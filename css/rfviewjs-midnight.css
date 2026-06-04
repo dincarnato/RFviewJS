@@ -1,0 +1,162 @@
+/*
+ * RFview.js — Midnight Theme
+ * deep blue-black with cyan accents
+ * Usage: add class "rv-theme-midnight" to the container element.
+ */
+.rv-theme-midnight {
+  /* Surfaces */
+  --rv-bg:      #060b18;
+  --rv-surface: #0d1526;
+  --rv-border:  #1e3050;
+
+  /* Text */
+  --rv-text:  #ccd6f6;
+  --rv-muted: #8892b0;
+
+  /* Accent palette */
+  --rv-accent:  #64ffda;
+  --rv-accent2: #f4b942;
+  --rv-accent3: #bd93f9;
+  --rv-error:   #ff6b6b;
+
+  /* Backbone */
+  --rv-backbone:        #8892b0;
+  --rv-backbone-width:  2;
+
+  /* Base-pairs */
+  --rv-basepair:        #64ffda;
+  --rv-basepair-width:  2.2;
+
+  /* Pseudoknots */
+  --rv-pseudopair:       #f4b942;
+  --rv-pseudopair-width: 2;
+
+  /* Non-canonical dots */
+  --rv-noncanon-dot-r:  4.5;
+
+  /* Bond animation colours */
+  --rv-pair-break: #ff6b6b;
+  --rv-pair-form:  #64ffda;
+
+  /* Nucleotide circles */
+  --rv-base-fill:         #112240;
+  --rv-base-stroke:       #64ffda;
+  --rv-base-stroke-width: 2;
+  --rv-base-hover:        #1a3a6e;
+
+  /* Base labels */
+  --rv-base-label-color:     #ccd6f6;
+  --rv-base-label-font:      monospace;
+  --rv-base-label-font-size: 13;
+
+  /* Position indices */
+  --rv-base-index-color:     #8892b0;
+  --rv-base-index-font:      monospace;
+  --rv-base-index-font-size: 12;
+
+  /* Layout */
+  --rv-base-radius:       11;
+  --rv-base-index-offset: 26;
+
+  /* Rotation interaction */
+  --rv-rot-line: #64ffda80;
+  --rv-rot-ring: #64ffda20;
+
+  /* Pair annotations */
+  --rv-pair-annot-opacity:      0.3;
+  --rv-pair-annot-stroke-width: 1.5;
+  --rv-pair-annot-padding:      5;
+  --rv-helix-annot-padding:     21;
+  --rv-helix-annot-color:       #ff6b6b;
+
+  /* Non-canonical dot colour */
+  --rv-noncanon-dot: #64ffda;
+
+  /* Error border (semi-transparent) */
+  --rv-error-border: #ff6b6b60;
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-toolbar { background: var(--rv-surface); border-bottom-color: var(--rv-border); }
+.rv-theme-midnight .rv-btn:hover { background: color-mix(in srgb,var(--rv-accent) 10%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-btn-toggle.rv--active { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-tsep { background: var(--rv-border); }
+
+/* ─── Structure switcher ───────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-struct-bar { background: var(--rv-surface); border-color: var(--rv-border); }
+.rv-theme-midnight .rv-struct-pill { color: var(--rv-muted); }
+.rv-theme-midnight .rv-struct-pill:hover { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-struct-pill.rv--active { background: var(--rv-accent); border-color: var(--rv-accent); color: var(--rv-bg); font-weight: 600; }
+.rv-theme-midnight .rv-struct-arrow { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-midnight .rv-struct-arrow:hover { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); }
+
+/* ─── Canvas ──────────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-canvas { background: var(--rv-bg); }
+.rv-theme-midnight .rv--drop-hover { outline-color: var(--rv-accent); }
+
+/* ─── Status bar ──────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-statusbar { background: var(--rv-surface); border-top-color: var(--rv-border); color: var(--rv-muted); }
+
+/* ─── Legends ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-legend,
+.rv-theme-midnight .rv-pal-legend,
+.rv-theme-midnight .rv-aln-legend { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-midnight .rv-legend h4,
+.rv-theme-midnight .rv-pal-legend h4,
+.rv-theme-midnight .rv-aln-legend-hdr { color: var(--rv-muted); }
+
+/* ─── Tooltip ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-tooltip { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+
+/* ─── Upload / manual-input panel ────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-upload-panel,
+.rv-theme-midnight .rv-manual-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-midnight .rv-upload-btn { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-midnight .rv-upload-btn:hover:not(:disabled) { border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-upload-btn-load { background: color-mix(in srgb,var(--rv-accent) 20%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-upload-btn-load:hover:not(:disabled) { background: color-mix(in srgb,var(--rv-accent) 35%,transparent); }
+.rv-theme-midnight .rv-upload-status.rv--ok  { color: var(--rv-accent2); }
+.rv-theme-midnight .rv-upload-status.rv--err { color: var(--rv-error); }
+
+/* ─── Settings panel ──────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-settings-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-midnight .rv-settings-tabs { border-bottom-color: var(--rv-border); }
+.rv-theme-midnight .rv-settings-tab { color: var(--rv-muted); }
+.rv-theme-midnight .rv-settings-tab:hover,
+.rv-theme-midnight .rv-settings-tab.rv--active { color: var(--rv-accent); }
+.rv-theme-midnight .rv-settings-tab.rv--active { border-bottom-color: var(--rv-accent); }
+.rv-theme-midnight .rv-settings-x,
+.rv-theme-midnight .rv-manual-x,
+.rv-theme-midnight .rv-about-x { color: var(--rv-muted); }
+.rv-theme-midnight .rv-settings-x:hover,
+.rv-theme-midnight .rv-manual-x:hover,
+.rv-theme-midnight .rv-about-x:hover { color: var(--rv-accent); }
+.rv-theme-midnight .rv-setting-val { color: var(--rv-accent); }
+.rv-theme-midnight .rv-cm-type-btn { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-midnight .rv-cm-type-btn.rv--active { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-struct-order-row { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-midnight .rv-btn-primary { background: color-mix(in srgb,var(--rv-accent) 20%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-midnight .rv-btn-primary:hover { background: color-mix(in srgb,var(--rv-accent) 35%,transparent); }
+
+/* ─── About panel ─────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight .rv-about-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-midnight .rv-about-name { color: var(--rv-accent); }
+.rv-theme-midnight .rv-about-link { color: var(--rv-accent); }
+.rv-theme-midnight .rv-about-link:hover { color: var(--rv-accent2); }
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+.rv-theme-midnight ::-webkit-scrollbar { width: 5px; height: 5px; }
+.rv-theme-midnight ::-webkit-scrollbar-track { background: var(--rv-surface); }
+.rv-theme-midnight ::-webkit-scrollbar-thumb { background: var(--rv-border); border-radius: 3px; }
+.rv-theme-midnight ::-webkit-scrollbar-thumb:hover { background: var(--rv-accent); }
+

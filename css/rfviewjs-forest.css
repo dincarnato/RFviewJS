@@ -1,0 +1,162 @@
+/*
+ * RFview.js — Forest Theme
+ * earthy greens and browns
+ * Usage: add class "rv-theme-forest" to the container element.
+ */
+.rv-theme-forest {
+  /* Surfaces */
+  --rv-bg:      #0f1a0e;
+  --rv-surface: #182417;
+  --rv-border:  #2d4a2a;
+
+  /* Text */
+  --rv-text:  #d4e8c2;
+  --rv-muted: #7a9e6a;
+
+  /* Accent palette */
+  --rv-accent:  #6abf45;
+  --rv-accent2: #d4a843;
+  --rv-accent3: #9b59b6;
+  --rv-error:   #e74c3c;
+
+  /* Backbone */
+  --rv-backbone:        #7a9e6a;
+  --rv-backbone-width:  2;
+
+  /* Base-pairs */
+  --rv-basepair:        #6abf45;
+  --rv-basepair-width:  2.2;
+
+  /* Pseudoknots */
+  --rv-pseudopair:       #d4a843;
+  --rv-pseudopair-width: 2;
+
+  /* Non-canonical dots */
+  --rv-noncanon-dot-r:  4.5;
+
+  /* Bond animation colours */
+  --rv-pair-break: #e74c3c;
+  --rv-pair-form:  #6abf45;
+
+  /* Nucleotide circles */
+  --rv-base-fill:         #1e3318;
+  --rv-base-stroke:       #6abf45;
+  --rv-base-stroke-width: 2;
+  --rv-base-hover:        #2a4a22;
+
+  /* Base labels */
+  --rv-base-label-color:     #d4e8c2;
+  --rv-base-label-font:      monospace;
+  --rv-base-label-font-size: 13;
+
+  /* Position indices */
+  --rv-base-index-color:     #7a9e6a;
+  --rv-base-index-font:      monospace;
+  --rv-base-index-font-size: 12;
+
+  /* Layout */
+  --rv-base-radius:       11;
+  --rv-base-index-offset: 26;
+
+  /* Rotation interaction */
+  --rv-rot-line: #6abf4580;
+  --rv-rot-ring: #6abf4520;
+
+  /* Pair annotations */
+  --rv-pair-annot-opacity:      0.3;
+  --rv-pair-annot-stroke-width: 1.5;
+  --rv-pair-annot-padding:      5;
+  --rv-helix-annot-padding:     21;
+  --rv-helix-annot-color:       #e74c3c;
+
+  /* Non-canonical dot colour */
+  --rv-noncanon-dot: #6abf45;
+
+  /* Error border (semi-transparent) */
+  --rv-error-border: #e74c3c60;
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-toolbar { background: var(--rv-surface); border-bottom-color: var(--rv-border); }
+.rv-theme-forest .rv-btn:hover { background: color-mix(in srgb,var(--rv-accent) 10%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-forest .rv-btn-toggle.rv--active { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-forest .rv-tsep { background: var(--rv-border); }
+
+/* ─── Structure switcher ───────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-struct-bar { background: var(--rv-surface); border-color: var(--rv-border); }
+.rv-theme-forest .rv-struct-pill { color: var(--rv-muted); }
+.rv-theme-forest .rv-struct-pill:hover { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); color: var(--rv-accent); }
+.rv-theme-forest .rv-struct-pill.rv--active { background: var(--rv-accent); border-color: var(--rv-accent); color: var(--rv-bg); font-weight: 600; }
+.rv-theme-forest .rv-struct-arrow { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-forest .rv-struct-arrow:hover { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); }
+
+/* ─── Canvas ──────────────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-canvas { background: var(--rv-bg); }
+.rv-theme-forest .rv--drop-hover { outline-color: var(--rv-accent); }
+
+/* ─── Status bar ──────────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-statusbar { background: var(--rv-surface); border-top-color: var(--rv-border); color: var(--rv-muted); }
+
+/* ─── Legends ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-legend,
+.rv-theme-forest .rv-pal-legend,
+.rv-theme-forest .rv-aln-legend { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-forest .rv-legend h4,
+.rv-theme-forest .rv-pal-legend h4,
+.rv-theme-forest .rv-aln-legend-hdr { color: var(--rv-muted); }
+
+/* ─── Tooltip ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-tooltip { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+
+/* ─── Upload / manual-input panel ────────────────────────────────────────── */
+
+.rv-theme-forest .rv-upload-panel,
+.rv-theme-forest .rv-manual-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-forest .rv-upload-btn { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-forest .rv-upload-btn:hover:not(:disabled) { border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-forest .rv-upload-btn-load { background: color-mix(in srgb,var(--rv-accent) 20%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-forest .rv-upload-btn-load:hover:not(:disabled) { background: color-mix(in srgb,var(--rv-accent) 35%,transparent); }
+.rv-theme-forest .rv-upload-status.rv--ok  { color: var(--rv-accent2); }
+.rv-theme-forest .rv-upload-status.rv--err { color: var(--rv-error); }
+
+/* ─── Settings panel ──────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-settings-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-forest .rv-settings-tabs { border-bottom-color: var(--rv-border); }
+.rv-theme-forest .rv-settings-tab { color: var(--rv-muted); }
+.rv-theme-forest .rv-settings-tab:hover,
+.rv-theme-forest .rv-settings-tab.rv--active { color: var(--rv-accent); }
+.rv-theme-forest .rv-settings-tab.rv--active { border-bottom-color: var(--rv-accent); }
+.rv-theme-forest .rv-settings-x,
+.rv-theme-forest .rv-manual-x,
+.rv-theme-forest .rv-about-x { color: var(--rv-muted); }
+.rv-theme-forest .rv-settings-x:hover,
+.rv-theme-forest .rv-manual-x:hover,
+.rv-theme-forest .rv-about-x:hover { color: var(--rv-accent); }
+.rv-theme-forest .rv-setting-val { color: var(--rv-accent); }
+.rv-theme-forest .rv-cm-type-btn { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-forest .rv-cm-type-btn.rv--active { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-forest .rv-struct-order-row { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-forest .rv-btn-primary { background: color-mix(in srgb,var(--rv-accent) 20%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-forest .rv-btn-primary:hover { background: color-mix(in srgb,var(--rv-accent) 35%,transparent); }
+
+/* ─── About panel ─────────────────────────────────────────────────────────── */
+
+.rv-theme-forest .rv-about-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-forest .rv-about-name { color: var(--rv-accent); }
+.rv-theme-forest .rv-about-link { color: var(--rv-accent); }
+.rv-theme-forest .rv-about-link:hover { color: var(--rv-accent2); }
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+.rv-theme-forest ::-webkit-scrollbar { width: 5px; height: 5px; }
+.rv-theme-forest ::-webkit-scrollbar-track { background: var(--rv-surface); }
+.rv-theme-forest ::-webkit-scrollbar-thumb { background: var(--rv-border); border-radius: 3px; }
+.rv-theme-forest ::-webkit-scrollbar-thumb:hover { background: var(--rv-accent); }
+

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>RFview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #f6f8fa; }
+    #viewer { position: absolute; inset: 0; }
+  </style>
+</head>
+<body>
+  <div id="viewer"></div>
+  <script src="RFview.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

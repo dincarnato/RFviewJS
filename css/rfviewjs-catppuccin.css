@@ -1,0 +1,162 @@
+/*
+ * RFview.js — Catppuccin Mocha
+ * soothing pastel dark theme
+ * Usage: add class "rv-theme-catppuccin" to the container element.
+ */
+.rv-theme-catppuccin {
+  /* Surfaces */
+  --rv-bg:      #1e1e2e;
+  --rv-surface: #313244;
+  --rv-border:  #45475a;
+
+  /* Text */
+  --rv-text:  #cdd6f4;
+  --rv-muted: #9399b2;
+
+  /* Accent palette */
+  --rv-accent:  #89b4fa;
+  --rv-accent2: #a6e3a1;
+  --rv-accent3: #cba6f7;
+  --rv-error:   #f38ba8;
+
+  /* Backbone */
+  --rv-backbone:        #9399b2;
+  --rv-backbone-width:  2;
+
+  /* Base-pairs */
+  --rv-basepair:        #89b4fa;
+  --rv-basepair-width:  2.2;
+
+  /* Pseudoknots */
+  --rv-pseudopair:       #fab387;
+  --rv-pseudopair-width: 2;
+
+  /* Non-canonical dots */
+  --rv-noncanon-dot-r:  4.5;
+
+  /* Bond animation colours */
+  --rv-pair-break: #f38ba8;
+  --rv-pair-form:  #a6e3a1;
+
+  /* Nucleotide circles */
+  --rv-base-fill:         #313244;
+  --rv-base-stroke:       #89b4fa;
+  --rv-base-stroke-width: 2;
+  --rv-base-hover:        #45475a;
+
+  /* Base labels */
+  --rv-base-label-color:     #cdd6f4;
+  --rv-base-label-font:      monospace;
+  --rv-base-label-font-size: 13;
+
+  /* Position indices */
+  --rv-base-index-color:     #9399b2;
+  --rv-base-index-font:      monospace;
+  --rv-base-index-font-size: 12;
+
+  /* Layout */
+  --rv-base-radius:       11;
+  --rv-base-index-offset: 26;
+
+  /* Rotation interaction */
+  --rv-rot-line: #89b4fa80;
+  --rv-rot-ring: #89b4fa25;
+
+  /* Pair annotations */
+  --rv-pair-annot-opacity:      0.3;
+  --rv-pair-annot-stroke-width: 1.5;
+  --rv-pair-annot-padding:      5;
+  --rv-helix-annot-padding:     21;
+  --rv-helix-annot-color:       #f38ba8;
+
+  /* Non-canonical dot colour */
+  --rv-noncanon-dot: #a6e3a1;
+
+  /* Error border (semi-transparent) */
+  --rv-error-border: #f38ba860;
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-toolbar { background: var(--rv-surface); border-bottom-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-btn:hover { background: color-mix(in srgb,var(--rv-accent) 10%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-btn-toggle.rv--active { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-tsep { background: var(--rv-border); }
+
+/* ─── Structure switcher ───────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-struct-bar { background: var(--rv-surface); border-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-struct-pill { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-struct-pill:hover { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-struct-pill.rv--active { background: var(--rv-accent); border-color: var(--rv-accent); color: var(--rv-bg); font-weight: 600; }
+.rv-theme-catppuccin .rv-struct-arrow { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-struct-arrow:hover { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); }
+
+/* ─── Canvas ──────────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-canvas { background: var(--rv-bg); }
+.rv-theme-catppuccin .rv--drop-hover { outline-color: var(--rv-accent); }
+
+/* ─── Status bar ──────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-statusbar { background: var(--rv-surface); border-top-color: var(--rv-border); color: var(--rv-muted); }
+
+/* ─── Legends ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-legend,
+.rv-theme-catppuccin .rv-pal-legend,
+.rv-theme-catppuccin .rv-aln-legend { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-legend h4,
+.rv-theme-catppuccin .rv-pal-legend h4,
+.rv-theme-catppuccin .rv-aln-legend-hdr { color: var(--rv-muted); }
+
+/* ─── Tooltip ─────────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-tooltip { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+
+/* ─── Upload / manual-input panel ────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-upload-panel,
+.rv-theme-catppuccin .rv-manual-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-upload-btn { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-upload-btn:hover:not(:disabled) { border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-upload-btn-load { background: color-mix(in srgb,var(--rv-accent) 20%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-upload-btn-load:hover:not(:disabled) { background: color-mix(in srgb,var(--rv-accent) 35%,transparent); }
+.rv-theme-catppuccin .rv-upload-status.rv--ok  { color: var(--rv-accent2); }
+.rv-theme-catppuccin .rv-upload-status.rv--err { color: var(--rv-error); }
+
+/* ─── Settings panel ──────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-settings-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-settings-tabs { border-bottom-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-settings-tab { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-settings-tab:hover,
+.rv-theme-catppuccin .rv-settings-tab.rv--active { color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-settings-tab.rv--active { border-bottom-color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-settings-x,
+.rv-theme-catppuccin .rv-manual-x,
+.rv-theme-catppuccin .rv-about-x { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-settings-x:hover,
+.rv-theme-catppuccin .rv-manual-x:hover,
+.rv-theme-catppuccin .rv-about-x:hover { color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-setting-val { color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-cm-type-btn { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-cm-type-btn.rv--active { background: color-mix(in srgb,var(--rv-accent) 15%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-struct-order-row { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-btn-primary { background: color-mix(in srgb,var(--rv-accent) 20%,transparent); border-color: var(--rv-accent); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-btn-primary:hover { background: color-mix(in srgb,var(--rv-accent) 35%,transparent); }
+
+/* ─── About panel ─────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-about-panel { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-about-name { color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-about-link { color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-about-link:hover { color: var(--rv-accent2); }
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin ::-webkit-scrollbar { width: 5px; height: 5px; }
+.rv-theme-catppuccin ::-webkit-scrollbar-track { background: var(--rv-surface); }
+.rv-theme-catppuccin ::-webkit-scrollbar-thumb { background: var(--rv-border); border-radius: 3px; }
+.rv-theme-catppuccin ::-webkit-scrollbar-thumb:hover { background: var(--rv-accent); }
+
