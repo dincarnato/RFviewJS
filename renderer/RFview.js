@@ -3337,6 +3337,7 @@ a:focus { color: #656d76; }
 			const result = this._layoutAlgo === 'naview' ? this._autoRotateLayout(drawRNANAView(pairs, sequence.length)) :
 				this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) :
 				this._pickLayout(pairs, sequence.length);
+			const _loadedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
 			this._rna = {
 				sequence,
 				structure: config.structure, // keep original dot-bracket for APPEND
@@ -3350,6 +3351,7 @@ a:focus { color: #656d76; }
 				helices: null,
 				pairAnnotations: config.pairAnnotations || null,
 				pairAnnotColorMap: normalizePairAnnotColorMap(config.pairAnnotColorMap),
+				_algo: _loadedAlgo,
 			};
 			// Remember any explicitly-provided colorMap so file-loader reuses it after clear()
 			this._rna.helices = buildHelixTree(pairs, sequence.length, result.centers);
@@ -4878,9 +4880,11 @@ a:focus { color: #656d76; }
 		 with fewer overlapping base circles is used.
 		 */
 		toggleLayout() {
-			const current = this._layoutAlgo === 'auto' ?
-				(this._lastPickedAlgo || 'radiate') :
-				this._layoutAlgo;
+			const _curAlgo = this._structLayouts?.[this._currentStructIdx]?._algo
+			?? this._rna?._algo
+			?? this._lastPickedAlgo
+			?? 'radiate';
+			const current = this._layoutAlgo === 'auto' ? _curAlgo : this._layoutAlgo;
 			this._layoutAlgo = current === 'naview' ? 'radiate' : 'naview';
 			this._syncLayoutBtn(this._layoutAlgo);
 			if (this._lastConfig) {
@@ -6322,6 +6326,8 @@ a:focus { color: #656d76; }
 			const result = this._layoutAlgo === 'naview' ? this._autoRotateLayout(drawRNANAView(pairs, sequence.length)) :
 				this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) :
 				this._pickLayout(pairs, sequence.length);
+			const _usedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
+
 			return {
 				sequence,
 				structure,
@@ -6337,11 +6343,12 @@ a:focus { color: #656d76; }
 				pairAnnotColorMap: pairAnnotColorMap || null,
 				baseDisplay: baseDisplay || null,
 				positionLabels: positionLabels || null,
-                baseDisplay:    baseDisplay    || null,
+                baseDisplay: baseDisplay|| null,
                 positionLabels: positionLabels || null,
-                alnSeqs:        alnSeqs        || null,
-                alnStruct:      alnStruct      || null,
-                alnLen:         alnLen         || 0,
+                alnSeqs: alnSeqs || null,
+                alnStruct: alnStruct || null,
+                alnLen: alnLen || 0,
+				_algo: _usedAlgo,
 			};
 		}
 
