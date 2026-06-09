@@ -39,12 +39,8 @@
 	// Fallback values match rfviewjs.css exactly, so appearance is identical
 	// whether or not the external stylesheet is loaded.
 	const CSS = `
-a,
-a:visited,
-a:hover,
-a:active,
-a:focus { color: #656d76; }
-
+a, a:visited, a:hover, a:active, a:focus {color: #656d76}
+body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
 .rv{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr;width:100%;height:100%;overflow:hidden;position:relative;box-sizing:border-box;background:var(--rv-bg,#ffffff);color:var(--rv-text,#1f2328);--rv-bg:#ffffff;--rv-surface:#f6f8fa;--rv-border:#d0d7de;--rv-text:#1f2328;--rv-muted:#656d76;--rv-accent:#0969da;--rv-accent2:#2da44e;--rv-accent3:#8250df;--rv-error:#cf222e;--rv-backbone:#1f2328;--rv-backbone-width:2;--rv-basepair:#1f2328;--rv-basepair-width:2.2;--rv-pseudopair:#0969da;--rv-pseudopair-width:2;--rv-noncanon-dot-r:4.5;--rv-pair-break:#ef4444;--rv-pair-form:#22c55e;--rv-base-fill:#eaeef2;--rv-base-stroke:#1f2328;--rv-base-stroke-width:2;--rv-base-hover:#bbd4f0;--rv-base-label-color:#1f2328;--rv-base-label-font:monospace;--rv-base-label-font-size:13;--rv-base-index-color:#656d76;--rv-base-index-font:monospace;--rv-base-index-font-size:12;--rv-base-radius:11;--rv-base-index-offset:26;--rv-rot-line:#0969da80;--rv-rot-ring:#0969da20;--rv-pair-annot-opacity:0.3;--rv-pair-annot-stroke-width:1.5;--rv-pair-annot-padding:16;--rv-helix-annot-padding:21;--rv-helix-annot-color:#ef4444}
 .rv *{box-sizing:border-box}
 .rv-toolbar{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--rv-border,#d0d7de);background:var(--rv-bg,#ffffff);flex-wrap:wrap}
@@ -2449,7 +2445,7 @@ a:focus { color: #656d76; }
 		}
 	}
 
-	function applyHelixRotation(helix, dragAngle, startAngle, snapCoords, pairs, n) {
+	function applyHelixRotation(helix, dragAngle, startAngle, snapCoords, pairs, n, overrideCx, overrideCy) {
 		const coords = snapCoords;
 		const {
 			i: hi,
@@ -2457,8 +2453,8 @@ a:focus { color: #656d76; }
 			ml,
 			loopCenter: center
 		} = helix;
-		const cx = center.x,
-			cy = center.y;
+		const cx = overrideCx !== undefined ? overrideCx : center.x,
+    		  cy = overrideCy !== undefined ? overrideCy : center.y;
 		let prevIndex = hi,
 			nextIndex = hj;
 		let k = ml.x;
@@ -2502,6 +2498,11 @@ a:focus { color: #656d76; }
 		while (pHelL < pOld) pHelL += 2 * Math.PI;
 		let pLimL2 = pLimL;
 		while (pLimL2 < pHelL) pLimL2 += 2 * Math.PI;
+		// _hasRN / _hasLN used only to guard fixUnpairedPositions below.
+		const _hasRN = prevIndex !== hi;
+		const _hasLN = nextIndex !== hj;
+		// Restore original VARNA [0, 2π) clamping — signed delta breaks the
+		// while/if guards and lets helices rotate past neighbours.
 		const minDelta = normalizeAngle(pLimR2 - pHelR + 0.25);
 		let maxDelta = normalizeAngle(pLimL2 - pHelL - 0.25);
 		while (maxDelta < minDelta) maxDelta += 2 * Math.PI;
@@ -2514,6 +2515,7 @@ a:focus { color: #656d76; }
 		}
 		const corrected = correctHysteresis(delta + base + (pHelR + pHelL) / 2);
 		delta = corrected - (base + (pHelR + pHelL) / 2);
+		if (delta > Math.PI) delta -= 2 * Math.PI;
 		rotateHelixCoords(hi, hj, cx, cy, delta, coords);
 		// VARNA's rotateEverything swaps assignment based on isDirect:
 		//   isDirect:  pHelR = angle(h.y=hj),  pHelL = angle(h.x=hi)
@@ -2524,7 +2526,14 @@ a:focus { color: #656d76; }
 		const pHelRnew = isDirect ? aHj : aHi;
 		const pHelLnew = isDirect ? aHi : aHj;
 		const radius = Math.hypot(coords[hi].x - cx, coords[hi].y - cy);
-		fixUnpairedPositions(isDirect, pHelRnew, pLimL, pLimR, pHelLnew, radius, base, cx, cy, helix.prevUnpaired, helix.nextUnpaired, coords);
+		// Skip fixUnpairedPositions when neither side has a real neighbouring
+		// helix: the limit angles collapse to the helix endpoints, and
+		// distributeUnpaired would place outer-loop bases on a small-radius
+		// circle around the inner loop centre — directly over the inner
+		// loop content (the entanglement seen with single-pair helices).
+		if (_hasRN || _hasLN) {
+			fixUnpairedPositions(isDirect, pHelRnew, pLimL, pLimR, pHelLnew, radius, base, cx, cy, helix.prevUnpaired, helix.nextUnpaired, coords);
+		}
 		return delta;
 	}
 	// Color map
@@ -2562,7 +2571,18 @@ a:focus { color: #656d76; }
 			};
 		}
 		// No colorMap specified, callers apply SHAPE default when reactivity is present
-		return null;
+		return {
+			type: 'discrete',
+			min: 0,
+			stops: [
+				{ value: 0.3, color: '#1f2328' },
+				{ value: 0.7, color: '#f5c518' },
+				{ value: 1.0, color: '#cc0000' },
+			],
+			nanColor: config.colorMapNaN ?? '#808080',
+			title: 'SHAPE',
+			showTitle: true,
+		};
 	}
 
 	// Pair-annotation colormap normalizer
@@ -2742,7 +2762,7 @@ a:focus { color: #656d76; }
 			const ICON_INDICES = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 2l-2 12M12 2l-2 12M3 6h11M3 10h11"/></svg>`;
 			const ICON_COLORMAP = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="5" width="3.2" height="6" rx="1" opacity=".28"/><rect x="6.4" y="5" width="3.2" height="6" rx="1" opacity=".6"/><rect x="10.8" y="5" width="3.2" height="6" rx="1" opacity=".92"/></svg>`;
 			// NAView icon: two concentric arcs with spokes, suggests a radial layout
-			const ICON_PK = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 11 Q5 3 8 11 Q11 3 14 11" stroke-dasharray="3 2"/></svg>';
+			const ICON_PK = '<span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">PK</span>';
 			const ICON_PAIR_ANNOT = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="4.5" width="13" height="7" rx="2.5"/><circle cx="5" cy="8" r="1.6" fill="currentColor" stroke="none"/><circle cx="11" cy="8" r="1.6" fill="currentColor" stroke="none"/><line x1="6.8" y1="8" x2="9.2" y2="8"/></svg>`;
 			const ICON_MANUAL = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="12" height="9" rx="1.5"/><line x1="5" y1="8" x2="5" y2="8.01"/><line x1="8" y1="8" x2="8" y2="8.01"/><line x1="11" y1="8" x2="11" y2="8.01"/><line x1="5" y1="11" x2="5" y2="11.01"/><line x1="8" y1="11" x2="11" y2="11.01"/><path d="M6 4V3a2 2 0 014 0v1"/></svg>`;
 			const ICON_UPLOAD = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,9 8,4 12,9"/><line x1="8" y1="4" x2="8" y2="13"/><line x1="2" y1="14" x2="14" y2="14"/></svg>`;
@@ -2779,7 +2799,7 @@ a:focus { color: #656d76; }
 				[b.layout, [b.layout ?
                     `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>`
                     : '',
-                    `<button class="rv-btn rv-btn-toggle rv-btn-aln" title="Alignment view" style="display:none">&#x2630;<span class="rv-btn-label">Alignment view</span></button>`,
+                    `<button class="rv-btn rv-btn-toggle rv-btn-aln" title="Alignment view" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span></button>`,
                 ].join('')],
 				[b.toolbarPos, b.toolbarPos ? btnHTML('rv-btn-toolbar-pos', '', ICON_TOOLBAR_POS, this._toolbarPos === 'left' ? 'Move toolbar to top' : 'Move toolbar to left') : ''],
 			];
@@ -2813,17 +2833,17 @@ a:focus { color: #656d76; }
               <button class="rv-manual-x rv-upload-x" title="Close">&#x2715;</button>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Sequence <span>[A, C, G, U/T, N]</span></div>
+              <div class="rv-upload-lbl">Sequence <span>[A, C, G, U/T, N] (optional)</span></div>
               <textarea class="rv-manual-seq" spellcheck="false" rows="3"
                 style="width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;font-size:12px;padding:6px 8px;border:1px solid var(--rv-border,#d0d7de);border-radius:6px;background:var(--rv-bg,#fff);color:var(--rv-text,#1f2328);outline:none;margin-top:4px;display:block"></textarea>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Structure <span>[dot-bracket]</span></div>
+              <div class="rv-upload-lbl">Structure <span>[dot-bracket] (mandatory)</span></div>
               <textarea class="rv-manual-struct" spellcheck="false" rows="3"
                 style="width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;font-size:12px;padding:6px 8px;border:1px solid var(--rv-border,#d0d7de);border-radius:6px;background:var(--rv-bg,#fff);color:var(--rv-text,#1f2328);outline:none;margin-top:4px;display:block"></textarea>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Name <span>[optional]</span></div>
+              <div class="rv-upload-lbl">Name <span>(optional)</span></div>
               <input class="rv-manual-name" type="text" placeholder="Structure name"
                 style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--rv-border,#d0d7de);border-radius:6px;background:var(--rv-bg,#fff);color:var(--rv-text,#1f2328);outline:none;display:block;margin-top:4px">
             </div>
@@ -2864,7 +2884,7 @@ a:focus { color: #656d76; }
             </div>
             <div class="rv-settings-tabs">
               <button class="rv-settings-tab rv--active" data-tab="appearance">Appearance</button>
-              <button class="rv-settings-tab" data-tab="colormap">Color Map</button>
+              <button class="rv-settings-tab" data-tab="colormap">Reactivity</button>
               <button class="rv-settings-tab rv-tab-pannot" data-tab="pannot" style="display:none">Annotations</button>
             </div>
             <div class="rv-settings-body">
@@ -2888,7 +2908,7 @@ a:focus { color: #656d76; }
                   <button class="rv-cm-type-btn" data-type="discrete">Discrete</button>
                 </div>
                 <div class="rv-stops-list"></div>
-                <button class="rv-stop-add">+ Add stop</button>
+                <button class="rv-stop-add">+ Add step</button>
               </div>
               <div class="rv-settings-pane rv-set-pannot-pane" data-pane="pannot">
                 <div class="rv-setting-row"><span class="rv-setting-label">Opacity <span class="rv-setting-val rv-val-pa-opac">0.3</span></span>
@@ -2914,7 +2934,7 @@ a:focus { color: #656d76; }
               <button class="rv-upload-x" title="Close">&#x2715;</button>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Structure files <span>.db / .ct</span></div>
+              <div class="rv-upload-lbl">Structure files <span>(dot-bracket, CT, or Stockholm)</span></div>
               <div class="rv-upload-drop rv-upload-drop-db">
                 <input type="file" class="rv-file-db" accept=".db,.dot,.fa,.fasta,.ct,.stk,.sto,.stockholm,.txt" multiple>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/></svg>
@@ -2930,7 +2950,7 @@ a:focus { color: #656d76; }
               <div class="rv-loaded-struct-list rv-struct-order-list"></div>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Reactivity files <span>.xml</span></div>
+              <div class="rv-upload-lbl">Reactivity files <span>(RNA Framework's XML file)</span></div>
               <div class="rv-upload-drop rv-upload-drop-xml">
                 <input type="file" class="rv-file-xml" accept=".xml" multiple>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/><line x1="5" y1="9" x2="11" y2="9"/><line x1="5" y1="11.5" x2="9" y2="11.5"/></svg>
@@ -2946,7 +2966,7 @@ a:focus { color: #656d76; }
               <div class="rv-xml-target-list"></div>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Pair annotations <span>.tsv / .txt</span></div>
+              <div class="rv-upload-lbl">Pair annotations <span>(TSV, or R-scape's .cov/.helixcov file)</span></div>
               <div class="rv-upload-drop rv-upload-drop-annot">
                 <input type="file" class="rv-file-annot" accept=".tsv,.txt,.cov,.helixcov" multiple>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/><line x1="5" y1="9" x2="7" y2="9"/><line x1="9" y1="9" x2="11" y2="9"/><line x1="5" y1="11.5" x2="7" y2="11.5"/><line x1="9" y1="11.5" x2="11" y2="11.5"/></svg>
@@ -3871,7 +3891,7 @@ a:focus { color: #656d76; }
 					this._applySettingsCM();
 				});
 			});
-			// Add stop
+			// Add step
 			q('.rv-stop-add').addEventListener('click', () => {
 				const stops = p._cmStops;
 				const last = stops[stops.length - 1];
@@ -4214,12 +4234,12 @@ a:focus { color: #656d76; }
 			const validate = () => {
 				const seq = seqEl.value.trim();
 				const str = strEl.value.trim();
-				if (!seq || !str) {
+				if (!str) {
 					loadBtn.disabled = true;
 					statusEl.textContent = '';
 					return;
 				}
-				if (seq.length !== str.length) {
+				if (seq && seq.length !== str.length) {
 					showErr(`Length mismatch: sequence ${seq.length} nt, structure ${str.length} nt.`);
 				} else {
 					clearStatus();
@@ -4236,22 +4256,20 @@ a:focus { color: #656d76; }
 			panel.querySelector('.rv-manual-cancel').onclick = close;
 
 			loadBtn.onclick = () => {
-				const seq = normalizeSeq(seqEl.value.trim());
 				const str = strEl.value.trim();
 				const label = nameEl.value.trim() || `Structure ${(this._structures?.length || 0) + 1}`;
-				if (!seq) {
-					showErr('Please enter a sequence.');
-					return;
-				}
+
 				if (!str) {
-					showErr('Please enter a structure.');
+					showErr('No structure provided');
 					return;
 				}
-				if (!/^[ACGNU]+$/.test(seq)) {
+
+				const seq = normalizeSeq(seqEl.value.trim()) || 'N'.repeat(str.length);
+				if (seqEl.value.trim() && !/^[ACGNU]+$/.test(seq)) {
 					showErr('Sequence contains invalid characters (allowed: A/C/U/T/N)');
 					return;
 				}
-				if (seq.length !== str.length) {
+				if (seqEl.value.trim() && seq.length !== str.length) {
 					showErr(`Sequence (${seq.length} nt) and structure (${str.length} nt) have different lengths.`);
 					return;
 				}
@@ -4783,6 +4801,8 @@ a:focus { color: #656d76; }
 				};
 
 				this.load(cfg);
+				this._pendingStructures = [];
+				this._accumulatedDbFiles = [];
 
 				if (hasReact) {
 					this._showColors = true;
@@ -4807,8 +4827,8 @@ a:focus { color: #656d76; }
 						}
 						of this._pendingAnnotData) {
 						const checkedRadio = this._upAnnotTargetList?.querySelector('input[type=radio]:checked');
-						const tIdx = checkedRadio ? parseInt(checkedRadio.value) : 0;
-						const layout = layouts[tIdx] || layouts[0];
+						const tIdx = checkedRadio ? parseInt(checkedRadio.value) : startIdx;
+						const layout = layouts[tIdx] || layouts[startIdx] || layouts[0];
 						if (!layout) continue;
 						const structPairs = getStructurePairSet(layout.structure || '');
 						// Stockholm remapping, same logic as annotation-only path
@@ -4844,15 +4864,15 @@ a:focus { color: #656d76; }
 			} catch (err) {
 				setStatus(err.message, 'rv--err');
 				this._upLoadBtn.disabled = false;
-				// Clear stale file state so next drop starts fresh
-				this._pendingAnnotData = [];
-				this._accumulatedAnnotFiles = [];
+				// Keep panel open and annotation data intact so the user can
+				// pick a different target structure and try again without
+				// re-dropping the file.
 			}
 		}
 		_buildPairAnnotLegend(colorMap, isCov = false) {
 			if (!this._palLegend) return;
 			const hasHelix = !!this._rna?.helixAnnotations?.length;
-			if ((!colorMap?.length || !isCov) && !hasHelix) {
+			if (!colorMap?.length && !hasHelix) {
 				this._palLegend.style.display = 'none';
 				this._palLegend.innerHTML = '';
 				return;
@@ -4871,7 +4891,8 @@ a:focus { color: #656d76; }
 				  + `<span class="rv-pal-swatch" style="background:rgba(239,68,68,0.35);border-color:#ef4444"></span>`
 				  + `<span class="rv-pal-key">Helix-level</span></div>`
 				: '';
-			this._palLegend.innerHTML = `<h4>Covarying pairs</h4>${rows}${helixRow}`;
+			const legendTitle = isCov ? 'Covarying pairs' : 'Pair annotations';
+			this._palLegend.innerHTML = `<h4>${legendTitle}</h4>${rows}${helixRow}`;
 			this._palLegend.style.display = this._showPairAnnotations ? 'block' : 'none';
 		}
 		/*
@@ -6147,9 +6168,33 @@ a:focus { color: #656d76; }
 						this._canvas.classList.add('rotating');
 					} else {
 						// Interior-loop helix, rotate around the loop centre
+						// Interior-loop helix, rotate around the loop centre
 						const pt = this._clientToScene(e.clientX, e.clientY);
-						const cx = helix.loopCenter.x,
-							cy = helix.loopCenter.y;
+						// For NAView the loopCenter centroid can sit geometrically between the
+						// helix arms — use the midpoint of the flanking backbone positions instead.
+						let cx = helix.loopCenter.x, cy = helix.loopCenter.y;
+						let navPath = null;
+						if (this._rna._algo === 'naview') {
+							const _hi = helix.i, _hj = helix.j;
+							const _c = this._rna.coords;
+							const _mlX = helix.ml.x, _mlY = helix.ml.y;
+							let _sx = 0, _sy = 0, _cnt = 0;
+							for (let _k = _mlX; _k < _hi; _k++) { _sx += _c[_k].x; _sy += _c[_k].y; _cnt++; }
+							for (let _k = _hj + 1; _k <= _mlY; _k++) { _sx += _c[_k].x; _sy += _c[_k].y; _cnt++; }
+							if (_cnt > 0) { cx = _sx / _cnt; cy = _sy / _cnt; }
+							const _nu = helix.nextUnpaired, _pu = helix.prevUnpaired;
+							const _nuRev = [..._nu].reverse();
+							const _n = this._rna.n;
+							const _lf = Math.max(0, _nu.length > 0 ? _nu[_nu.length-1]-1 : _hi-1);
+							const _rf = Math.min(_n-1, _pu.length > 0 ? _pu[_pu.length-1]+1 : _hj+1);
+							const _pp = [_lf, ..._nuRev, _hi, _hj, ..._pu, _rf];
+							const _pc = _pp.map(i => ({ x: _c[i].x, y: _c[i].y }));
+							const _al = [0];
+							for (let _k = 1; _k < _pc.length; _k++)
+								_al.push(_al[_k-1] + Math.hypot(_pc[_k].x-_pc[_k-1].x, _pc[_k].y-_pc[_k-1].y));
+							navPath = { pc: _pc, al: _al, total: _al[_al.length-1],
+								shi: _al[1+_nuRev.length], shj: _al[2+_nuRev.length] };
+						}
 						const startAngle = Math.atan2(pt.y - cy, pt.x - cx);
 						// Snapshot loop centers of ALL helices so child loop centers
 						// can be kept in sync as the drag progresses (see _onMouseMove).
@@ -6163,7 +6208,8 @@ a:focus { color: #656d76; }
 							cy,
 							startAngle,
 							snapCoords,
-							snapLCs
+							snapLCs,
+							navPath
 						};
 						this._canvas.classList.add('rotating');
 						const r = Math.hypot(this._rna.coords[helix.i].x - cx, this._rna.coords[helix.i].y - cy);
@@ -6251,31 +6297,104 @@ a:focus { color: #656d76; }
 				const workCoords = snapCoords.map(c => ({
 					...c
 				}));
-				// applyHelixRotation returns the actual delta applied (post-hysteresis).
-				const delta = applyHelixRotation(helix, dragAngle, startAngle, workCoords, this._rna.pairs, this._rna.n);
+				// For NAView path-sliding bypass VARNA entirely: its minDelta snap
+				// (0.25 rad) maps tiny rightward drags to delta≈maxDelta≈6.03, which
+				// after sign-conversion becomes -0.25 → helix moves backwards and
+				// snaps. Use the raw signed drag angle instead.
+				const { navPath } = this._rotState;
+				let delta;
+				if (this._rna._algo === 'naview' && navPath && navPath.total > 1e-9) {
+					delta = dragAngle - startAngle;
+					if (delta > Math.PI) delta -= 2 * Math.PI;
+					if (delta < -Math.PI) delta += 2 * Math.PI;
+				} else {
+					// applyHelixRotation returns the actual delta applied (post-hysteresis).
+					delta = applyHelixRotation(helix, dragAngle, startAngle, workCoords, this._rna.pairs, this._rna.n, cx, cy);
+				}
+				if (this._rna._algo === 'naview' && navPath && navPath.total > 1e-9) {
+					const { pc, al, total, shi, shj } = navPath;
+					const hi = helix.i, hj = helix.j;
+					const nu = helix.nextUnpaired, pu = helix.prevUnpaired;
+					const span = shj - shi;
+					// delta is already raw-signed. Cap R to total/π so short loops
+					// (1 base) don't overshoot on the first tiny drag.
+					const R = Math.min(Math.hypot(snapCoords[hi].x - cx, snapCoords[hi].y - cy) || 1, total / Math.PI);
+					const nshi = Math.max(0, Math.min(shi + delta * R, total - span));
+					const nshj = nshi + span;
+					const interp = s => {
+						for (let k = 0; k < al.length-1; k++) {
+							if (s <= al[k+1] + 1e-9) {
+								const seg = al[k+1]-al[k];
+								const t = seg < 1e-9 ? 0 : (s-al[k])/seg;
+								return { x: pc[k].x+t*(pc[k+1].x-pc[k].x), y: pc[k].y+t*(pc[k+1].y-pc[k].y) };
+							}
+						}
+						return { ...pc[pc.length-1] };
+					};
+					const nHi = interp(nshi);
+					workCoords[hi].x = nHi.x; workCoords[hi].y = nHi.y;
+					const oHi = snapCoords[hi], oHj = snapCoords[hj];
+					const oDx = oHj.x-oHi.x, oDy = oHj.y-oHi.y;
+					// Rigid transform: rotation only, NO scale — prevents the helix
+					// from compressing when the path chord shortens.
+					const origLen = Math.hypot(oDx, oDy);
+					const nHj_path = interp(nshj);
+					const nDxP = nHj_path.x-nHi.x, nDyP = nHj_path.y-nHi.y;
+					const pathLen = Math.hypot(nDxP, nDyP);
+					let rC = 1, rS = 0;
+					if (origLen > 1e-9 && pathLen > 1e-9) {
+						rC = (nDxP*oDx+nDyP*oDy)/(origLen*pathLen);
+						rS = (nDyP*oDx-nDxP*oDy)/(origLen*pathLen);
+					}
+					// Place hj at original chord length from nHi in the new direction
+					workCoords[hj].x = nHi.x + rC*oDx - rS*oDy;
+					workCoords[hj].y = nHi.y + rS*oDx + rC*oDy;
+					const actualNHj = workCoords[hj];
+					for (let k = hi+1; k < hj; k++) {
+						const dx = snapCoords[k].x-oHi.x, dy = snapCoords[k].y-oHi.y;
+						workCoords[k].x = nHi.x + rC*dx - rS*dy;
+						workCoords[k].y = nHi.y + rS*dx + rC*dy;
+					}
+					nu.forEach((idx, k) => {
+						const p = interp((nu.length-k)/(nu.length+1) * nshi);
+						workCoords[idx].x = p.x; workCoords[idx].y = p.y;
+					});
+					// Redistribute pu via similarity transform anchored at actualNHj
+					// (not the path-derived nHj) so pu path shape is preserved.
+					const rfC = pc[pc.length-1];
+					const puODx = rfC.x-oHj.x, puODy = rfC.y-oHj.y;
+					const puNDx = rfC.x-actualNHj.x, puNDy = rfC.y-actualNHj.y;
+					const puOL2 = puODx*puODx+puODy*puODy;
+					if (puOL2 > 1e-9) {
+						const puRC=(puNDx*puODx+puNDy*puODy)/puOL2;
+						const puRS=(puNDy*puODx-puNDx*puODy)/puOL2;
+						pu.forEach(idx => {
+							const dx=snapCoords[idx].x-oHj.x, dy=snapCoords[idx].y-oHj.y;
+							workCoords[idx].x=actualNHj.x+puRC*dx-puRS*dy;
+							workCoords[idx].y=actualNHj.y+puRS*dx+puRC*dy;
+						});
+					}
+					this._rna.helices.forEach((h, idx) => {
+						const snap = snapLCs[idx];
+						if (h !== helix && h.i >= hi && h.j <= hj) {
+							const dx = snap.x-oHi.x, dy = snap.y-oHi.y;
+							h.loopCenter.x = nHi.x + rC*dx - rS*dy;
+							h.loopCenter.y = nHi.y + rS*dx + rC*dy;
+						} else { h.loopCenter.x = snap.x; h.loopCenter.y = snap.y; }
+					});
+				} else {
+					this._rna.helices.forEach((h, idx) => {
+						const snap = snapLCs[idx];
+						if (h !== helix && h.i > helix.i && h.j < helix.j) {
+							const r = rotatePoint(cx, cy, snap.x, snap.y, delta);
+							h.loopCenter.x = r.x; h.loopCenter.y = r.y;
+						} else { h.loopCenter.x = snap.x; h.loopCenter.y = snap.y; }
+					});
+				}
 				for (let i = 0; i < this._rna.n; i++) {
 					this._rna.coords[i].x = workCoords[i].x;
 					this._rna.coords[i].y = workCoords[i].y;
 				}
-				/* 
-                 Keep child helices' loop centers in sync.
-				 When helix B rotates, every helix A nested inside B (A.i > B.i && A.j < B.j)
-				 has its loop center orbiting the same pivot, if we leave loopCenter_A stale,
-				 subsequent rotation of A uses a wrong pivot and a blown-up radius.
-                */
-				this._rna.helices.forEach((h, idx) => {
-					const snap = snapLCs[idx];
-					if (h !== helix && h.i > helix.i && h.j < helix.j) {
-						// Child helix, rotate its loop center by the same delta
-						const r = rotatePoint(cx, cy, snap.x, snap.y, delta);
-						h.loopCenter.x = r.x;
-						h.loopCenter.y = r.y;
-					} else {
-						// Not a child, restore from snapshot (undo any drift from earlier frames)
-						h.loopCenter.x = snap.x;
-						h.loopCenter.y = snap.y;
-					}
-				});
 				this._render();
 				const r = parseFloat(this._rotCirc.getAttribute('r'));
 				this._rotLine.setAttribute('x2', cx + r * Math.cos(dragAngle));
@@ -6866,7 +6985,7 @@ a:focus { color: #656d76; }
             if (this._structWrap) this._structWrap.style.display = '';
             if (this._alnBtn) {
                 this._alnBtn.classList.remove('rv--active');
-                this._alnBtn.innerHTML = '&#x2630;<span class="rv-btn-label">Alignment</span>';
+                this._alnBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span>';
             }
             if (this._rna?.values && this._showColors)
                 this._legend.style.display = 'block';
@@ -6889,7 +7008,7 @@ a:focus { color: #656d76; }
                 this._alnViewEl.classList.add('rv--active');
                 if (this._alnBtn) {
                     this._alnBtn.classList.add('rv--active');
-                    this._alnBtn.innerHTML = '&#x2630;<span class="rv-btn-label">Structure</span>';
+					this._alnBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Structure</span>';
                 }
                 this._buildAlnView();
             } else {

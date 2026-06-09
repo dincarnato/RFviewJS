@@ -60,9 +60,9 @@ if (cliArgs.help || cliArgs.h) {
  Usage:    RFview [options] --structureFile /path/to/file
  Examples:
   
- RFview --structureFile my_rna.db
+ RFview --structureFile structure.db
  RFview --structureFile alignment.sto --basePairAnno alignment.cov --layout naview --svg output.svg
- RFview --structureFile my_rna.db --xml shape.xml --svg plot.svg
+ RFview --structureFile structure.db --xml reactivity.xml --svg plot.svg
  
 
  Options                        Description
@@ -149,6 +149,7 @@ function createWindow() {
         },
         backgroundColor: '#ffffff',
         show: false,
+        icon: path.join(__dirname, 'assets', 'icon.png'),
 
     });
 
@@ -196,7 +197,7 @@ ipcMain.handle('headless-error', async (_, message) => {
 
 });
 
-// ---- Headless / CLI mode ----------------------------------------------------
+// Headless / CLI mode
 async function runHeadless(args) {
 
     if (!fs.existsSync(args.structureFile)) {

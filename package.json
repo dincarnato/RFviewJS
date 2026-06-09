@@ -61,7 +61,7 @@
     "win": {
       "target": [
         {
-          "target": "exe",
+          "target": "portable",
           "arch": [
             "x64"
           ]

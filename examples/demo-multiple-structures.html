@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFview - Two structures + Reactivity</title>
+<script src="../RFview.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  #viewer { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+<div id="viewer"></div>
+<script>
+  const SEQ = 'GGGUCUAUCUAUUGGAGAGAACCAUGGAGAAACCCUGGAGAUUUCGAGAGAGCUCUAGAGCUCAGAGUGAGCUCGAGAGCGAGAGC';
+
+  const STR1 = '((((...(((((.((......)))))))...))))................(((((.(((((((...))))))).)))))......';
+  const STR2 = '.(.(((.(((.((.((((...(((.((.....)).)))...)))).)))))(((((.(((((((...))))))).))))).))).)';
+
+  const VALUES1 = [
+    0.08,0.05,0.15,0.03,0.86,0.52,0.54,0.12,
+    0.03,0.11,0.03,0.04,0.83,0.19,0.04,0.78,
+    0.88,0.57,0.87,0.82,0.97,0.03,0.19,0.08,
+    0.05,0.04,0.08,0.18,0.77,0.87,0.89,0.09,
+    0.13,0.03,0.03,0.77,0.50,0.83,0.80,0.87,
+    0.84,0.80,0.93,0.90,0.78,0.87,0.56,0.55,
+    0.51,0.79,0.97,0.04,0.10,0.17,0.05,0.12,
+    0.73,0.15,0.17,0.13,0.20,0.08,0.16,0.14,
+    0.87,0.84,0.54,0.21,0.11,0.15,0.03,0.16,
+    0.15,0.22,0.93,0.08,0.10,0.15,0.02,0.11,
+    0.76,0.75,0.54,0.92,0.55,0.78,
+  ];
+
+  const VALUES2 = [
+    0.79,0.16,0.9,0.19,0.06,0.07,0.56,0.07,
+    0.17,0.05,0.86,0.06,0.08,0.83,0.19,0.14,
+    0.02,0.08,0.56,0.95,0.93,0.18,0.19,0.17,
+    0.97,0.18,0.07,0.94,0.85,0.52,0.57,0.83,
+    0.09,0.11,0.8,0.04,0.18,0.18,0.98,0.5,
+    0.86,0.17,0.05,0.16,0.11,0.77,0.06,0.12,
+    0.07,0.11,0.14,0.1,0.05,0.12,0.07,0.07,
+    0.77,0.09,0.03,0.15,0.21,0.1,0.16,0.21,
+    0.73,0.56,0.93,0.19,0.15,0.05,0.1,0.19,
+    0.2,0.18,0.77,0.19,0.09,0.16,0.05,0.21,
+    0.88,0.16,0.06,0.14,0.87,0.14,
+  ];
+
+  const COLOR_MAP = {
+    type: 'discrete',
+    min: 0,
+    nanColor: '#999999',
+    stops: [
+      { value: 0.3, color: '#1e3a55' },
+      { value: 0.7, color: '#60a5fa' },
+      { value: 1.0, color: '#9353ea' },
+    ],
+  };
+
+  const viewer = new RFviewJS(document.getElementById('viewer'), {
+
+    showIndices: true,
+    toolbarPosition: 'left',
+
+    buttons: {
+      upload: false, // Disables data upload button
+      clean: false, // Disables structure removal button
+      zoomIn: true, // Enables zoom in button
+      zoomOut: true, // Enables zoom out button
+      fit: true, // Enables structure auto fit button
+      reset: true, // Enables structure plot reset button
+      save: true, // Enables save structure to SVG button
+      indices: false, // Disables position indices visualization button
+      colorMap: false, // Disables color map visualiation button
+      toolbarPos: false, // Disables toolbar repositioning button
+    },
+
+    statusBar: true,
+    canvasDrop: false, // Disables drag and drop of files onto the canvas
+
+  });
+
+  viewer.load({
+    sequence: SEQ,    // Shared across both structures
+    showColors: true,
+    structures: [
+      {
+        label: 'Structure 1 - Default color map',
+        structure: STR1,
+        values: VALUES1,
+      },
+      {
+        label: 'Structure 2 — Custom color map',
+        structure: STR2,
+        values: VALUES2,
+        colorMap: COLOR_MAP,
+      },
+    ],
+  });
+</script>
+</body>
+</html>
