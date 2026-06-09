@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://rfview.incarnatolab.com/images/RFview_logo.png" />
+  <img src="https://rfview.incarnatolab.com/images/RFview_logo.png" width="50%" />
 </p>
 <br/>
 
