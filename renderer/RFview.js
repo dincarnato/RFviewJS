@@ -3728,7 +3728,26 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					throw new Error(`HTTP ${resp.status} — could not retrieve ${rfamId}`);
 				text = await resp.text();
 			}
-			this.load({ stockholmText: text, label: rfamId.toUpperCase() });
+			const incoming = RFviewJS.parseStockholmFile(text, rfamId.toUpperCase());
+			if (this._structLayouts?.length) {
+				const existing = this._structLayouts.map((s, i) => ({
+					label:            this._structures?.[i]?.label || s.label,
+					sequence:         s.sequence,
+					structure:        s.structure,
+					values:           s.values,
+					colorMap:         s.colorMap,
+					pairAnnotations:  s.pairAnnotations,
+					helixAnnotations: s.helixAnnotations,
+					baseDisplay:      s.baseDisplay,
+					positionLabels:   s.positionLabels,
+					alnSeqs:          s.alnSeqs,
+					alnStruct:        s.alnStruct,
+					alnLen:           s.alnLen,
+				}));
+				this.load({ structures: [...existing, ...incoming], showColors: this._showColors });
+			} else {
+				this.load({ structures: incoming, showColors: this._showColors });
+			}
 		}
 		_openSettings() {
 			this._aboutPanel?.classList.remove('rv-visible');

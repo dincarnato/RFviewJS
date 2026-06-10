@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFview - Stockholm fetch from Rfam</title>
+<script src="../RFview.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  #viewer { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+<div id="viewer"></div>
+<script>
+  
+  const viewer = new RFviewJS(document.getElementById('viewer'), {
+
+    showIndices: true,
+    toolbarPosition: 'left',
+
+    buttons: {
+      upload: false, // Disables data upload button
+      cleanOne: false, // Disables single structure clear button
+      cleanAll: false, // Disables all structure clear button
+      zoomIn: true, // Enables zoom in button
+      zoomOut: true, // Enables zoom out button
+      fit: true, // Enables structure auto fit button
+      reset: true, // Enables structure plot reset button
+      save: true, // Enables save structure to SVG button
+      indices: false, // Disables position indices visualization button
+      colorMap: false, // Disables color map visualiation button
+      toolbarPos: false, // Disables toolbar repositioning button
+      rfam: false, // Disables fetch aligment from Rfam
+    },
+
+    statusBar: true,
+    canvasDrop: false, // Disables drag and drop of files onto the canvas
+
+  });
+
+  // Fetches Stockholm alignment directly from Rfam
+  viewer.fetchRfam('RF00005');
+  
+</script>
+</body>
+</html>
