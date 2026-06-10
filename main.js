@@ -197,6 +197,19 @@ ipcMain.handle('headless-error', async (_, message) => {
 
 });
 
+// Rfam fetch proxy (bypasses CORS in renderer)
+ipcMain.handle('fetch-rfam', async (_, rfamId) => {
+    const https = require('https');
+    const url = `https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`;
+    return new Promise((resolve, reject) => {
+        https.get(url, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => resolve(data));
+        }).on('error', err => reject(err));
+    });
+});
+
 // Headless / CLI mode
 async function runHeadless(args) {
 
