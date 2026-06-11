@@ -3,7 +3,14 @@
 </p>
 <br/>
 
+
 # RFviewJS - RNA Framework Structure Viewer
+
+
+<p align="center">
+  <img src="http://rfview.incarnatolab.com/images/RFview_GUI.gif" border="1"/>
+</p>
+
 
 ## Introduction
 
