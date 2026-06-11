@@ -46,6 +46,13 @@ Please see <http://www.gnu.org/licenses/> for more information.
 
 __RFviewJS__ can be tested at: <https://rfview.incarnatolab.com>
 
+A variety of examples can be found here:
+
+- [Structure](https://rfview.incarnatolab.com/examples/demo-structure.html)
+- [Multiple structures](https://rfview.incarnatolab.com/examples/demo-multiple-structures.html)
+- [Stockholm alignment](https://rfview.incarnatolab.com/examples/demo-stockholm.html)
+- [Multiple Stockholm alignments](https://rfview.incarnatolab.com/examples/demo-multiple-stockholm.html)
+
 
 ## Standalone executables
 
