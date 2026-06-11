@@ -5914,9 +5914,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (bd?.colStats) {
                 // Stockholm alignment: show column composition
                 const s = bd.colStats;
-                const label = bd.letter || '·';
                 const partner = pairs[idx];
-                html = `<b>${label}${posLabel}`;
+                html = `<b>${posLabel}`;
                 if (partner !== -1) html += ` ↔ ${positionLabels?.[partner] ?? (partner + 1)}`;
                 const ps = pseudoPairs.find(p => p.i === idx || p.j === idx);
                 if (ps) {
