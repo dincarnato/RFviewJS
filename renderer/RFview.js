@@ -2652,6 +2652,37 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Switch at L ≈ 0.2 — white text below, dark text above
 		return L > 0.2 ? '#1a1a2e' : '#f0f6ff';
 	}
+	// Convert user-friendly helixAnnotations [{i, color, opacity}] to internal
+	// [{subHelices:[{pos5p,pos3p}], color, opacity}] format.
+	// Entries already in internal format (have .subHelices) are passed through unchanged.
+	function resolveHelixAnnotations(annotations, pairs, positionLabels = null) {
+		const origToRendered = new Map();
+		if (positionLabels?.length)
+			positionLabels.forEach((col1, ri) => origToRendered.set(col1 - 1, ri));
+		return annotations.map(ann => {
+			if (ann.subHelices) return ann; // already internal
+			const i = origToRendered.size ? (origToRendered.get(ann.i) ?? ann.i) : ann.i;
+			const j = pairs[i];
+			if (j === undefined || j < 0)
+				throw new Error(`helixAnnotations: position ${i} is not paired`);
+			// Walk outward to find the outermost pair of this helix
+			let a = i, b = j;
+			while (a > 0 && pairs[a - 1] === b + 1) { a--; b++; }
+			// Walk inward collecting all consecutive stacked pairs
+			const pos5p = [], pos3p = [];
+			let ca = a, cb = b;
+			while (ca <= cb && pairs[ca] === cb) {
+				pos5p.push(ca);
+				pos3p.push(cb);
+				ca++; cb--;
+			}
+			return {
+				subHelices: [{ pos5p, pos3p }],
+				color:   ann.color   ?? null,
+				opacity: ann.opacity ?? 0.08,
+			};
+		});
+	}
 	// RFviewJS class
 	class RFviewJS {
 		constructor(container, config = {}) {
@@ -2931,7 +2962,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                   <button class="rv-cm-type-btn" data-type="discrete">Discrete</button>
                 </div>
                 <div class="rv-stops-list"></div>
-                <button class="rv-stop-add">+ Add step</button>
+                <button class="rv-stop-add">+ Add stop</button>
               </div>
               <div class="rv-settings-pane rv-set-pannot-pane" data-pane="pannot">
                 <div class="rv-setting-row"><span class="rv-setting-label">Opacity <span class="rv-setting-val rv-val-pa-opac">0.3</span></span>
@@ -3431,7 +3462,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				helices: null,
 				pairAnnotations: config.pairAnnotations || null,
 				pairAnnotColorMap: normalizePairAnnotColorMap(config.pairAnnotColorMap),
-				helixAnnotations: config.helixAnnotations || null,
+				helixAnnotations: config.helixAnnotations?.length
+					? resolveHelixAnnotations(config.helixAnnotations, pairs, config.positionLabels) : null,
 				isCovAnnot: !!(config.pairAnnotations?.length || config.helixAnnotations?.length),
 				_algo: _loadedAlgo,
 			};
@@ -4000,7 +4032,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._applySettingsCM();
 				});
 			});
-			// Add step
+			// Add stop
 			q('.rv-stop-add').addEventListener('click', () => {
 				const stops = p._cmStops;
 				const last = stops[stops.length - 1];
@@ -5173,6 +5205,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const _helixHex = _hexColor; // kept for SVG legend
 				const NS = 'http://www.w3.org/2000/svg';
 				for (const ann of anns) {
+					const annPad = ann.padding ?? pad;
 					for (const sh of (ann.subHelices || [])) {
 					const p5=sh.pos5p.filter(ri=>ri>=0&&ri<n);
 					const p3=sh.pos3p.filter(ri=>ri>=0&&ri<n);
@@ -5184,8 +5217,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const oxm=(x1+x2)/2, oym=(y1+y2)/2;
 					const cx=(oxm+ixm)/2, cy=(oym+iym)/2;
 					const angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
-					const w=Math.hypot(x2-x1,y2-y1)+pad*2;
-					const h=Math.hypot(ixm-oxm,iym-oym)+pad*2;
+					const w=Math.hypot(x2-x1,y2-y1)+annPad*2;
+					const h=Math.hypot(ixm-oxm,iym-oym)+annPad*2;
 					const rx=Math.min(baseR*0.6,w/2,h/2);
 					const rect=document.createElementNS(NS,'rect');
 					rect.setAttribute('x',cx-w/2);
@@ -5194,11 +5227,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					rect.setAttribute('height',h);
 					rect.setAttribute('rx',rx);
 					rect.setAttribute('ry',rx);
-					rect.setAttribute('fill', _helixHex);
-					rect.setAttribute('fill-opacity', '0.08');
-					rect.setAttribute('stroke', _helixHex);
+					const annColor = ann.color ?? _helixHex;
+					const annOpacity = ann.opacity ?? 0.08;
+					const annStrokeWidth = ann.strokeWidth ?? 1.5;
+					rect.setAttribute('fill', annColor);
+					rect.setAttribute('fill-opacity', String(annOpacity));
+					rect.setAttribute('stroke', annColor);
 					rect.setAttribute('stroke-opacity', '0.45');
-					rect.setAttribute('stroke-width','1.5');
+					rect.setAttribute('stroke-width', String(annStrokeWidth));
 					rect.setAttribute('transform',`rotate(${angle},${cx},${cy})`);
 					g.appendChild(rect);
 				}
@@ -6555,6 +6591,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) :
 				this._pickLayout(pairs, sequence.length);
 			const _usedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
+			const resolvedHelixAnnotations = helixAnnotations?.length
+				? resolveHelixAnnotations(helixAnnotations, pairs, positionLabels) : null;
 
 			return {
 				sequence,
@@ -6569,8 +6607,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				helices: buildHelixTree(pairs, sequence.length, result.centers),
 				pairAnnotations: pairAnnotations || null,
 				pairAnnotColorMap: pairAnnotColorMap || null,
-				helixAnnotations: helixAnnotations || null,
-				isCovAnnot: !!(pairAnnotations?.length || helixAnnotations?.length),
+				helixAnnotations: resolvedHelixAnnotations || null,
+				isCovAnnot: !!(pairAnnotations?.length || resolvedHelixAnnotations?.length),
 				baseDisplay: baseDisplay || null,
 				positionLabels: positionLabels || null,
                 baseDisplay: baseDisplay|| null,

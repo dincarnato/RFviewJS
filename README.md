@@ -47,6 +47,23 @@ Please see <http://www.gnu.org/licenses/> for more information.
 __RFviewJS__ can be tested at: <https://rfview.incarnatolab.com>
 
 
+## Installation
+
+To install __RFviewJS__ on your webpage, just obtain `RFview.js` (under `renderer/RFview.js` on this repository), upload it to your webserver and include it with a plain `<script>` tag:
+
+```html
+<script src="path/to/RFview.js"></script>
+```
+
+Alternatively, you can directly import it from the official RFviewJS website:
+
+```html
+<script src="https://rfview.incarnatolab.com/scripts/RFview.js"></script>
+```
+
+The module exports a single global class, `RFviewJS`. 
+
+
 ## Documentation
 
 For any information, please refer to the documentation: <http://rfviewjs-docs.readthedocs.io/>
