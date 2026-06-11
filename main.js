@@ -38,12 +38,14 @@ function parseCliArgs(argv) {
 }
 
 const cliArgs = parseCliArgs(process.argv);
-const isCLI = Boolean(cliArgs.structureFile);
+const isCLI = Boolean(cliArgs.structureFile || cliArgs.rfam);
 
 // These must be called immediately in CLI mode
 if (isCLI) {
 
     app.disableHardwareAcceleration();
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
     app.dock?.hide();
 
 }
@@ -68,6 +70,8 @@ if (cliArgs.help || cliArgs.h) {
  Options                        Description
  --structureFile    <string>    Path to a structure file (.db, .dbn, .ct, .txt) or to 
                                 a Stockholm alignment [required]
+ --rfam             <string>    Rfam family ID to fetch directly from Rfam (e.g., RF00162)
+                                Note: --rfam and --structureFile are mutually exclusive
  --xml              <string>    Reactivity file (in RNA Framework's XML format)
  --basePairAnno     <string>    Pair-annotation file (.tsv, .txt) or R-scape's .cov file
  --helixCovAnno     <string>    R-scape's .helixcov helix-level covariation file
@@ -213,7 +217,15 @@ ipcMain.handle('fetch-rfam', async (_, rfamId) => {
 // Headless / CLI mode
 async function runHeadless(args) {
 
-    if (!fs.existsSync(args.structureFile)) {
+    if (!args.structureFile && !args.rfam) {
+        console.error('[!] Error: either --structureFile or --rfam is required'); app.exit(1); return;
+    }
+
+    if (args.rfam && !/^RF\d+$/i.test(args.rfam)) {
+        console.error(`[!] Error: invalid Rfam ID "${args.rfam}" — must be RF followed by digits`); app.exit(1); return;
+    }
+
+    if (args.structureFile && !fs.existsSync(args.structureFile)) {
         console.error(`[!] Error: Structure file ${args.structureFile} not found`); app.exit(1); return;
     }
 
@@ -235,8 +247,40 @@ async function runHeadless(args) {
         console.error(`[!] Error: unknown layout "${layout}" (available: ${validLayouts.join(', ')})`); app.exit(1); return;
     }
 
-    const structureText = fs.readFileSync(args.structureFile, 'utf8');
-    const structureName = path.basename(args.structureFile);
+    let structureText, structureName;
+    if (args.rfam) {
+        const rfamId = args.rfam.toUpperCase();
+        console.log(`Fetching Rfam alignment: ${rfamId}`);
+        try {
+          structureText = await new Promise((resolve, reject) => {
+          const https = require('https');
+          const url = `https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`;
+          https.get(url, res => {
+              if (res.statusCode !== 200) {
+                  res.resume();
+                  reject(new Error(`HTTP ${res.statusCode} — family "${rfamId}" not found on Rfam`));
+                  return;
+              }
+              let data = '';
+              res.on('data', chunk => data += chunk);
+              res.on('end', () => resolve(data));
+          }).on('error', err => reject(err));
+        });
+        } catch (err) {
+          console.error(`[!] Error: ${err.message}`);
+          app.exit(1);
+          return;
+        }
+    if (!structureText.trimStart().startsWith('# STOCKHOLM')) {
+        console.error(`[!] Error: Rfam returned no valid alignment for "${rfamId}". Please verify ID.`);
+        app.exit(1);
+        return;
+    }
+    structureName = rfamId + '.sto';
+    } else {
+        structureText = fs.readFileSync(args.structureFile, 'utf8');
+        structureName = path.basename(args.structureFile);
+    }
     const xmlText = args.xml ? fs.readFileSync(args.xml, 'utf8') : null;
     const annotText = args.basePairAnno ? fs.readFileSync(args.basePairAnno, 'utf8') : null;
     const annotName = args.basePairAnno ? path.basename(args.basePairAnno) : null;
@@ -245,10 +289,12 @@ async function runHeadless(args) {
 
     const outPath = args.svg
         ? path.resolve(args.svg)
-        : path.join(
-            path.dirname(path.resolve(args.structureFile)),
-            path.basename(args.structureFile, path.extname(args.structureFile)) + '.svg'
-          );
+        : args.structureFile
+            ? path.join(
+                path.dirname(path.resolve(args.structureFile)),
+                path.basename(args.structureFile, path.extname(args.structureFile)) + '.svg'
+              )
+            : path.join(process.cwd(), args.rfam.toUpperCase() + '.svg');
 
     console.log(`Loading:  ${structureName}`);
 
@@ -460,7 +506,10 @@ async function runHeadless(args) {
 // App lifecycle
 
 app.whenReady().then(() => {
-    if (isCLI) runHeadless(cliArgs);
+    if (isCLI) runHeadless(cliArgs).catch(err => {
+        console.error(`[!] Error: ${err.message}`);
+        app.exit(1);
+    });
     else createWindow();
 });
 
