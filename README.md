@@ -47,6 +47,17 @@ Please see <http://www.gnu.org/licenses/> for more information.
 __RFviewJS__ can be tested at: <https://rfview.incarnatolab.com>
 
 
+## Standalone executables
+
+Standalone __RFview__ executables are available from the __[Releases](https://github.com/dincarnato/RFviewJS/releases)__ section.
+
+__Note to macOS users:__ as the app is not code-signed, before running it, issue the following command in the Terminal:
+
+```bash
+xattr -cr /path/to/RFview.app
+```
+
+
 ## Installation
 
 To install __RFviewJS__ on your webpage, just obtain `RFview.js` (under `renderer/RFview.js` on this repository), upload it to your webserver and include it with a plain `<script>` tag:
