@@ -4901,8 +4901,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }) : normalizeColorMap(cfg));
                     const pa = existing?.pairAnnotations || s.pairAnnotations || cfg.pairAnnotations || null;
                     const pacm = existing?.pairAnnotColorMap || normalizePairAnnotColorMap(s.pairAnnotColorMap || cfg.pairAnnotColorMap);
-                    this._structLayouts[savedIdx] = this._computeLayout(s.sequence, s.structure, vals, cm, pa, pacm, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
-                    if (existing?.helixAnnotations) this._structLayouts[savedIdx].helixAnnotations = existing.helixAnnotations;
+                    const ha = existing?.helixAnnotations || s.helixAnnotations || null;
+                    this._structLayouts[savedIdx] = this._computeLayout(s.sequence, s.structure, vals, cm, pa, pacm, ha, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
+					if (existing?.helixAnnotations) this._structLayouts[savedIdx].helixAnnotations = existing.helixAnnotations;
                     if (existing?.isCovAnnot) this._structLayouts[savedIdx].isCovAnnot = existing.isCovAnnot;
                     this._currentStructIdx = savedIdx;
                     this._rna = this._structLayouts[savedIdx];
@@ -6424,8 +6425,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             };
         }
         _initStructures(config) {
-            this._errEl.style.display = 'none';
-            this._legend.style.display = 'none';
+			this._lastConfig = config;
+			this._errEl.style.display = 'none';
+			this._legend.style.display = 'none';
             const sharedValues = config.values || null;
             const sharedColorMap = normalizeColorMap(config);
             this._structures = config.structures; // enriched after layout loop below
