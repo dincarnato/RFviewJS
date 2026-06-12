@@ -819,7 +819,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     start5p: a - 1,
                     end5p: b - 1,
                     start3p: Math.min(c, d) - 1,
-                    end3p: Math.max(c, d) - 1,
+                    end3p: Math.max(c, d),
                     reversed3p: c > d,
                     nbp: hm[6] ? +hm[6] : 0,
                     nbpCov: hm[7] ? +hm[7] : 0,
@@ -5381,6 +5381,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     ny = dx / len; // unit normal to pair axis
                 const b1 = sequence[i].toUpperCase(),
                     b2 = sequence[j].toUpperCase();
+                if (this._relaxedSequence) {
+                    g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+                    continue;
+                }
                 const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
                 const isAU = (b1 === 'A' && b2 === 'U') || (b1 === 'U' && b2 === 'A') || (b1 === 'A' && b2 === 'T') || (b1 === 'T' && b2 === 'A');
                 const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
@@ -6603,8 +6607,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // Animate only when both structures share the same sequence — different
             // sequences mean different lengths / base identities which would corrupt
             // the transition frame interpolation.
-            if (srcRna.sequence === tgtRna.sequence) {
-                this._animateTransition(srcRna, tgtRna);
+            if (srcRna.sequence === tgtRna.sequence && this._transitionDuration > 0) {
+				this._animateTransition(srcRna, tgtRna);
             } else {
                 this._rna = tgtRna;
                 this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
@@ -6862,28 +6866,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                         if (fillColor) lbl.style.fill = getContrastTextColor(fillColor);
                     }
                     (pkEndpts.has(i) ? g_pk_top : g_base).append(circ, lbl);
-                }
-                // Position index labels (same logic as _render)
-                if (this._showIndices && (i === 0 || (i + 1) % 10 === 0 || i === n - 1)) {
-                    let dx = 0,
-                        dy = 0;
-                    if (i > 0) {
-                        dx += coords[i].x - coords[i - 1].x;
-                        dy += coords[i].y - coords[i - 1].y;
-                    }
-                    if (i < n - 1) {
-                        dx += coords[i + 1].x - coords[i].x;
-                        dy += coords[i + 1].y - coords[i].y;
-                    }
-                    const len = Math.hypot(dx, dy) || 1;
-                    const nx = -dy / len,
-                        ny = dx / len;
-                    const idx = document.createElementNS(NS, 'text');
-                    idx.setAttribute('class', 'rv-base-index');
-                    idx.setAttribute('x', coords[i].x + nx * (baseR + idxOff));
-                    idx.setAttribute('y', coords[i].y + ny * (baseR + idxOff));
-                    idx.textContent = this._rna?.positionLabels?.[i] ?? (i + 1);
-                    g_base.appendChild(idx);
                 }
             }
         }
