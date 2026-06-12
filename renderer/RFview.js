@@ -5381,22 +5381,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     ny = dx / len; // unit normal to pair axis
                 const b1 = sequence[i].toUpperCase(),
                     b2 = sequence[j].toUpperCase();
-                if (this._relaxedSequence) {
-                    g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
-                    continue;
-                }
                 const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
                 const isAU = (b1 === 'A' && b2 === 'U') || (b1 === 'U' && b2 === 'A') || (b1 === 'A' && b2 === 'T') || (b1 === 'T' && b2 === 'A');
                 const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
                 const isCanon = isGC || isAU || isGU;
                 if (!isCanon) {
-                    // Non-canonical, dot only at midpoint
-                    const ndot = document.createElementNS(NS, 'circle');
-                    ndot.setAttribute('class', 'rv-bp-noncanon');
-                    ndot.setAttribute('cx', (x1 + x2) / 2);
-                    ndot.setAttribute('cy', (y1 + y2) / 2);
-                    ndot.setAttribute('r', dotR);
-                    g_bp.appendChild(ndot);
+                    if (this._relaxedSequence) {
+                        // Non-standard bases — render as single line instead of dot
+                        g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+                    } else {
+                        // Non-canonical, dot only at midpoint
+                        const ndot = document.createElementNS(NS, 'circle');
+                        ndot.setAttribute('class', 'rv-bp-noncanon');
+                        ndot.setAttribute('cx', (x1 + x2) / 2);
+                        ndot.setAttribute('cy', (y1 + y2) / 2);
+                        ndot.setAttribute('r', dotR);
+                        g_bp.appendChild(ndot);
+                    }
                 } else if (isGC) {
                     g_bp.appendChild(mkLine(x1 + nx * BP_OFFSET, y1 + ny * BP_OFFSET, x2 + nx * BP_OFFSET, y2 + ny * BP_OFFSET, 'rv-basepair'));
                     g_bp.appendChild(mkLine(x1 - nx * BP_OFFSET, y1 - ny * BP_OFFSET, x2 - nx * BP_OFFSET, y2 - ny * BP_OFFSET, 'rv-basepair'));
@@ -5415,10 +5416,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }
             // Pseudoknot pairs ([], {}, <> brackets) — dashed, distinct  color
             if (this._showPseudoknots !== false) {
-                for (const ps of pseudoPairs) {
-                    g_pk.appendChild(mkLine(coords[ps.i].x, coords[ps.i].y, coords[ps.j].x, coords[ps.j].y, 'rv-pseudopair'));
-                }
-            }
+				for (const ps of pseudoPairs) {
+					const ax = coords[ps.i].x, ay = coords[ps.i].y;
+					const bx = coords[ps.j].x, by = coords[ps.j].y;
+					const mx = (ax + bx) / 2, my = (ay + by) / 2;
+					const len = Math.hypot(bx - ax, by - ay) || 1;
+					const nx = -(by - ay) / len, ny = (bx - ax) / len;
+					const sign = ny >= 0 ? -1 : 1;
+					const off = len * 0.35;
+					const arc = document.createElementNS(NS, 'path');
+					arc.setAttribute('d', `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`);
+					arc.setAttribute('class', 'rv-pseudopair');
+					g_pk.appendChild(arc);
+				}
+			}
             // Bases
             for (let i = 0; i < n; i++) {
                 const grp = document.createElementNS(NS, 'g');
@@ -6718,14 +6729,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					y1 = coords[i].y;
 				const x2 = coords[j].x,
 					y2 = coords[j].y;
-				if (this._relaxedSequence) {
-					const l = document.createElementNS(NS, 'line');
-					l.setAttribute('x1', x1); l.setAttribute('y1', y1);
-					l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-					l.style.cssText = `stroke:${color};stroke-width:${bpWidth};fill:none;stroke-linecap:round;opacity:${opacity}`;
-					g_bp.appendChild(l);
-					return;
-				}
 				const b1 = normalizeSeq(sequence[i] || '');
 				const b2 = normalizeSeq(sequence[j] || '');
 				const pair = [b1, b2].sort().join('');
@@ -6758,6 +6761,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     dot.style.cssText = `fill:${color};stroke:none;opacity:${opacity}`;
                     g_bp.appendChild(dot);
                 } else if (pair === 'AU' || pair === 'UA') {
+                    mkL(x1, y1, x2, y2);
+                } else if (this._relaxedSequence) {
+                    // Non-standard bases — single line
                     mkL(x1, y1, x2, y2);
                 } else {
                     // Non-canonical, dot only
@@ -6802,16 +6808,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 of gainedPairs) drawPair(i, j, formColor, fadeIn);
             // Pseudoknot pairs (target) fading in, on top of bases
             if (this._showPseudoknots !== false) {
-                for (const ps of pseudoPairs) {
-                    const l = document.createElementNS(NS, 'line');
-                    l.setAttribute('x1', coords[ps.i].x);
-                    l.setAttribute('y1', coords[ps.i].y);
-                    l.setAttribute('x2', coords[ps.j].x);
-                    l.setAttribute('y2', coords[ps.j].y);
-                    l.style.cssText = `stroke:${cs.getPropertyValue('--rv-pseudopair').trim()||'#f97316'};stroke-width:${pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3;opacity:${fadeIn}`;
-                    g_pk.appendChild(l);
-                }
-            }
+				for (const ps of pseudoPairs) {
+					const ax = coords[ps.i].x, ay = coords[ps.i].y;
+					const bx = coords[ps.j].x, by = coords[ps.j].y;
+					const mx = (ax + bx) / 2, my = (ay + by) / 2;
+					const len = Math.hypot(bx - ax, by - ay) || 1;
+					const nx = -(by - ay) / len, ny = (bx - ax) / len;
+					const sign = ny >= 0 ? -1 : 1;
+					const off = len * 0.35;
+					const arc = document.createElementNS(NS, 'path');
+					arc.setAttribute('d', `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`);
+					arc.style.cssText = `stroke:${cs.getPropertyValue('--rv-pseudopair').trim()||'#0969da'};stroke-width:${pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3;opacity:${fadeIn}`;
+					g_pk.appendChild(arc);
+				}
+			}
             // Pair annotation boxes (fade with target structure)
             if (this._showPairAnnotations && pairAnnotations?.length) {
                 // Build a minimal pairs array from commonPairs + gainedPairs for the target
