@@ -2653,6 +2653,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._flipState = null;
             this._showIndices = config.showIndices !== false; // default true
             this._showColors = config.showColors !== false; // default true
+			this._relaxedSequence = config.relaxedSequence === true;
             this._showPairAnnotations = config.showPairAnnotations !== false;
             this._autoTolerance = config.autoLayoutTolerance ?? 0;
             this._id = config.id || null; // used as SVG export filename
@@ -3314,7 +3315,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 values
             } = config;
             // Convert DNA T to RNA U automatically
-            const sequence = config.sequence ? normalizeSeq(config.sequence) : config.sequence;
+            const sequence = config.sequence
+				? (this._relaxedSequence ? config.sequence : normalizeSeq(config.sequence))
+				: config.sequence;
             // Clear any previous error and reset state
             this._errEl.style.display = 'none';
             this._legend.style.display = 'none';
@@ -6705,15 +6708,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const bpWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
             const pseudopairWidth = parseFloat(cs.getPropertyValue('--rv-pseudopair-width')) || 2;
             // Helper, draw a styled bond (GC=double, GU=dot, AU=single)
-            const drawBond = (i, j, color, opacity) => {
-                if (opacity < 0.01) return;
-                const x1 = coords[i].x,
-                    y1 = coords[i].y;
-                const x2 = coords[j].x,
-                    y2 = coords[j].y;
-                const b1 = normalizeSeq(sequence[i] || '');
-                const b2 = normalizeSeq(sequence[j] || '');
-                const pair = [b1, b2].sort().join('');
+			const drawBond = (i, j, color, opacity) => {
+				if (opacity < 0.01) return;
+				const x1 = coords[i].x,
+					y1 = coords[i].y;
+				const x2 = coords[j].x,
+					y2 = coords[j].y;
+				if (this._relaxedSequence) {
+					const l = document.createElementNS(NS, 'line');
+					l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+					l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+					l.style.cssText = `stroke:${color};stroke-width:${bpWidth};fill:none;stroke-linecap:round;opacity:${opacity}`;
+					g_bp.appendChild(l);
+					return;
+				}
+				const b1 = normalizeSeq(sequence[i] || '');
+				const b2 = normalizeSeq(sequence[j] || '');
+				const pair = [b1, b2].sort().join('');
                 const css = `stroke:${color};stroke-width:${bpWidth};fill:none;stroke-linecap:round;opacity:${opacity}`;
                 const mkL = (x1, y1, x2, y2) => {
                     const l = document.createElementNS(NS, 'line');
