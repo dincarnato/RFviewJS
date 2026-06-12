@@ -3395,21 +3395,38 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         // standard .cov pair-annotation file.
         loadCov(covText) {
             if (!this._rna) throw new Error('No structure loaded — call load() first.');
-            // Auto-detect helixcov format
             if (/^#\s+RM_HELIX\b/m.test(covText)) return this.loadHelixCov(covText);
             const pairs = parseCovFile(covText);
             const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
-            const structPairs = getStructurePairSet(this._rna.structure || '');
-            const {
-                annotArr,
-                pairAnnotColorMap
-            } = buildAnnotationArrays(remapped, structPairs, 'cov', this._rna.label);
-            this._rna.pairAnnotations = annotArr;
-            this._rna.pairAnnotColorMap = pairAnnotColorMap;
+            // Build separate sets for nested vs pseudoknot pairs
+            const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
+            const allStructPairs = getStructurePairSet(this._rna.structure || '');
+            const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
+            const nestedCovPairs = remapped.filter(({i, j}) => nestedStructPairs.has(pairKey(i, j)));
+            const pkCovPairs     = remapped.filter(({i, j}) => pkSet.has(pairKey(i, j)));
+            if (!nestedCovPairs.length && !pkCovPairs.length)
+                buildAnnotationArrays(remapped, allStructPairs, 'cov', this._rna.label); // throws with proper message
+            // Nested pairs → bounding boxes (existing flow)
+            if (nestedCovPairs.length) {
+                const { annotArr, pairAnnotColorMap } =
+                    buildAnnotationArrays(nestedCovPairs, nestedStructPairs, 'cov', this._rna.label);
+                this._rna.pairAnnotations = annotArr;
+                this._rna.pairAnnotColorMap = pairAnnotColorMap;
+                this._buildPairAnnotLegend(pairAnnotColorMap, true);
+            }
+            // Pseudoknot pairs → per-base boxes + coloured arcs
+            if (pkCovPairs.length) {
+                const pkColorMap = buildAnnotColorMapAuto(pkCovPairs);
+                this._rna.pseudoCovAnnotations = pkCovPairs.map(({ i, j, category }) => ({
+                    i, j,
+                    color: pkColorMap
+                        ? (pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR)
+                        : ANNOT_DEFAULT_COLOR,
+                }));
+            }
             this._rna.isCovAnnot = true;
             this._showPairAnnotations = true;
             if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-            this._buildPairAnnotLegend(pairAnnotColorMap, true);
             this._render();
         }
         // Load significant helix-level covariation from .helixcov text.
@@ -5414,9 +5431,38 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
                 }
             }
+			// Per-base highlight boxes for covarying pseudoknot pairs
+            if (this._showPairAnnotations && this._rna.pseudoCovAnnotations?.length) {
+                const s = baseR * 2.4;
+                for (const { i, j, color } of this._rna.pseudoCovAnnotations) {
+                    for (const pos of [i, j]) {
+                        const box = document.createElementNS(NS, 'rect');
+                        box.setAttribute('x', coords[pos].x - s / 2);
+                        box.setAttribute('y', coords[pos].y - s / 2);
+                        box.setAttribute('width', s);
+                        box.setAttribute('height', s);
+                        box.setAttribute('rx', s * 0.2);
+                        box.setAttribute('ry', s * 0.2);
+                        box.setAttribute('fill', color);
+                        box.setAttribute('fill-opacity', '0.25');
+                        box.setAttribute('stroke', color);
+                        box.setAttribute('stroke-width', '2');
+                        box.setAttribute('stroke-opacity', '0.8');
+                        g_annot.appendChild(box);
+                    }
+                }
+            }
             // Pseudoknot pairs ([], {}, <> brackets) — dashed, distinct  color
             if (this._showPseudoknots !== false) {
+				const pkCovMap = new Map(
+					(this._rna.pseudoCovAnnotations || []).map(({ i, j, color }) => [pairKey(i, j), color])
+				);
 				for (const ps of pseudoPairs) {
+					const key = pairKey(ps.i, ps.j);
+					const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#0969da';
+					const pkWidth = parseFloat(cs.getPropertyValue('--rv-pseudopair-width')) || 2;
+					const arcColor = pkCovMap.get(key) ?? pkColor;
+					const strokeW = pkCovMap.has(key) ? pkWidth * 1.5 : pkWidth;
 					const ax = coords[ps.i].x, ay = coords[ps.i].y;
 					const bx = coords[ps.j].x, by = coords[ps.j].y;
 					const mx = (ax + bx) / 2, my = (ay + by) / 2;
@@ -5426,7 +5472,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const off = len * 0.35;
 					const arc = document.createElementNS(NS, 'path');
 					arc.setAttribute('d', `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`);
-					arc.setAttribute('class', 'rv-pseudopair');
+					arc.style.cssText = `stroke:${arcColor};stroke-width:${strokeW};fill:none;stroke-linecap:round;stroke-dasharray:5 3`;
 					g_pk.appendChild(arc);
 				}
 			}
