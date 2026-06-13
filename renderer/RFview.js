@@ -847,6 +847,26 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         return helices;
     }
     // Extracts all base-pair positions from a dot-bracket string as a Set of "i,j" strings (i<j)
+    function buildPairsArray(structure) {
+        const n = structure.length;
+        const p = new Int32Array(n).fill(-1);
+        const st = {};
+        const cl = { ')': '(', ']': '[', '}': '{', '>': '<' };
+        for (let i = 0; i < n; i++) {
+            const c = structure[i];
+            if ('([{<'.includes(c) || (c >= 'A' && c <= 'Z')) {
+                if (!st[c]) st[c] = [];
+                st[c].push(i);
+            } else if (cl[c]) {
+                const j = st[cl[c]]?.pop();
+                if (j != null) { p[i] = j; p[j] = i; }
+            } else if (c >= 'a' && c <= 'z') {
+                const j = st[c.toUpperCase()]?.pop();
+                if (j != null) { p[i] = j; p[j] = i; }
+            }
+        }
+        return p;
+    }
     function getStructurePairSet(structure) {
         const pairs = new Set();
         const stacks = {
@@ -3440,36 +3460,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             else
                 for (let i = 0; i < this._rna.n; i++) o2r.set(i, i);
             const n = this._rna.n;
-            const _pairsArr = (() => {
-                const p = new Array(this._rna.n).fill(-1);
-                const st = {
-                        '(': [],
-                        '[': [],
-                        '{': [],
-                        '<': []
-                    },
-                    cl = {
-                        ')': '(',
-                        ']': '[',
-                        '}': '{',
-                        '>': '<'
-                    };
-                const s = this._rna.structure || '';
-                for (let i = 0; i < s.length; i++) {
-                    const c = s[i];
-                    if (st[c]) st[c].push(i);
-                    else if (cl[c]) {
-                        const j = st[cl[c]].pop();
-                        if (j != null) {
-                            p[i] = j;
-                            p[j] = i;
-                        }
-                    }
-                }
-                return p;
-            })();
+            const _pairsArr = buildPairsArray(this._rna.structure || '');
             const helixAnnotations = helices.map(h => {
-                if (h.helixType === 'PK') return null;
                 // Collect all rendered positions in each arm range
                 const ri5All = [],
                     ri3Set = new Set();
@@ -3496,17 +3488,33 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }
                 }
                 subHelices.push(cur);
+                // Split sub-helices into nested and pseudoknot pairs.
+                // PK helix type from RM_HELIX line takes priority; otherwise check structure brackets.
+                const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
+                const isPkHelix = h.helixType === 'PK';
+                const nestedSubs = [], pkPairs = [];
+                for (const sh of subHelices) {
+                    const nPos5p = [], nPos3p = [];
+                    for (let k = 0; k < sh.length; k++) {
+                        if (isPkHelix || pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
+                            pkPairs.push({ i: sh[k].ri5, j: sh[k].ri3 });
+                        else { nPos5p.push(sh[k].ri5); nPos3p.push(sh[k].ri3); }
+                    }
+                    if (nPos5p.length) nestedSubs.push({ pos5p: nPos5p, pos3p: nPos3p });
+                }
                 return {
-                    subHelices: subHelices.map(sh => ({
-                        pos5p: sh.map(p => p.ri5),
-                        pos3p: sh.map(p => p.ri3)
-                    })),
+                    nestedSubs,
+                    pkPairs,
                     evalue: h.evalue,
                     pvalue: h.pvalue
                 };
-            }).filter(a => a?.subHelices?.length > 0);
+            }).filter(a => a?.nestedSubs?.length > 0 || a?.pkPairs?.length > 0);
             if (!helixAnnotations.length) throw new Error('No significant helix positions could be mapped to the current structure.');
-            this._rna.helixAnnotations = helixAnnotations;
+            this._rna.helixAnnotations = helixAnnotations
+                .filter(a => a.nestedSubs.length > 0)
+                .map(a => ({ subHelices: a.nestedSubs, evalue: a.evalue, pvalue: a.pvalue }));
+            const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
+            if (pkGlowPairs.length) this._rna.pseudoHelixCovAnnotations = pkGlowPairs;
             this._rna.isCovAnnot = true;
             this._showPairAnnotations = true;
             if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
@@ -4582,36 +4590,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             else
                                 for (let i = 0; i < layout.n; i++) o2r.set(i, i);
                             // Build pairs array from rendered structure
-                            const _lpa = (() => {
-                                const p = new Array(layout.n).fill(-1);
-                                const st = {
-                                        '(': [],
-                                        '[': [],
-                                        '{': [],
-                                        '<': []
-                                    },
-                                    cl = {
-                                        ')': '(',
-                                        ']': '[',
-                                        '}': '{',
-                                        '>': '<'
-                                    };
-                                const s = layout.structure || '';
-                                for (let i = 0; i < s.length; i++) {
-                                    const c = s[i];
-                                    if (st[c]) st[c].push(i);
-                                    else if (cl[c]) {
-                                        const j = st[cl[c]].pop();
-                                        if (j != null) {
-                                            p[i] = j;
-                                            p[j] = i;
-                                        }
-                                    }
-                                }
-                                return p;
-                            })();
+                            const _lpa = buildPairsArray(layout.structure || '');
                             const helixAnnotations = sigH.map(h => {
-                                if (h.helixType === 'PK') return null;
                                 const ri5All = [],
                                     ri3Set = new Set();
                                 for (let c = h.start5p; c <= h.end5p; c++)
@@ -4635,17 +4615,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                                     }
                                 }
                                 subHelices.push(cur);
-                                return {
-                                    subHelices: subHelices.map(sh => ({
-                                        pos5p: sh.map(p => p.ri5),
-                                        pos3p: sh.map(p => p.ri3)
-                                    })),
-                                    evalue: h.evalue,
-                                    pvalue: h.pvalue
-                                };
-                            }).filter(a => a?.subHelices?.length > 0);
+                                const pkSet = new Set(layout.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
+                                const isPkHelix = h.helixType === 'PK';
+                                const nestedSubs = [], pkPairs = [];
+                                for (const sh of subHelices) {
+                                    const nPos5p = [], nPos3p = [];
+                                    for (let k = 0; k < sh.length; k++) {
+                                        if (isPkHelix || pkSet.has(pairKey(sh[k].ri5, sh[k].ri3))) pkPairs.push({ i: sh[k].ri5, j: sh[k].ri3 });
+                                        else { nPos5p.push(sh[k].ri5); nPos3p.push(sh[k].ri3); }
+                                    }
+                                    if (nPos5p.length) nestedSubs.push({ pos5p: nPos5p, pos3p: nPos3p });
+                                }
+                                return { nestedSubs, pkPairs, evalue: h.evalue, pvalue: h.pvalue };
+                            }).filter(a => a?.nestedSubs?.length > 0 || a?.pkPairs?.length > 0);
                             if (!helixAnnotations.length) throw new Error(`"${filename}": no helix positions mapped to "${layout.label||'selected'}".`);
-                            layout.helixAnnotations = helixAnnotations;
+                            layout.helixAnnotations = helixAnnotations
+                                .filter(a => a.nestedSubs.length > 0)
+                                .map(a => ({ subHelices: a.nestedSubs, evalue: a.evalue, pvalue: a.pvalue }));
+                            const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
+                            if (pkGlowPairs.length) layout.pseudoHelixCovAnnotations = pkGlowPairs;
                             layout.isCovAnnot = true;
                             this._currentStructIdx = targetIdx;
                             this._rna = layout;
@@ -5432,7 +5420,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 }
             }
 			// Per-base highlight boxes for covarying pseudoknot pairs
-            if (this._showPairAnnotations && this._rna.pseudoCovAnnotations?.length) {
+			// Gated on both pair-annotations AND pseudoknots toggles
+            if (this._showPairAnnotations && this._showPseudoknots !== false && this._rna.pseudoCovAnnotations?.length) {
                 const s = baseR * 2.4;
                 for (const { i, j, color } of this._rna.pseudoCovAnnotations) {
                     for (const pos of [i, j]) {
@@ -5452,15 +5441,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }
                 }
             }
-            // Pseudoknot pairs ([], {}, <> brackets) — dashed, distinct  color
+            // Pseudoknot pairs — curved dashed arcs; cov color + glow when annotations on
             if (this._showPseudoknots !== false) {
-				const pkCovMap = new Map(
-					(this._rna.pseudoCovAnnotations || []).map(({ i, j, color }) => [pairKey(i, j), color])
-				);
+				const _showAnnot = this._showPairAnnotations;
+				const pkCovMap = _showAnnot
+					? new Map((this._rna.pseudoCovAnnotations || []).map(({ i, j, color }) => [pairKey(i, j), color]))
+					: new Map();
+				const pkHelixGlowSet = _showAnnot
+					? new Set((this._rna.pseudoHelixCovAnnotations || []).map(({ i, j }) => pairKey(i, j)))
+					: new Set();
+				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#ef4444';
+				const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#0969da';
+				const pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
 				for (const ps of pseudoPairs) {
 					const key = pairKey(ps.i, ps.j);
-					const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#0969da';
-					const pkWidth = parseFloat(cs.getPropertyValue('--rv-pseudopair-width')) || 2;
 					const arcColor = pkCovMap.get(key) ?? pkColor;
 					const strokeW = pkCovMap.has(key) ? pkWidth * 1.5 : pkWidth;
 					const ax = coords[ps.i].x, ay = coords[ps.i].y;
@@ -5470,8 +5464,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const nx = -(by - ay) / len, ny = (bx - ax) / len;
 					const sign = ny >= 0 ? -1 : 1;
 					const off = len * 0.35;
+					const arcD = `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`;
+					if (pkHelixGlowSet.has(key)) {
+						const glow = document.createElementNS(NS, 'path');
+						glow.setAttribute('d', arcD);
+						glow.style.cssText = `stroke:${_helixColor};stroke-width:${pkWidth * 5};fill:none;stroke-linecap:round;opacity:0.25`;
+						g_pk.appendChild(glow);
+					}
 					const arc = document.createElementNS(NS, 'path');
-					arc.setAttribute('d', `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`);
+					arc.setAttribute('d', arcD);
 					arc.style.cssText = `stroke:${arcColor};stroke-width:${strokeW};fill:none;stroke-linecap:round;stroke-dasharray:5 3`;
 					g_pk.appendChild(arc);
 				}
@@ -6862,9 +6863,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const nx = -(by - ay) / len, ny = (bx - ax) / len;
 					const sign = ny >= 0 ? -1 : 1;
 					const off = len * 0.35;
+					const arcD = `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`;
+					if (pkHelixGlowSet.has(key)) {
+						const glow = document.createElementNS(NS, 'path');
+						glow.setAttribute('d', arcD);
+						glow.style.cssText = `stroke:${_helixColor};stroke-width:${_pkWidth * 5};fill:none;stroke-linecap:round;opacity:0.25`;
+						g_pk.appendChild(glow);
+					}
 					const arc = document.createElementNS(NS, 'path');
-					arc.setAttribute('d', `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`);
-					arc.style.cssText = `stroke:${cs.getPropertyValue('--rv-pseudopair').trim()||'#0969da'};stroke-width:${pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3;opacity:${fadeIn}`;
+					arc.setAttribute('d', arcD);
+					arc.style.cssText = `stroke:${arcColor};stroke-width:${strokeW};fill:none;stroke-linecap:round;stroke-dasharray:5 3`;
 					g_pk.appendChild(arc);
 				}
 			}

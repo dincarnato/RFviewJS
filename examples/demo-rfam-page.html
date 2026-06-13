@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFview - RFAM example</title>
+<script src="../RFview.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  #viewer { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+<div id="viewer"></div>
+<script>
+
+  // Embedded Stockholm alignment
+  const _STO = `
+# STOCKHOLM 1.0
+#=GF ID IRE_II
+#=GF AC RF02253
+#=GF DE Iron response element II
+#=GF AU Brown C
+#=GF GA 30.0
+#=GF NC 29.9
+#=GF TC 30.0
+#=GF PI Model1_new
+#=GF SE Leipuviene, R. and Theil, E.C.
+#=GF SS Published; PMID:17849083
+#=GF TP Cis-reg;
+#=GF BM cmbuild -F CM SEED
+#=GF CB cmcalibrate --mpi CM
+#=GF SM cmsearch --cpu 4 --verbose --nohmmonly -T 25.00 -Z 2958934 CM SEQDB
+#=GF DR GO; 0010039; response to iron ion;
+#=GF DR SO; 0001182; iron_responsive_element;
+#=GF RN [1]
+#=GF RM 2498873
+#=GF RT A cytosolic protein binds to structural elements within the iron
+#=GF RT regulatory region of the transferrin receptor mRNA.
+#=GF RA Koeller DM, Casey JL, Hentze MW, Gerhardt EM, Chan LN, Klausner RD,
+#=GF RA Harford JB
+#=GF RL Proc Natl Acad Sci U S A. 1989;86:3574-3578.
+#=GF RN [2]
+#=GF RM 14568251
+#=GF RT The role of the iron responsive element in the control of
+#=GF RT ferroportin1/IREG1/MTP1 gene expression.
+#=GF RA Lymboussaki A, Pignatti E, Montosi G, Garuti C, Haile DJ, Pietrangelo A
+#=GF RL J Hepatol. 2003;39:710-715.
+#=GF RN [3]
+#=GF RM 8530520
+#=GF RT Succinate dehydrogenase b mRNA of Drosophila melanogaster has a functional
+#=GF RT iron-responsive element in its 5'-untranslated region.
+#=GF RA Kohler SA, Henderson BR, Kuhn LC
+#=GF RL J Biol Chem. 1995;270:30781-30786.
+#=GF RN [4]
+#=GF RM 11741608
+#=GF RT Iron-dependent regulation of the divalent metal ion transporter.
+#=GF RA Gunshin H, Allerson CR, Polycarpou-Schwarz M, Rofts A, Rogers JT, Kishi F,
+#=GF RA Hentze MW, Rouault TA, Andrews NC, Hediger MA
+#=GF RL FEBS Lett. 2001;509:309-316.
+#=GF RN [5]
+#=GF RM 16412980
+#=GF RT A novel iron responsive element in the 3'UTR of human MRCKalpha.
+#=GF RA Cmejla R, Petrak J, Cmejlova J
+#=GF RL Biochem Biophys Res Commun. 2006;341:158-166.
+#=GF RN [6]
+#=GF RM 8643505
+#=GF RT Translational regulation of mammalian and Drosophila citric acid cycle
+#=GF RT enzymes via iron-responsive elements.
+#=GF RA Gray NK, Pantopoulos K, Dandekar T, Ackrell BA, Hentze MW
+#=GF RL Proc Natl Acad Sci U S A. 1996;93:4925-4930.
+#=GF RN [7]
+#=GF RM 2050126
+#=GF RT Identification of a novel iron-responsive element in murine and human
+#=GF RT erythroid delta-aminolevulinic acid synthase mRNA.
+#=GF RA Dandekar T, Stripecke R, Gray NK, Goossen B, Constable A, Johansson HE,
+#=GF RA Hentze MW
+#=GF RL EMBO J. 1991;10:1903-1909.
+#=GF RN [8]
+#=GF RM 16760464
+#=GF RT Iron regulation and the cell cycle: identification of an iron-responsive
+#=GF RT element in the 3'-untranslated region of human cell division cycle 14A
+#=GF RT mRNA by a refined microarray-based screening strategy.
+#=GF RA Sanchez M, Galy B, Dandekar T, Bengert P, Vainshtein Y, Stolte J,
+#=GF RA Muckenthaler MU, Hentze MW
+#=GF RL J Biol Chem. 2006;281:22865-22874.
+#=GF RN [9]
+#=GF RM 17417656
+#=GF RT Iron-regulatory proteins limit hypoxia-inducible factor-2alpha expression
+#=GF RT in iron deficiency.
+#=GF RA Sanchez M, Galy B, Muckenthaler MU, Hentze MW
+#=GF RL Nat Struct Mol Biol. 2007;14:420-426.
+#=GF RN [10]
+#=GF RM 16110529
+#=GF RT Deficiency of glutaredoxin 5 reveals Fe-S clusters are required for
+#=GF RT vertebrate haem synthesis.
+#=GF RA Wingert RA, Galloway JL, Barut B, Foott H, Fraenkel P, Axe JL, Weber GJ,
+#=GF RA Dooley K, Davidson AJ, Schmid B, Paw BH, Shaw GC, Kingsley P, Palis J,
+#=GF RA Schubert H, Chen O, Kaplan J, Zon LI
+#=GF RL Nature. 2005;436:1035-1039.
+#=GF RN [11]
+#=GF RM 10468622
+#=GF RT Bacillus subtilis aconitase is an RNA-binding protein.
+#=GF RA Alen C, Sonenshein AL
+#=GF RL Proc Natl Acad Sci U S A. 1999;96:10412-10417.
+#=GF RN [12]
+#=GF RM 9891009
+#=GF RT Molecular cloning of mouse glycolate oxidase. High evolutionary
+#=GF RT conservation and presence of an iron-responsive element-like sequence in
+#=GF RT the mRNA.
+#=GF RA Kohler SA, Menotti E, Kuhn LC
+#=GF RL J Biol Chem. 1999;274:2401-2407.
+#=GF RN [13]
+#=GF RM 11313346
+#=GF RT Regulation of the 75-kDa subunit of mitochondrial complex I by iron.
+#=GF RA Lin E, Graziano JH, Freyer GA
+#=GF RL J Biol Chem. 2001;276:27685-27692.
+#=GF RN [14]
+#=GF RM 22119729
+#=GF RT Accommodating variety in iron-responsive elements: Crystal structure of
+#=GF RT transferrin receptor 1 B IRE bound to iron regulatory protein 1.
+#=GF RA Walden WE, Selezneva A, Volz K
+#=GF RL FEBS Lett. 2012;586:32-35.
+#=GF CC IRE, TFRC, SLC40A1, SDHB, SLC11A2, CDC42BPA, ACO2, ALAS2_H.SAPIENS,
+#=GF CC CDC14A, EPAS1, ALAS2, qoxD, Hao1, NDUFS1, transferrin, Aconitate. The 3D
+#=GF CC structure of IRE_II was reported in PDB 3SN2 [14]
+#=GF WK Iron_response_element
+#=GF SQ 30
+
+DQ496099.1/33592-33622                      UAAUUAUCGGGAACAGUGUUU-CCCAUAAUUU
+DQ496099.1/33076-33106                      UAAUUAUCGGAAGCAGUGCCU-UCCAUAAUUA
+DQ496099.1/33026-33056                      UAUUUAUCAGUGACAGAGUUC-ACUAUAAAUG
+BC002592.2/1805-1836                        UAGCCAUCAGAGCCAGUGUGUUUCUAUGGUUU
+U87926.1/193-223                            ACCUCAUCUUUGUCAGUGCAC-AAAAUGGCGC
+DQ496099.1/33480-33510                      ACAUUAUCGGGAGCAGUGUCU-UCCAUAAUGU
+AC096777.1/125476-125507                    GUACAAUCCUCGGCAGUGUCCUGAGACUGUAU
+DQ065759.1/122-152                          CCAACUUCAGCUACAGUGUUA-GCUAAGUUUG
+BT072252.1/999-1029                         UAAUUAUCGGGAGCAGUGUCU-UCCAUAAUUA
+ABQO010331002.1/2885-2915                   ACAUUAUCGGAAGCAGUGUCU-UCCAUAAUGA
+AANH01009495.1/10595-10625                  ACGUUAUCGGGAGCAGUGUCU-CCCAUAAUGC
+AAPY01264792.1/6848-6818                    UAAUUAUCGGGAACAGCGCUU-CCCAUAAUUU
+AAFR03033680.1/6556-6526                    UAAUUAUCGGGGACAGCGUUU-CCCAUAAUUU
+CAAE01012432.1/1092-1062                    CCAUUAUCGGGAGCAGUGUCU-UCCAUAAUGA
+AAVX01293942.1/615-585                      AAGUUAUCGGGAACAGAGAUU-CCCAUAAUUU
+ABQF01023485.1/2300-2270                    UAAUUAUCGGGGACAGUGUUU-CCCAUAAUUG
+AJ851647.1/104-134                          CCGACUUCAGCUACAGUGCUA-GCUAAGUCGG
+AANN01734046.1/1792-1822                    UGAUUAUCGGGGGCAGUGUCU-CCCAUAAUCC
+CT030428.1/3683-3713                        UAUUUAUCAGUGACAGCGAUC-ACUAUAAAUG
+BAAF04049161.1/677-707                      ACGUUAUCGGAAGCAGUGCCU-UCCAUAAUUA
+AAPN01033802.1/214-244                      GGAUUAUCGGAAGCAGUGACU-UCCAUAAUUU
+ABRT010089884.1/134-104                     CCGACUUCAGCUACAGUGUUG-GCUAAGUUUG
+ABPK01066404.1/64-34                        UUUUUAUCGGGAGCAGUGCCU-UCCAUAAUAA
+ABJB010839612.1/1641-1672                   AUGCAAUCCUCGGCAGUGUCCUGAGACUGCGU
+AF428141.1/386-416                          ACUUCAUCUUUGUCAGUGCAC-AAAAUGGCGC
+AAWZ02031527.1/19065-19095                  CCGACUUCAGCUACAGUGCUA-GCUAAGUUUG
+AAEX03017890.1/298469-298439                CCGACUUCAGCUACAGUGUUA-GCUAAGUUAG
+CAAB02011656.1/4642-4612                    UCAUUAUCGGGAGCAGUGUCU-CCCAUAAUGU
+BC108025.1/2966-2996                        UAAUUAUCGGAAGCAGUGCCU-UCCAUAAUUG
+URS000080E231_9986/1-29                     -GAUUAUCGGAAGCAGUGCCU-UCCAUAAUC-
+#=GR URS000080E231_9986/1-29      3SN2_B_SS .((((((.((((((...).)).))))))))).
+#=GC SS_cons                                <<<<<<<-<<<<<<___>->>.>>>>>>>>>>
+#=GC RF                                     ccauuAUCgGcggCAGUGUcc.gCcAUaaugg
+//`;
+
+  const _COV = `
+#
+# Method Target_E-val [cov_min,cov_max] [FP | TP True Found | Sen PPV F]
+# GTp    0.1           [-9.74,48.81]    [0 | 8 13 8 | 61.54 100.00 76.19]
+#
+# #tests = 13 (base pairs) 452 (others)
+# in_given  left_pos       right_pos        score      E-value          pvalue      substitutions      power
+#----------------------------------------------------------------------------------------------------------------
+*	         2	        31	21.03144	0.0105305	0.000810036	16		0.54
+*	         4	        29	19.97790	0.0131398	0.00101075	5		0.15
+*	         5	        28	27.23225	0.00187902	0.00014454	4		0.10
+*	         9	        25	31.50658	0.000346963	2.66894e-05	6		0.19
+*	        10	        24	19.06786	0.0161219	0.00124014	2		0.00
+*	        11	        23	48.80690	2.399e-07	1.84538e-08	12		0.42
+*	        12	        21	20.70708	0.011276	0.000867384	7		0.24
+*	        13	        20	36.38589	4.71155e-05	3.62427e-06	8		0.28`;
+
+  const _HLXCOV = `
+# RMs = 1 L = 32
+
+# RM_HELIX NESTED 1-14 18-31, nbp = 13 nbp_cov = 8
+# pvals: 0.0965233,0.000810036,0.0220573,0.00101075,0.00014454,0.0407312,0.316057,2.66894e-05,0.00124014,1.84538e-08,0.000867384,3.62427e-06,0.316057
+# aggregated LANCASTER        E-value: 3.1492e-25 P-value: 3.1492e-25 *
+NESTED  <<<<<<<-<<<<<<___>->>>>>>>>>>>>
+        :<-<<---<<<<<______>>>>>-->>->:`;
+
+  // Consensus sequence/structure for annotation tracks
+  const SEQ = 'KYUMYYGCKKCRACAGUGYUUGVMCRKAAS';
+  const STR = '(((((...(((((......))))).)))))';
+
+  // Per-track reactivity values
+  const VALS_SEQCONS = [0.69, 0.92, 0.89, 0.73, 0.81, 0.35,
+    0.42, 0.47, 0.68, 0.66, 0.92, 0.79,
+    0.89, 0.18, 0.34, 0.45, 0.26, 0.53,
+    0.51, 0.66, 0.66, 0.82, 0.95, 0.77,
+    0.26, 0.79, 0.66, 0.72, 0.79, 0.81];
+
+  const VALS_BPCONS = [0.95, 0.94, 0.64, 0.65, 0.90, 0.11,
+    0.10, 0.06, 0.83, 0.83, 0.82, 0.67,
+    0.77, 0.07, 0.11, 0.14, 0.13, 0.09,
+    0.07, 0.71, 0.63, 0.63, 0.78, 0.73,
+    0.07, 0.92, 0.80, 0.81, 0.70, 0.63];
+
+  const VALS_COV = [0.52, 0.68, 0.59, 0.71, 0.73, 0.02,
+    0.01, 0.10, 0.53, 0.52, 0.92, 0.64,
+    0.83, 0.06, 0.08, 0.03, 0.08, 0.11,
+    0.07, 0.79, 0.75, 0.43, 0.79, 0.71,
+    0.04, 0.42, 0.85, 0.65, 0.77, 0.86];
+
+  const VALS_ENT = [0.12, 0.09, 0.16, 0.10, 0.08, 0.68,
+    0.85, 0.81, 0.26, 0.12, 0.20, 0.13,
+    0.10, 0.59, 0.62, 0.86, 0.82, 0.82,
+    0.81, 0.11, 0.14, 0.22, 0.25, 0.28,
+    0.84, 0.08, 0.22, 0.23, 0.19, 0.11];
+
+  const VALS_MAXCM = [0.82, 0.86, 0.88, 0.93, 0.86, 0.43,
+    0.21, 0.32, 0.93, 0.83, 0.92, 0.64,
+    0.76, 0.26, 0.34, 0.34, 0.20, 0.25,
+    0.27, 0.92, 0.87, 0.66, 0.88, 0.65,
+    0.35, 0.64, 0.60, 0.90, 0.67, 0.68];
+
+
+  // Per-track colormaps
+
+  // seqcons: white → blue (sequence conservation)
+  const CM_SEQCONS = {
+    type: 'gradient', nanColor: '#ccc',
+    stops: [{ value: 0, color: '#e0f2fe' }, { value: 1, color: '#1e3a8a' }],
+    title: 'Seq. cons.', showTitle: true,
+  };
+
+  // bpcons: grey / orange / green (low / mid / high base-pair conservation)
+  const CM_BPCONS = {
+    type: 'gradient', min: 0, nanColor: '#ccc',
+    stops: [
+      { value: 0, color: '#5896bf' },
+      { value: 0.5, color: '#f97316' },
+      { value: 1.0, color: '#16a34a' },
+    ],
+    title: 'BP cons.', showTitle: true,
+  };
+
+  // cov: white → red (covariation score)
+  const CM_COV = {
+    type: 'gradient', nanColor: '#ccc',
+    stops: [{ value: 0, color: '#fff1f2' }, { value: 1, color: '#b91c1c' }],
+    title: 'Covariation', showTitle: true,
+  };
+
+  // ent: dark green → yellow (lower entropy = more conserved = darker)
+  const CM_ENT = {
+    type: 'gradient', nanColor: '#ccc',
+    stops: [
+      { value: 0,   color: '#14532d' },
+      { value: 0.5, color: '#84cc16' },
+      { value: 1,   color: '#fef08a' },
+    ],
+    title: 'Entropy', showTitle: true,
+  };
+
+  // maxcm: light purple → dark purple (CM score)
+  const CM_MAXCM = {
+    type: 'gradient', nanColor: '#ccc',
+    stops: [{ value: 0, color: '#f5f3ff' }, { value: 1, color: '#6d28d9' }],
+    title: 'Max CM', showTitle: true,
+  };
+
+  // Viewer 
+  const viewer = new RFviewJS(document.getElementById('viewer'), {
+
+    transitionDuration: 0,
+    relaxedSequence: true, // Enables custom sequence alphabet (i.e., IUPAC codes)
+    showIndices: true,
+    toolbarPosition: 'left',
+
+    buttons: {
+      manualInput: false,
+      upload: false,
+      cleanOne: false,
+      cleanAll: false,
+      zoomIn: true,
+      zoomOut: true,
+      fit: true,
+      reset: true,
+      save: true,
+      indices: false,
+      colorMap: false,
+      toolbarPos: false,
+      rfam: false,
+    },
+
+    statusBar: true,
+    canvasDrop: false,
+
+  });
+
+  // Load all structures in a single call
+  viewer.load({
+    showColors: true,
+    structures: [
+      // Stockholm alignment (first, with covariation loaded below)
+      ...RFviewJS.parseStockholmFile(_STO, 'R-scape'),
+
+      // Annotation tracks — same sequence/structure, different values/colormaps
+      { label: 'seqcons', sequence: SEQ, structure: STR, values: VALS_SEQCONS, colorMap: CM_SEQCONS },
+      { label: 'bpcons',  sequence: SEQ, structure: STR, values: VALS_BPCONS,  colorMap: CM_BPCONS  },
+      { label: 'cov',     sequence: SEQ, structure: STR, values: VALS_COV,     colorMap: CM_COV     },
+      { label: 'ent',     sequence: SEQ, structure: STR, values: VALS_ENT,     colorMap: CM_ENT     },
+      { label: 'maxcm',   sequence: SEQ, structure: STR, values: VALS_MAXCM,   colorMap: CM_MAXCM   },
+    ],
+  });
+
+  // Covariation applied to the Stockholm structure (first, index 0)
+  viewer.switchToStructure(0);
+  try {
+    viewer.loadCov(_COV);
+  } catch (e) {
+    console.warn('Covariation loading error:', e.message);
+  }
+
+  try {
+    viewer.loadCov(_HLXCOV);
+  } catch (e) {
+    console.warn('Helix covariation loading error:', e.message);
+  }
+
+</script>
+</body>
+</html>
