@@ -83,6 +83,8 @@ if (cliArgs.help || cliArgs.h) {
                                   - radiate
  --svg              <string>    Path to the output SVG file (Default: <structureFile basename>.svg)
  --noLegend                     Omits legends from the exported SVG
+ --noPk                         Omits pseudoknot archs from the exported SVG
+ --noR3d                        Omits CaCoFold-R3D annotations from the exported SVG
  --help                         Shows this help message
 
 `);
@@ -341,7 +343,7 @@ async function runHeadless(args) {
 
         // Embeds all data as JSON so no IPC hand-off is needed.
         // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend });
+         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noR3d: !!args.noR3d });
 
         const code = `
 (function () {
@@ -353,6 +355,8 @@ async function runHeadless(args) {
     const viewer = new RFviewJS(document.getElementById('viewer'), { statusBar: false });
     if (d.layout && d.layout !== 'auto') viewer.setLayoutAlgorithm(d.layout);
     if (d.noLegend) viewer._noLegend = true;
+    if (d.noPk) viewer._showPseudoknots = false;
+    if (d.noR3d) viewer._showR3d = false;
 
     /* Parse structure */
     let structs;

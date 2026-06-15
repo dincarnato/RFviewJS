@@ -36,7 +36,7 @@
     const CSS = `
 a, a:visited, a:hover, a:active, a:focus {color: #656d76}
 body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
-.rv{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr;width:100%;height:100%;overflow:hidden;position:relative;box-sizing:border-box;background:var(--rv-bg,#ffffff);color:var(--rv-text,#1f2328);--rv-bg:#ffffff;--rv-surface:#f6f8fa;--rv-border:#d0d7de;--rv-text:#1f2328;--rv-muted:#656d76;--rv-accent:#0969da;--rv-accent2:#2da44e;--rv-accent3:#8250df;--rv-error:#cf222e;--rv-backbone:#1f2328;--rv-backbone-width:2;--rv-basepair:#1f2328;--rv-basepair-width:2.2;--rv-pseudopair:#0969da;--rv-pseudopair-width:2;--rv-noncanon-dot-r:4.5;--rv-pair-break:#ef4444;--rv-pair-form:#22c55e;--rv-base-fill:#eaeef2;--rv-base-stroke:#1f2328;--rv-base-stroke-width:2;--rv-base-hover:#bbd4f0;--rv-base-label-color:#1f2328;--rv-base-label-font:monospace;--rv-base-label-font-size:13;--rv-base-index-color:#656d76;--rv-base-index-font:monospace;--rv-base-index-font-size:12;--rv-base-radius:11;--rv-base-index-offset:26;--rv-rot-line:#0969da80;--rv-rot-ring:#0969da20;--rv-pair-annot-opacity:0.3;--rv-pair-annot-stroke-width:1.5;--rv-pair-annot-padding:16;--rv-helix-annot-padding:21;--rv-helix-annot-color:#ef4444}
+.rv{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr;width:100%;height:100%;overflow:hidden;position:relative;box-sizing:border-box;background:var(--rv-bg,#ffffff);color:var(--rv-text,#1f2328);--rv-bg:#ffffff;--rv-surface:#f6f8fa;--rv-border:#d0d7de;--rv-text:#1f2328;--rv-muted:#656d76;--rv-accent:#0969da;--rv-accent2:#2da44e;--rv-accent3:#8250df;--rv-error:#cf222e;--rv-backbone:#1f2328;--rv-backbone-width:2;--rv-basepair:#1f2328;--rv-basepair-width:2.2;--rv-pseudopair:#1f2328;--rv-pseudopair-width:2;--rv-noncanon-dot-r:4.5;--rv-pair-break:#ef4444;--rv-pair-form:#22c55e;--rv-base-fill:#eaeef2;--rv-base-stroke:#1f2328;--rv-base-stroke-width:2;--rv-base-hover:#bbd4f0;--rv-base-label-color:#1f2328;--rv-base-label-font:monospace;--rv-base-label-font-size:13;--rv-base-index-color:#656d76;--rv-base-index-font:monospace;--rv-base-index-font-size:12;--rv-base-radius:11;--rv-base-index-offset:26;--rv-rot-line:#0969da80;--rv-rot-ring:#0969da20;--rv-pair-annot-opacity:0.3;--rv-pair-annot-stroke-width:1.5;--rv-pair-annot-padding:16;--rv-helix-annot-padding:21;--rv-helix-annot-color:#064e3b}
 .rv *{box-sizing:border-box}
 .rv-toolbar{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--rv-border,#d0d7de);background:var(--rv-bg,#ffffff);flex-wrap:wrap}
 .rv-btn-label{display:none}
@@ -56,7 +56,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-basepair{stroke:var(--rv-basepair,#000);stroke-width:var(--rv-basepair-width,2.2);fill:none;stroke-linecap:round}
 .rv-bp-dot{fill:var(--rv-basepair,#000);stroke:none}
 .rv-bp-noncanon{fill:var(--rv-noncanon-dot,var(--rv-basepair,#000));stroke:none}
-.rv-pseudopair{stroke:var(--rv-pseudopair,#0969da);stroke-width:var(--rv-pseudopair-width,2);fill:none;stroke-linecap:round;stroke-dasharray:5 3}
+.rv-pseudopair{stroke:var(--rv-pseudopair,#1f2328);stroke-width:var(--rv-pseudopair-width,2);fill:none;stroke-linecap:round;stroke-dasharray:5 3}
 .rv-aln-legend{display:none;position:absolute;bottom:32px;left:10px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:var(--rv-text,#1f2328);pointer-events:none;z-index:5;white-space:nowrap}
 .rv-aln-legend *{pointer-events:none}
 .rv-aln-legend.rv-visible{display:block}
@@ -385,6 +385,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             ac = null;
         const seqMap = new Map(); // seqId to concatenated gapped sequence
         const ssConsParts = [];
+        const ssConsFeatureParts = {};
 
         function buildRecord() {
             if (!ssConsParts.length || !seqMap.size) return;
@@ -570,12 +571,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }
             // filenameFallback (caller-provided label) takes priority over #=GF ID / AC
             const label = (filenameFallback ? filenameFallback.replace(/\.[^.]+$/, '') : null) || id || ac || 'alignment';
-            // Trims terminal unstructured positions (leading/trailing dots only)
+            // Trims terminal unstructured positions (leading/trailing dots only).
+            // Saves the untrimmed data in ssEnds so it can be restored by the toggle.
             let trimS = 0,
                 trimE = filteredStruct.length - 1;
             while (trimS <= trimE && filteredStruct[trimS] === '.') trimS++;
             while (trimE >= trimS && filteredStruct[trimE] === '.') trimE--;
+            let ssEnds = null;
             if (trimS > 0 || trimE < filteredStruct.length - 1) {
+                ssEnds = {
+                    trimS, trimE,
+                    fullSeq:          filteredSeq.slice(),
+                    fullStruct:       filteredStruct.slice(),
+                    fullBaseDisplay:  baseDisplay.slice(),
+                    fullPositionLabels: positionLabels.slice(),
+                };
                 filteredSeq.splice(trimE + 1);
                 filteredStruct.splice(trimE + 1);
                 baseDisplay.splice(trimE + 1);
@@ -584,6 +594,86 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 filteredStruct.splice(0, trimS);
                 baseDisplay.splice(0, trimS);
                 positionLabels.splice(0, trimS);
+            }
+            const _colToRi = new Map();
+            positionLabels.forEach((col1, ri) => _colToRi.set(col1 - 1, ri));
+            const ssConsFeatures = {};
+            // Extra pairs from SS_cons_* features to inject into the structure
+            // (bracket chars in these lines represent additional base pairs).
+            // We collect all such pairs first, then add them to filteredStruct.
+            const extraPairs = []; // {i, j} in residue indices, i < j
+            const BRACKET_OPEN  = /[([{<A-Z]/;
+            const BRACKET_PAIRS = {'(':')', '[':']', '{':'}', '<':'>'};
+            for (const [fn, parts] of Object.entries(ssConsFeatureParts)) {
+                const str = parts.join('');
+                if (str.length !== alnLen) continue;
+                const pos = [];
+                // Collect annotation positions (non-structure chars)
+                // and parse bracket pairs for structure injection.
+                const featureStacks = {};
+                for (let col = 0; col < alnLen; col++) {
+                    const c = str[col];
+                    const ri = _colToRi.get(col);
+                    if (c === '.' || c === ':' || c === '-' || c === '_') continue;
+                    // Bracket chars: parse as pairs
+                    if ('([{<'.includes(c) || (c >= 'A' && c <= 'Z')) {
+                        if (!featureStacks[c]) featureStacks[c] = [];
+                        featureStacks[c].push(col);
+                    } else if (')]}>'.includes(c)) {
+                        const openCh = {'(':'(', ')':'(', ']':'[', '[':'[', '}':'{', '{':'{', '>':'<', '<':'<'}[c] || null;
+                        if (openCh && featureStacks[openCh]?.length) {
+                            const openCol = featureStacks[openCh].pop();
+                            const riOpen = _colToRi.get(openCol);
+                            const riClose = ri;
+                            if (riOpen !== undefined && riClose !== undefined) {
+                                extraPairs.push({ i: Math.min(riOpen, riClose), j: Math.max(riOpen, riClose) });
+                            }
+                        }
+                    } else if (c >= 'a' && c <= 'z') {
+                        const open = c.toUpperCase();
+                        if (featureStacks[open]?.length) {
+                            const openCol = featureStacks[open].pop();
+                            const riOpen = _colToRi.get(openCol);
+                            if (riOpen !== undefined && ri !== undefined) {
+                                extraPairs.push({ i: Math.min(riOpen, ri), j: Math.max(riOpen, ri) });
+                            }
+                        }
+                    }
+                    // All non-dot chars are annotation positions
+                    if (ri !== undefined) pos.push(ri);
+                }
+                if (pos.length) ssConsFeatures[fn] = pos.sort((a,b)=>a-b);
+            }
+            // Inject extra pairs into filteredStruct if not already paired.
+            // Determine which bracket types are already used in the main structure.
+            if (extraPairs.length) {
+                const structArr = filteredStruct; // already trimmed array of chars
+                const n2 = structArr.length;
+                // Parse existing pairs to know which positions are already paired
+                const existingPaired = new Set();
+                for (let k = 0; k < n2; k++) {
+                    if (structArr[k] !== '.' && structArr[k] !== ':') existingPaired.add(k);
+                }
+                // Find an unused bracket type for the extra pairs
+                const usedBrackets = new Set(structArr);
+                const candidates = ['[', ']', '{', '}', '<', '>', 'A', 'a', 'B', 'b'];
+                let openBk = null, closeBk = null;
+                for (let ci = 0; ci < candidates.length; ci += 2) {
+                    if (!usedBrackets.has(candidates[ci]) && !usedBrackets.has(candidates[ci+1])) {
+                        openBk = candidates[ci]; closeBk = candidates[ci+1];
+                        break;
+                    }
+                }
+                if (openBk) {
+                    for (const { i, j } of extraPairs) {
+                        if (i < 0 || j >= n2 || i >= n2) continue;
+                        if (existingPaired.has(i) || existingPaired.has(j)) continue;
+                        structArr[i] = openBk;
+                        structArr[j] = closeBk;
+                        existingPaired.add(i);
+                        existingPaired.add(j);
+                    }
+                }
             }
             records.push({
                 label,
@@ -597,6 +687,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 })),
                 alnStruct: structFull,
                 alnLen: alnLen,
+                ssConsFeatures,
+                ssEnds,  // null if no terminal unpaired bases were trimmed
             });
         }
         for (const raw of text.replace(/\r/g, '').split('\n')) {
@@ -607,6 +699,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 ac = null;
                 seqMap.clear();
                 ssConsParts.length = 0;
+                for (const k of Object.keys(ssConsFeatureParts)) delete ssConsFeatureParts[k];
                 continue;
             }
             if (raw.startsWith('#=GF ID ')) {
@@ -621,6 +714,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (raw.startsWith('#=GC')) {
                 const fields = raw.split(/\s+/);
                 if (fields[1] === 'SS_cons' && fields[2]) ssConsParts.push(fields[2]);
+                else if (fields[1]?.startsWith('SS_cons_') && fields[2]) {
+                    const fn = fields[1].slice(8);
+                    if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = [];
+                    ssConsFeatureParts[fn].push(fields[2]);
+                }
                 continue;
             }
             if (raw.startsWith('#')) continue;
@@ -776,18 +874,24 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             label: 'E ≥ 0.2',
             color: '#8b949e'
         }, ];
+        // Detect format from the column-header comment line.
+        // Standard R-scape:  # left_pos  right_pos  score  E-value ...
+        //   data line:       *  181  218  813.4  3.5e-22 ...   (cols: [*,left,right,score,evalue])
+        // CaCoFold R-scape:  # in_fold  in_given  left_pos  right_pos  score  E-value ...
+        //   data line:       *  *  181  218  813.4  3.5e-22 ...   (cols: [*,*,left,right,score,evalue])
+        // Detect by presence of 'in_fold' or 'in_given' in the header.
+        const isCaCoFold = /\bin_fold\b|\bin_given\b/i.test(text);
+        const off = isCaCoFold ? 1 : 0; // extra column offset for CaCoFold format
         const pairs = [];
         for (const raw of text.replace(/\r/g, '').split('\n')) {
-            // Only process lines whose first non-whitespace character is '*'.
-            // Comment lines (#), blank lines, and non-starred data lines are all skipped.
             const line = raw.trim();
             if (!line.startsWith('*')) continue;
-            // columns (whitespace-separated): * left right score evalue pvalue subs power
+            // cols[0]='*', [1+off]=left_pos, [2+off]=right_pos, [3+off]=score, [4+off]=E-value
             const cols = line.split(/\s+/);
-            if (cols.length < 5) continue;
-            const left = parseInt(cols[1]);
-            const right = parseInt(cols[2]);
-            const evalue = parseFloat(cols[4]);
+            if (cols.length < 5 + off) continue;
+            const left   = parseInt(cols[1 + off]);
+            const right  = parseInt(cols[2 + off]);
+            const evalue = parseFloat(cols[4 + off]);
             if (!Number.isInteger(left) || !Number.isInteger(right) || left < 1 || right < 1) continue;
             if (isNaN(evalue)) continue;
             const bucket = COV_COLORS.find(b => evalue < b.limit) ?? COV_COLORS[COV_COLORS.length - 1];
@@ -819,7 +923,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     start5p: a - 1,
                     end5p: b - 1,
                     start3p: Math.min(c, d) - 1,
-                    end3p: Math.max(c, d),
+                    end3p: Math.max(c, d) - 1,
                     reversed3p: c > d,
                     nbp: hm[6] ? +hm[6] : 0,
                     nbpCov: hm[7] ? +hm[7] : 0,
@@ -2614,6 +2718,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (config.height) container.style.height = typeof config.height === 'number' ? config.height + 'px' : config.height;
             this._container = container;
             this._lastConfig = null;
+            this._constructorConfig = config; // preserved for defaults like showIndices
             // UI layout config (fixed at construction time)
             const validPos = ['top', 'bottom', 'left', 'right'];
             this._toolbarPos = validPos.includes(config.toolbarPosition) ? config.toolbarPosition : 'left';
@@ -2639,7 +2744,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 cleanOne: true,
                 cleanAll: true,
                 manualInput: true,
-                toolbarPos: true
+                toolbarPos: true,
+                r3d: true,
+                ssEnds: true,
             };
             const b = config.buttons;
             this._btns = b === false ? {
@@ -2657,7 +2764,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 cleanOne: false,
                 cleanAll: false,
                 manualInput: false,
-                toolbarPos: false
+                toolbarPos: false,
+                r3d: false,
+                ssEnds: false,
             } : (b && typeof b === 'object' ? {
                 ...ALL_ON,
                 ...b
@@ -2747,11 +2856,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
                 ].join('')],
                 [b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
-                [b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots, [
+                [b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.r3d !== false || b.ssEnds !== false, [
                     b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
                     b.colorMap ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity">${ICON_COLORMAP}<span class="rv-btn-label">Reactivity</span></button>` : '',
                     b.pairAnnotations ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations">${ICON_PAIR_ANNOT}<span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
                     b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
+                    b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d" title="SS_cons annotations" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:9px;letter-spacing:-0.5px;line-height:14px;display:inline-block;width:14px;text-align:center">R3D</span><span class="rv-btn-label">Annotations</span></button>` : '',
+                    b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5\'/3\' ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:9px;letter-spacing:-0.5px;line-height:14px;display:inline-block;width:14px;text-align:center">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
                 ].join('')],
                 // Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
                 [b.layout, [b.layout ? `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>` : '', `<button class="rv-btn rv-btn-toggle rv-btn-aln" title="Alignment view" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span></button>`, ].join('')],
@@ -2988,9 +3099,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._chkColors = q('.rv-chk-colors');
             this._chkPAnnot = q('.rv-chk-pannot');
             this._chkPk = q('.rv-chk-pk');
+            this._chkR3d = q('.rv-chk-r3d');
+            this._chkSsEnds = q('.rv-chk-ssends');
             this._alnLegend = q('.rv-aln-legend');
             this._showPseudoknots = this._config?.showPseudoknots !== false;
             if (this._chkPk) this._chkPk.classList.toggle('rv--active', this._showPseudoknots);
+            this._showR3d = this._constructorConfig?.showR3d !== false;
+            if (this._chkR3d) this._chkR3d.classList.toggle('rv--active', this._showR3d);
+            this._showSsEnds = this._constructorConfig?.showSsEnds === true;
+            if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
             this._layoutBtn = q('.rv-btn-layout');
             this._uploadBtn = q('.rv-btn-upload');
             this._cleanBtn = q('.rv-btn-clean');
@@ -3064,6 +3181,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     this._showPseudoknots = !this._showPseudoknots;
                     this._chkPk.classList.toggle('rv--active', this._showPseudoknots);
                     this._render();
+                });
+            }
+            if (this._chkR3d) {
+                this._chkR3d.addEventListener('click', () => {
+                    this._showR3d = !this._showR3d;
+                    this._chkR3d.classList.toggle('rv--active', this._showR3d);
+                    this._render();
+                });
+            }
+            if (this._chkSsEnds) {
+                this._chkSsEnds.addEventListener('click', () => {
+                    this._showSsEnds = !this._showSsEnds;
+                    this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
+                    this._rebuildCurrentLayout();
                 });
             }
             if (this._chkPAnnot) {
@@ -3406,6 +3537,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 // Show legend if  color-map is already active (e.g. showColors:true in config)
             }
             this._updateLegendVisibility();
+            // Restore or hide indices based on this structure type.
+            this._applyStructIndices(this._rna, config);
             this._render();
             this.fit();
         }
@@ -3445,8 +3578,36 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 }));
             }
             this._rna.isCovAnnot = true;
-            this._showPairAnnotations = true;
-            if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+            if (this._constructorConfig?.showPairAnnotations !== false) {
+                this._showPairAnnotations = true;
+                if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+            }
+            // Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
+            // always has the canonical unshifted source regardless of ssEnds state.
+            {
+                const _layout = this._structLayouts[this._currentStructIdx];
+                const _base   = _layout?._base;
+                if (_base && _base !== _layout) {
+                    const _shift = _base.ssEnds?.trimS || 0;
+                    const _unshift = (arr, keys) => arr?.map(p => {
+                        const r = {...p};
+                        for (const k of keys) if (r[k] != null) r[k] -= _shift;
+                        return r;
+                    });
+                    _base.pairAnnotations           = _unshift(this._rna.pairAnnotations, ['i','j'])   || _base.pairAnnotations;
+                    _base.pairAnnotColorMap         = this._rna.pairAnnotColorMap                      || _base.pairAnnotColorMap;
+                    _base.helixAnnotations          = this._rna.helixAnnotations?.map(h => ({
+                        ...h,
+                        subHelices: h.subHelices.map(sh => ({
+                            pos5p: sh.pos5p.map(p => p - _shift),
+                            pos3p: sh.pos3p.map(p => p - _shift),
+                        }))
+                    }))                                                                                 || _base.helixAnnotations;
+                    _base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i','j']) || _base.pseudoHelixCovAnnotations;
+                    _base.pseudoCovAnnotations      = _unshift(this._rna.pseudoCovAnnotations, ['i','j'])      || _base.pseudoCovAnnotations;
+                    _base.isCovAnnot                = this._rna.isCovAnnot;
+                }
+            }
             this._render();
         }
         // Load significant helix-level covariation from .helixcov text.
@@ -3461,19 +3622,27 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 for (let i = 0; i < this._rna.n; i++) o2r.set(i, i);
             const n = this._rna.n;
             const _pairsArr = buildPairsArray(this._rna.structure || '');
+            // Build a combined partner map covering both nested and pseudoknot pairs
+            const _partnerMap = new Map();
+            for (let i = 0; i < this._rna.n; i++) {
+                if (_pairsArr[i] >= 0) { _partnerMap.set(i, _pairsArr[i]); }
+            }
+            for (const ps of this._rna.pseudoPairs) {
+                _partnerMap.set(ps.i, ps.j);
+                _partnerMap.set(ps.j, ps.i);
+            }
             const helixAnnotations = helices.map(h => {
-                // Collect all rendered positions in each arm range
-                const ri5All = [],
-                    ri3Set = new Set();
+                // Collect all rendered positions in the 5' arm range
+                const ri5All = [];
                 for (let c = h.start5p; c <= h.end5p; c++)
                     if (o2r.has(c)) ri5All.push(o2r.get(c));
-                for (let c = h.start3p; c <= h.end3p; c++)
-                    if (o2r.has(c)) ri3Set.add(o2r.get(c));
-                // Keep only positions whose structure partner is in the 3' arm range
-                const hp = ri5All.filter(r => _pairsArr[r] >= 0 && ri3Set.has(_pairsArr[r])).map(r => ({
-                    ri5: r,
-                    ri3: _pairsArr[r]
-                })).sort((a, b) => a.ri5 - b.ri5);
+                // Map each 5' position directly to its structural partner.
+                // Do NOT filter by a 3' column range — for reversed helices (c > d)
+                // the actual partners may extend beyond the reported range end.
+                const hp = ri5All
+                    .filter(r => _partnerMap.has(r))
+                    .map(r => ({ ri5: r, ri3: _partnerMap.get(r) }))
+                    .sort((a, b) => a.ri5 - b.ri5);
                 if (!hp.length) return null;
                 // Group consecutive pairs (ri5+1, ri3-1) into sub-helices
                 const subHelices = [];
@@ -3516,9 +3685,37 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
             if (pkGlowPairs.length) this._rna.pseudoHelixCovAnnotations = pkGlowPairs;
             this._rna.isCovAnnot = true;
-            this._showPairAnnotations = true;
-            if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+            if (this._constructorConfig?.showPairAnnotations !== false) {
+                this._showPairAnnotations = true;
+                if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+            }
             this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, true);
+            // Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
+            // always has the canonical unshifted source regardless of ssEnds state.
+            {
+                const _layout = this._structLayouts[this._currentStructIdx];
+                const _base   = _layout?._base;
+                if (_base && _base !== _layout) {
+                    const _shift = _base.ssEnds?.trimS || 0;
+                    const _unshift = (arr, keys) => arr?.map(p => {
+                        const r = {...p};
+                        for (const k of keys) if (r[k] != null) r[k] -= _shift;
+                        return r;
+                    });
+                    _base.pairAnnotations           = _unshift(this._rna.pairAnnotations, ['i','j'])   || _base.pairAnnotations;
+                    _base.pairAnnotColorMap         = this._rna.pairAnnotColorMap                      || _base.pairAnnotColorMap;
+                    _base.helixAnnotations          = this._rna.helixAnnotations?.map(h => ({
+                        ...h,
+                        subHelices: h.subHelices.map(sh => ({
+                            pos5p: sh.pos5p.map(p => p - _shift),
+                            pos3p: sh.pos3p.map(p => p - _shift),
+                        }))
+                    }))                                                                                 || _base.helixAnnotations;
+                    _base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i','j']) || _base.pseudoHelixCovAnnotations;
+                    _base.pseudoCovAnnotations      = _unshift(this._rna.pseudoCovAnnotations, ['i','j'])      || _base.pseudoCovAnnotations;
+                    _base.isCovAnnot                = this._rna.isCovAnnot;
+                }
+            }
             this._render();
         }
         // Fit the structure to fill the canvas
@@ -3585,6 +3782,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (this._chkPAnnot) this._chkPAnnot.classList.toggle('rv--active', this._showPairAnnotations);
             this._buildPairAnnotLegend(this._rna?.pairAnnotColorMap, this._rna?.isCovAnnot);
             this._render();
+        }
+        // Toggle SS_cons annotations (R3D) on or off
+        setShowR3d(val) {
+            this._showR3d = !!val;
+            if (this._chkR3d) this._chkR3d.classList.toggle('rv--active', this._showR3d);
+            this._render();
+        }
+        // Toggle display of trimmed single-stranded 5'/3' end bases on or off.
+        // Has no effect if the current structure has no trimmed ss ends.
+        setShowSsEnds(val) {
+            const show = !!val;
+            if (show === this._showSsEnds) return;
+            this._showSsEnds = show;
+            if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
+            this._rebuildCurrentLayout();
         }
         // Switch the layout algorithm and re-renders the current structure if one is loaded
         setLayoutAlgorithm(algo) {
@@ -3677,6 +3889,367 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             handle.addEventListener('pointercancel', () => {
                 active = false;
             });
+        }
+        _renderSsConsAnnotations(gLines, gLabels, coords, n, features, pairs, pseudoPairs, cs) {
+            const NS = 'http://www.w3.org/2000/svg';
+            const cx  = coords.reduce((s,c) => s+c.x, 0) / n;
+            const cy  = coords.reduce((s,c) => s+c.y, 0) / n;
+            const bbW    = parseFloat(cs.getPropertyValue('--rv-backbone-width')) || 2;
+            const baseR  = parseFloat(cs.getPropertyValue('--rv-base-radius')) || 11;
+            const idxOff = parseFloat(cs.getPropertyValue('--rv-base-index-offset')) || 26;
+            const lineCol = cs.getPropertyValue('--rv-text').trim() || '#1f2328';
+            const lblCol  = cs.getPropertyValue('--rv-base-index-color').trim() || '#656d76';
+            const bgCol   = cs.getPropertyValue('--rv-bg').trim() || '#ffffff';
+            const lSz    = parseFloat(cs.getPropertyValue('--rv-base-index-font-size')) || 12;
+            const lFont  = cs.getPropertyValue('--rv-base-index-font').trim() || 'monospace';
+            // pad < baseR+idxOff so ss_cons lines sit inside the index label radius;
+            // loop indices go inward so no conflict; helix indices already outside
+            const pad    = baseR + lSz * 1.2;
+
+            // ── Pseudoknot partner map ─────────────────────────────────────────
+            const pkPartner = new Map();
+            for (const p of pseudoPairs) { pkPartner.set(p.i, p.j); pkPartner.set(p.j, p.i); }
+
+            // ── Canvas occupancy map ───────────────────────────────────────────
+            const occupied = [];
+            const addOccupied = (cx2, cy2, tw, th) =>
+                occupied.push({ x: cx2 - tw/2, y: cy2 - th/2, w: tw, h: th });
+            const isOccupied = (cx2, cy2, tw, th) => {
+                const lx = cx2 - tw/2, ly = cy2 - th/2;
+                return occupied.some(o =>
+                    lx < o.x+o.w+2 && lx+tw > o.x-2 && ly < o.y+o.h+2 && ly+th > o.y-2);
+            };
+
+            // Pre-fill with index label bounding boxes.
+            // Loop-base indices are now flipped INWARD, so we register them inward.
+            for (let i = 0; i < n; i++) {
+                if (i === 0 || (i + 1) % 10 === 0 || i === n - 1) {
+                    const pi = Math.max(0,i-1), ni2 = Math.min(n-1,i+1);
+                    const tx = coords[ni2].x-coords[pi].x, ty = coords[ni2].y-coords[pi].y;
+                    const tl = Math.hypot(tx,ty)||1;
+                    let inx = -ty/tl, iny = tx/tl;
+                    if ((coords[i].x-cx)*inx+(coords[i].y-cy)*iny < 0) { inx=-inx; iny=-iny; }
+                    // Unpaired (loop) bases: index is placed INWARD — flip direction
+                    const inLoop = pairs[i] < 0 && !pkPartner.has(i);
+                    if (inLoop) { inx = -inx; iny = -iny; }
+                    const ix = coords[i].x + inx*(baseR+idxOff);
+                    const iy = coords[i].y + iny*(baseR+idxOff);
+                    addOccupied(ix, iy, lSz*4.5, lSz*2.2);
+                }
+            }
+
+            // ── Arc-length helpers ─────────────────────────────────────────────
+            const arcLen = (pts) => {
+                const L = [0];
+                for (let k=1; k<pts.length; k++)
+                    L.push(L[k-1] + Math.hypot(pts[k].x-pts[k-1].x, pts[k].y-pts[k-1].y));
+                return L;
+            };
+            const ptAtT = (pts, L, t) => {
+                const tot = L[L.length-1];
+                if (tot === 0) return pts[0];
+                const tgt = Math.max(0, Math.min(tot, t*tot));
+                for (let k=1; k<L.length; k++) {
+                    if (L[k] >= tgt || k === L.length-1) {
+                        const frac = L[k]===L[k-1] ? 0 : (tgt-L[k-1])/(L[k]-L[k-1]);
+                        // Interpolate nx,ny so the label direction reflects the actual
+                        // midpoint normal rather than always using the first segment endpoint.
+                        const nxi = pts[k-1].nx + frac*(pts[k].nx-pts[k-1].nx);
+                        const nyi = pts[k-1].ny + frac*(pts[k].ny-pts[k-1].ny);
+                        const nl  = Math.hypot(nxi, nyi) || 1;
+                        return {
+                            x:  pts[k-1].x + frac*(pts[k].x-pts[k-1].x),
+                            y:  pts[k-1].y + frac*(pts[k].y-pts[k-1].y),
+                            nx: nxi/nl, ny: nyi/nl
+                        };
+                    }
+                }
+                return pts[pts.length-1];
+            };
+
+            // ── Merge labels that share a start position ─────────────────────
+            const edgeGap = lSz * 3.5;
+            const toRuns = (positions) => {
+                const runs = []; let run = [positions[0]];
+                for (let k = 1; k < positions.length; k++) {
+                    if (positions[k] <= positions[k-1]+2) run.push(positions[k]);
+                    else { runs.push(run); run = [positions[k]]; }
+                }
+                runs.push(run); return runs;
+            };
+            // Per-position labels: every annotated position (non-'.' non-':') gets a label.
+            // Features sharing a position get one merged label (alphabetically sorted).
+            const posToNames = new Map(); // pos -> [featureName, ...]
+            for (const [name, positions] of Object.entries(features)) {
+                for (const pos of positions) {
+                    if (!posToNames.has(pos)) posToNames.set(pos, []);
+                    posToNames.get(pos).push(name);
+                }
+            }
+            const posLabel = new Map(); // pos -> merged label string
+            const posOwner = new Map(); // pos -> featureName that renders the label
+            for (const [pos, names] of posToNames) {
+                const sorted = [...new Set(names)].sort();
+                posLabel.set(pos, sorted.join(', '));
+                posOwner.set(pos, sorted[0]);
+            }
+
+            // ── Render each feature ───────────────────────────────────────────
+            // Collect placements: render all bg rects first, then all texts on top
+            const labelPlacements = [];
+            for (const [name, positions] of Object.entries(features)) {
+                if (!positions.length) continue;
+                const groups = toRuns(positions);
+                for (const group of groups) {
+                    const lcx = group.reduce((s,i) => s+coords[i].x, 0)/group.length;
+                    const lcy = group.reduce((s,i) => s+coords[i].y, 0)/group.length;
+
+                    // Per-position offset points.
+                    // Each base gets its own outward normal:
+                    //   - paired bases: perpendicular to backbone, pointing away from partner
+                    //   - loop bases: perpendicular to backbone, pointing away from structure centre
+                    // Using a shared normal across all bases in a group caused distortion when
+                    // a group spans both helix and loop positions (e.g. after pseudoknot injection).
+                    const pts = group.map(i => {
+                        let nx, ny;
+                        const partner = pairs[i]>=0 ? pairs[i] : (pkPartner.get(i)??-1);
+                        const pi=Math.max(0,i-1), ni2=Math.min(n-1,i+1);
+                        const tx=coords[ni2].x-coords[pi].x, ty=coords[ni2].y-coords[pi].y;
+                        const tl=Math.hypot(tx,ty)||1;
+                        nx=-ty/tl; ny=tx/tl;
+                        // Pseudoknot bases are treated like loop bases for normal computation —
+                        // using the partner direction causes path distortion in loop regions.
+                        const isHelixBase = pairs[i] >= 0; // only nested pairs, not pseudoknots
+                        if (isHelixBase) {
+                            // Helix base: point away from pair partner
+                            const pdx=coords[pairs[i]].x-coords[i].x, pdy=coords[pairs[i]].y-coords[i].y;
+                            if (pdx*nx+pdy*ny>0) { nx=-nx; ny=-ny; }
+                        } else {
+                            // Loop base (including pseudoknot bases): point away from structure centre.
+                            // For single-base groups lcx==coords[i], so fall back to cx/cy.
+                            const refX = group.length > 1 ? lcx : cx;
+                            const refY = group.length > 1 ? lcy : cy;
+                            if ((coords[i].x-refX)*nx+(coords[i].y-refY)*ny<0) { nx=-nx; ny=-ny; }
+                        }
+                        return { x: coords[i].x+nx*pad, y: coords[i].y+ny*pad, nx, ny };
+                    });
+
+                    // Draw annotation path
+                    // Build path: straight lines for ≤2 pts, normal-based cubic Bezier otherwise.
+                    // The stored normal at each pt is perpendicular to the backbone, so rotating
+                    // it 90° gives the backbone tangent — no ghost endpoints, no endpoint arching.
+                    // bezSegs stores cubic bezier segments for accurate curve-point sampling.
+                    let d;
+                    const bezSegs = []; // { p0,c1,c2,p1 } per segment
+                    if (pts.length < 3) {
+                        d = `M ${pts[0].x} ${pts[0].y}`;
+                        for (let k = 1; k < pts.length; k++) {
+                            d += ` L ${pts[k].x} ${pts[k].y}`;
+                            // Represent straight segment as a degenerate cubic
+                            bezSegs.push({ p0: pts[k-1], c1: pts[k-1], c2: pts[k], p1: pts[k] });
+                        }
+                    } else {
+                        // Tangent at each point = 90° rotation of outward normal,
+                        // chosen to face the direction of travel along the arc.
+                        const tangs = pts.map((p, k) => {
+                            const t1x = p.ny, t1y = -p.nx;
+                            const ref = k < pts.length - 1
+                                ? { x: pts[k+1].x - p.x, y: pts[k+1].y - p.y }
+                                : { x: p.x - pts[k-1].x, y: p.y - pts[k-1].y };
+                            const fwd = ref.x * t1x + ref.y * t1y >= 0;
+                            return fwd ? { x: t1x, y: t1y } : { x: -t1x, y: -t1y };
+                        });
+                        d = `M ${pts[0].x} ${pts[0].y}`;
+                        for (let k = 0; k < pts.length - 1; k++) {
+                            const seg = Math.hypot(pts[k+1].x - pts[k].x, pts[k+1].y - pts[k].y);
+                            const scale = seg / 3;
+                            const c1x = pts[k].x   + tangs[k].x   * scale;
+                            const c1y = pts[k].y   + tangs[k].y   * scale;
+                            const c2x = pts[k+1].x - tangs[k+1].x * scale;
+                            const c2y = pts[k+1].y - tangs[k+1].y * scale;
+                            d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${pts[k+1].x} ${pts[k+1].y}`;
+                            bezSegs.push({
+                                p0: pts[k], c1: { x: c1x, y: c1y },
+                                c2: { x: c2x, y: c2y }, p1: pts[k+1]
+                            });
+                        }
+                    }
+                    // Evaluate a cubic bezier at parameter u in [0,1]
+                    const cubicPt = (s, u) => {
+                        const v = 1 - u;
+                        return {
+                            x: v*v*v*s.p0.x + 3*v*v*u*s.c1.x + 3*v*u*u*s.c2.x + u*u*u*s.p1.x,
+                            y: v*v*v*s.p0.y + 3*v*v*u*s.c1.y + 3*v*u*u*s.c2.y + u*u*u*s.p1.y,
+                        };
+                    };
+                    // Sample the actual drawn curve at a normalised arc-fraction t in [0,1].
+                    // Uses the bezSegs array; falls back to pts[0] for single-point paths.
+                    const curvePtAtT = (t) => {
+                        if (bezSegs.length === 0) return { x: pts[0].x, y: pts[0].y };
+                        if (bezSegs.length === 1) return cubicPt(bezSegs[0], t);
+                        // Distribute t uniformly across segments by count
+                        const raw = t * bezSegs.length;
+                        const si  = Math.min(Math.floor(raw), bezSegs.length - 1);
+                        const u   = raw - si;
+                        return cubicPt(bezSegs[si], u);
+                    };
+                    const path = document.createElementNS(NS,'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', 'rv-ss-cons-line');
+                    path.style.cssText = `stroke:${lineCol};stroke-width:${bbW};fill:none;stroke-linecap:round;stroke-linejoin:round`;
+                    gLines.appendChild(path);
+
+                    // Pre-compute segment bounding boxes — added AFTER label placement
+                    const segM = bbW / 2 + edgeGap;
+                    const segBoxes = [];
+                    for (let k=0; k<pts.length-1; k++) {
+                        segBoxes.push({
+                            x: Math.min(pts[k].x, pts[k+1].x) - segM,
+                            y: Math.min(pts[k].y, pts[k+1].y) - segM,
+                            w: Math.abs(pts[k+1].x - pts[k].x) + 2*segM,
+                            h: Math.abs(pts[k+1].y - pts[k].y) + 2*segM,
+                        });
+                    }
+
+                    // ── Place one label per annotated position owned by this feature ─
+                    const L = arcLen(pts);
+                    const th = lSz * 1.3;
+                    const occMargin = lSz * 1.5;
+                    const isOccupiedBox = (b) => occupied.some(o =>
+                        b.bx < o.x+o.w+occMargin && b.bx+b.bw > o.x-occMargin &&
+                        b.by < o.y+o.h+occMargin && b.by+b.bh > o.y-occMargin);
+
+                    // Collapse consecutive positions with the same label into one label run
+                    const labelRuns = [];
+                    for (let k = 0; k < group.length; k++) {
+                        const pos = group[k];
+                        if (posOwner.get(pos) !== name) continue;
+                        const labelText = posLabel.get(pos) ?? name;
+                        const last = labelRuns[labelRuns.length - 1];
+                        if (last && last.labelText === labelText) last.endK = k;
+                        else labelRuns.push({ labelText, startK: k, endK: k });
+                    }
+                    for (const { labelText, startK, endK } of labelRuns) {
+                        const tw = labelText.length * lSz * 0.62 + lSz * 0.5;
+                        const midK = (startK + endK) / 2;
+                        const tBase = group.length > 1 ? midK / (group.length - 1) : 0.5;
+                        const labelLayout = (pt, extraGap = 0) => {
+                            const gap = edgeGap + extraGap;
+                            const isLR = Math.abs(pt.nx) >= Math.abs(pt.ny);
+                            if (isLR) {
+                                if (pt.nx < 0) {
+                                    const ax = pt.x + pt.nx * gap, ay = pt.y + pt.ny * gap;
+                                    return { lx: ax, ly: ay, anchor:'end',   bx: ax-tw, by: ay-th/2, bw: tw, bh: th };
+                                } else {
+                                    const ax = pt.x + pt.nx * gap, ay = pt.y + pt.ny * gap;
+                                    return { lx: ax, ly: ay, anchor:'start', bx: ax,    by: ay-th/2, bw: tw, bh: th };
+                                }
+                            } else {
+                                const lpad2 = th/2 + gap;
+                                const ax = pt.x + pt.nx * lpad2, ay = pt.y + pt.ny * lpad2;
+                                return { lx: ax, ly: ay, anchor:'middle', bx: ax-tw/2, by: ay-th/2, bw: tw, bh: th };
+                            }
+                        };
+                        // Arc midpoint on the ACTUAL drawn curve (not the pts polyline).
+                        const arcMid = curvePtAtT(tBase);
+                        const placeLabel = (layout) => {
+                            labelPlacements.push({ layout, labelText, arcMid });
+                            occupied.push({ x: layout.bx, y: layout.by, w: layout.bw, h: layout.bh });
+                        };
+                        let placed = false;
+                        const steps = 20;
+                        // Pass 1: normal offset, slide ±45% around this position
+                        for (let step=0; step<=steps && !placed; step++) {
+                            for (const sign of (step===0?[0]:[-1,1])) {
+                                const t = Math.max(0, Math.min(1, tBase + sign*step/steps*0.45));
+                                const layout = labelLayout(ptAtT(pts, L, t));
+                                if (!isOccupiedBox(layout)) { placeLabel(layout); placed = true; break; }
+                            }
+                        }
+                        // Pass 2: doubled gap
+                        for (let step=0; step<=steps && !placed; step++) {
+                            for (const sign of (step===0?[0]:[-1,1])) {
+                                const t = Math.max(0, Math.min(1, tBase + sign*step/steps*0.45));
+                                const layout = labelLayout(ptAtT(pts, L, t), edgeGap);
+                                if (!isOccupiedBox(layout)) { placeLabel(layout); placed = true; break; }
+                            }
+                        }
+                        if (!placed) placeLabel(labelLayout(ptAtT(pts, L, tBase)));
+                    } // end labelRuns
+
+                    // Now add segments to occupancy for future labels
+                    for (const sb of segBoxes) occupied.push(sb);
+                }
+            }
+            // Helper: find the point on the label bg-box edge that lies on the
+            // line from arcMid toward the box centre. This gives a clean edge-exit
+            // point for the leader line so it never overlaps the text.
+            const boxEdgePt = (bx, by, bw, bh, px, py) => {
+                const cx2 = bx + bw / 2, cy2 = by + bh / 2;
+                const dx = cx2 - px, dy = cy2 - py;
+                const distToCx = Math.hypot(dx, dy);
+                if (distToCx === 0) return { x: px, y: py };
+                // Parametric intersection with each of the 4 edges; take smallest t > 0
+                let tMin = Infinity;
+                const edges = [
+                    { nx: 1, ny: 0, c: bx },       // left edge
+                    { nx: -1, ny: 0, c: -(bx+bw) },// right edge
+                    { nx: 0, ny: 1, c: by },        // top edge
+                    { nx: 0, ny: -1, c: -(by+bh) } // bottom edge
+                ];
+                for (const e of edges) {
+                    const denom = e.nx * dx + e.ny * dy;
+                    if (Math.abs(denom) < 1e-9) continue;
+                    const t = (e.c - (e.nx * px + e.ny * py)) / denom;
+                    if (t > 1e-6 && t < tMin) tMin = t;
+                }
+                if (!isFinite(tMin)) return { x: cx2, y: cy2 };
+                return { x: px + tMin * dx, y: py + tMin * dy };
+            };
+
+            // Three-pass DOM rendering: leader lines, then bg rects, then texts (so text is on top).
+            const bgPad = lSz * 0.35;
+            for (const { layout, arcMid } of labelPlacements) {
+                // Find where the leader exits the label box on the side facing arcMid
+                const bx = layout.bx - bgPad, by = layout.by - bgPad;
+                const bw = layout.bw + bgPad*2, bh = layout.bh + bgPad*2;
+                const ep = boxEdgePt(bx, by, bw, bh, arcMid.x, arcMid.y);
+                const dist = Math.hypot(ep.x - arcMid.x, ep.y - arcMid.y);
+                // Always draw the leader — it connects the annotation arc to the label.
+                // Only skip if arcMid is literally inside or touching the box already.
+                if (dist > bbW) {
+                    const leader = document.createElementNS(NS,'line');
+                    leader.setAttribute('x1', ep.x);      // starts at label box edge
+                    leader.setAttribute('y1', ep.y);
+                    leader.setAttribute('x2', arcMid.x);  // ends exactly at annotation arc
+                    leader.setAttribute('y2', arcMid.y);
+                    leader.setAttribute('class', 'rv-ss-cons-leader');
+                    leader.style.cssText = `stroke:${lineCol};stroke-width:${bbW};fill:none;stroke-linecap:round`;
+                    gLabels.appendChild(leader);
+                }
+            }
+            for (const { layout } of labelPlacements) {
+                const bg = document.createElementNS(NS,'rect');
+                bg.setAttribute('x',      layout.bx - bgPad);
+                bg.setAttribute('y',      layout.by - bgPad);
+                bg.setAttribute('width',  layout.bw + bgPad * 2);
+                bg.setAttribute('height', layout.bh + bgPad * 2);
+                bg.setAttribute('fill',   bgCol);
+                bg.setAttribute('stroke', 'none');
+                bg.setAttribute('class',  'rv-ss-cons-bg');
+                gLabels.appendChild(bg);
+            }
+            for (const { layout, labelText } of labelPlacements) {
+                const txt = document.createElementNS(NS,'text');
+                txt.setAttribute('x', layout.lx);
+                txt.setAttribute('y', layout.ly);
+                txt.setAttribute('text-anchor', layout.anchor);
+                txt.setAttribute('dominant-baseline','middle');
+                txt.setAttribute('class', 'rv-ss-cons-label');
+                txt.style.cssText = `font-size:${lSz}px;font-weight:bold;fill:${lblCol};font-family:${lFont}`;
+                txt.textContent = labelText;
+                gLabels.appendChild(txt);
+            }
         }
         _openAbout() {
             this._settingsPanel?.classList.remove('rv-visible');
@@ -3846,9 +4419,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 if (haSection) haSection.style.display = this._rna?.helixAnnotations?.length ? 'block' : 'none';
                 const haColorPicker = this._settingsPanel.querySelector('.rv-set-ha-color');
                 if (haColorPicker) {
-                    const cur = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#ef4444';
+                    const cur = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
                     const hexMatch = cur.match(/#[0-9a-f]{6}/i);
-                    haColorPicker.value = hexMatch ? hexMatch[0] : '#ef4444';
+                    haColorPicker.value = hexMatch ? hexMatch[0] : '#064e3b';
                     haColorPicker.addEventListener('input', () => {
                         this._root.style.setProperty('--rv-helix-annot-color', haColorPicker.value);
                         this._render();
@@ -4589,55 +5162,50 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             if (layout.positionLabels?.length) layout.positionLabels.forEach((col1, ri) => o2r.set(col1 - 1, ri));
                             else
                                 for (let i = 0; i < layout.n; i++) o2r.set(i, i);
-                            // Build pairs array from rendered structure
+                            // Build pairs array from rendered structure (nested + pseudoknot)
                             const _lpa = buildPairsArray(layout.structure || '');
+                            const _lpaMap = new Map();
+                            for (let i = 0; i < layout.n; i++) {
+                                if (_lpa[i] >= 0) _lpaMap.set(i, _lpa[i]);
+                            }
+                            for (const ps of (layout.pseudoPairs || [])) {
+                                _lpaMap.set(ps.i, ps.j);
+                                _lpaMap.set(ps.j, ps.i);
+                            }
                             const helixAnnotations = sigH.map(h => {
-                                const ri5All = [],
-                                    ri3Set = new Set();
+                                const ri5All = [];
                                 for (let c = h.start5p; c <= h.end5p; c++)
                                     if (o2r.has(c)) ri5All.push(o2r.get(c));
-                                for (let c = h.start3p; c <= h.end3p; c++)
-                                    if (o2r.has(c)) ri3Set.add(o2r.get(c));
-                                const hp = ri5All.filter(r => _lpa[r] >= 0 && ri3Set.has(_lpa[r])).map(r => ({
-                                    ri5: r,
-                                    ri3: _lpa[r]
-                                })).sort((a, b) => a.ri5 - b.ri5);
+                                const hp = ri5All
+                                    .filter(r => _lpaMap.has(r))
+                                    .map(r => ({ ri5: r, ri3: _lpaMap.get(r) }))
+                                    .sort((a, b) => a.ri5 - b.ri5);
                                 if (!hp.length) return null;
-                                const subHelices = [];
-                                let cur = [hp[0]];
-                                for (let i = 1; i < hp.length; i++) {
-                                    const pv = cur[cur.length - 1],
-                                        nxt = hp[i];
-                                    if (nxt.ri5 === pv.ri5 + 1 && nxt.ri3 === pv.ri3 - 1) cur.push(nxt);
-                                    else {
-                                        subHelices.push(cur);
-                                        cur = [nxt];
-                                    }
-                                }
-                                subHelices.push(cur);
+                                // Treat all pairs from this helix arm range as one sub-helix.
                                 const pkSet = new Set(layout.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
                                 const isPkHelix = h.helixType === 'PK';
                                 const nestedSubs = [], pkPairs = [];
-                                for (const sh of subHelices) {
+                                {
                                     const nPos5p = [], nPos3p = [];
-                                    for (let k = 0; k < sh.length; k++) {
-                                        if (isPkHelix || pkSet.has(pairKey(sh[k].ri5, sh[k].ri3))) pkPairs.push({ i: sh[k].ri5, j: sh[k].ri3 });
-                                        else { nPos5p.push(sh[k].ri5); nPos3p.push(sh[k].ri3); }
+                                    for (const pair of hp) {
+                                        if (isPkHelix || pkSet.has(pairKey(pair.ri5, pair.ri3))) pkPairs.push({ i: pair.ri5, j: pair.ri3 });
+                                        else { nPos5p.push(pair.ri5); nPos3p.push(pair.ri3); }
                                     }
                                     if (nPos5p.length) nestedSubs.push({ pos5p: nPos5p, pos3p: nPos3p });
                                 }
                                 return { nestedSubs, pkPairs, evalue: h.evalue, pvalue: h.pvalue };
                             }).filter(a => a?.nestedSubs?.length > 0 || a?.pkPairs?.length > 0);
                             if (!helixAnnotations.length) throw new Error(`"${filename}": no helix positions mapped to "${layout.label||'selected'}".`);
-                            layout.helixAnnotations = helixAnnotations
+                            const helixAnnotFinal = helixAnnotations
                                 .filter(a => a.nestedSubs.length > 0)
                                 .map(a => ({ subHelices: a.nestedSubs, evalue: a.evalue, pvalue: a.pvalue }));
+                            layout.helixAnnotations = helixAnnotFinal;
                             const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
                             if (pkGlowPairs.length) layout.pseudoHelixCovAnnotations = pkGlowPairs;
                             layout.isCovAnnot = true;
                             this._currentStructIdx = targetIdx;
                             this._rna = layout;
-                            this._showPairAnnotations = true;
+                            if (this._constructorConfig?.showPairAnnotations !== false) this._showPairAnnotations = true;
                             if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
                             this._buildPairAnnotLegend(layout.pairAnnotColorMap, true);
                             this._buildStructSwitcher();
@@ -4660,14 +5228,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                                 this._upStatus.className = 'rv-upload-status';
                             }
                         }
-                        // Apply to the selected layout (in-place, no reload needed)
+                        // Apply to the selected layout (in-place, no reload needed).
+                        // Mirror onto _structures[targetIdx] so _rebuildCurrentLayout
+                        // always has the canonical unshifted annotations to work from.
                         layout.pairAnnotations = annotArr;
                         layout.pairAnnotColorMap = pairAnnotColorMap;
                         layout.isCovAnnot = !!(isCov || layout.helixAnnotations?.length);
                         this._currentStructIdx = targetIdx;
                         this._rna = layout;
-                        this._showPairAnnotations = true;
-                        if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+                        if (this._constructorConfig?.showPairAnnotations !== false) {
+                            this._showPairAnnotations = true;
+                            if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+                        }
                         this._buildPairAnnotLegend(pairAnnotColorMap, isCov);
                         this._buildStructSwitcher();
                         this._render();
@@ -4807,8 +5379,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 this._pendingStructures = [];
                 this._accumulatedDbFiles = [];
                 if (hasReact) {
-                    this._showColors = true;
-                    if (this._chkColors) this._chkColors.classList.add('rv--active');
+                    if (this._constructorConfig?.showColors !== false) {
+                        this._showColors = true;
+                        if (this._chkColors) this._chkColors.classList.add('rv--active');
+                    }
                     // Only show the  color legend if the structure now in focus has reactivity
                     if (this._rna?.values && this._rna.colorMap?.stops?.length) {
                         this._updateLegend(this._rna.colorMap);
@@ -4847,8 +5421,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             this._rna.pairAnnotations = annotArr;
                             this._rna.pairAnnotColorMap = pairAnnotColorMap;
                             this._rna.isCovAnnot = !!isCov;
-                            this._showPairAnnotations = true;
-                            if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+                            if (this._constructorConfig?.showPairAnnotations !== false) {
+                                this._showPairAnnotations = true;
+                                if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
+                            }
                             this._buildPairAnnotLegend(pairAnnotColorMap, isCov);
                         }
                     }
@@ -4880,7 +5456,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 key,
                 color
             }) => `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${color};border-color:${color}"></span>` + `<span class="rv-pal-key">${key}</span>` + `</div>`).join('');
-            const helixRow = hasHelix ? `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:rgba(239,68,68,0.35);border-color:#ef4444"></span>` + `<span class="rv-pal-key">Helix-level</span></div>` : '';
+            const _helixAnnotCol = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+            const helixRow = hasHelix ? `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${_helixAnnotCol};opacity:0.35;border-color:${_helixAnnotCol}"></span>` + `<span class="rv-pal-key">Helix-level</span></div>` : '';
             const legendTitle = isCov ? 'Covarying pairs' : 'Pair annotations';
             this._palLegend.innerHTML = `<h4>${legendTitle}</h4>${rows}${helixRow}`;
             this._palLegend.style.display = this._showPairAnnotations ? 'block' : 'none';
@@ -4913,7 +5490,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     this._structLayouts[savedIdx] = this._computeLayout(s.sequence, s.structure, vals, cm, pa, pacm, ha, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
 					if (existing?.helixAnnotations) this._structLayouts[savedIdx].helixAnnotations = existing.helixAnnotations;
                     if (existing?.isCovAnnot) this._structLayouts[savedIdx].isCovAnnot = existing.isCovAnnot;
-                    this._currentStructIdx = savedIdx;
+                    if (existing?.pseudoCovAnnotations) this._structLayouts[savedIdx].pseudoCovAnnotations = existing.pseudoCovAnnotations;
+                    if (existing?.pseudoHelixCovAnnotations) this._structLayouts[savedIdx].pseudoHelixCovAnnotations = existing.pseudoHelixCovAnnotations;
+                    if (existing?.ssConsFeatures) this._structLayouts[savedIdx].ssConsFeatures = existing.ssConsFeatures;
+					this._currentStructIdx = savedIdx;
                     this._rna = this._structLayouts[savedIdx];
                     this._render();
                     this.fit();
@@ -4923,6 +5503,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     const rna = this._computeLayout(prev.sequence, prev.structure, prev.values, prev.colorMap, prev.pairAnnotations, prev.pairAnnotColorMap, prev.baseDisplay, prev.positionLabels);
                     if (prev.helixAnnotations) rna.helixAnnotations = prev.helixAnnotations;
                     if (prev.isCovAnnot) rna.isCovAnnot = prev.isCovAnnot;
+                    if (prev.pseudoCovAnnotations) rna.pseudoCovAnnotations = prev.pseudoCovAnnotations;
+                    if (prev.pseudoHelixCovAnnotations) rna.pseudoHelixCovAnnotations = prev.pseudoHelixCovAnnotations;
+                    if (prev.ssConsFeatures) rna.ssConsFeatures = prev.ssConsFeatures;
                     this._rna = rna;
                     this._render();
                     this.fit();
@@ -5031,7 +5614,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (!anns?.length || !this._showPairAnnotations) return;
             const cs = getComputedStyle(this._root);
             const pad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || (baseR * 1.7);
-            const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#ef4444';
+            const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
             // Parse hex → rgba with opacity
             const _hm = helixColor.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
             const _hr = _hm ? parseInt(_hm[1], 16) : 239,
@@ -5314,8 +5897,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const g_base = document.createElementNS(NS, 'g');
             const g_pk = document.createElementNS(NS, 'g'); // PK lines, above non-endpoint bases
             const g_pk_top = document.createElementNS(NS, 'g'); // PK endpoint bases, above PK lines
-            // Order: helix boxes → backbone → eraser → pair annots → bases → PK
-            this._scene.append(g_bb, g_bp, g_bg, g_helix, g_annot, g_base, g_pk, g_pk_top);
+            const g_ss_labels = document.createElementNS(NS, 'g'); // SS_cons labels, topmost
+            // Order: helix boxes → backbone → eraser → pair annots → bases → PK → SS_cons labels
+            this._scene.append(g_bb, g_bp, g_bg, g_helix, g_annot, g_base, g_pk, g_pk_top, g_ss_labels);
             // Collect PK endpoint indices so their bases render on top of PK lines
             const pkEndpts = new Set(pseudoPairs.flatMap(ps => [ps.i, ps.j]));
             // Read configurable geometry from CSS variables
@@ -5450,8 +6034,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const pkHelixGlowSet = _showAnnot
 					? new Set((this._rna.pseudoHelixCovAnnotations || []).map(({ i, j }) => pairKey(i, j)))
 					: new Set();
-				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#ef4444';
-				const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#0969da';
+				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+				const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
 				const pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
 				for (const ps of pseudoPairs) {
 					const key = pairKey(ps.i, ps.j);
@@ -5477,6 +6061,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					g_pk.appendChild(arc);
 				}
 			}
+            // SS_cons_ feature annotations (gated on R3D toggle)
+            if (this._showR3d !== false && this._rna.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length)
+                this._renderSsConsAnnotations(g_annot, g_ss_labels, coords, n, this._rna.ssConsFeatures, pairs, pseudoPairs, cs);
             // Bases
             for (let i = 0; i < n; i++) {
                 const grp = document.createElementNS(NS, 'g');
@@ -5587,6 +6174,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 (pkEndpts.has(i) ? g_pk_top : g_base).appendChild(grp);
             }
             if (this._alnBtn) this._alnBtn.style.display = this._rna?.baseDisplay ? '' : 'none';
+            if (this._chkR3d) this._chkR3d.style.display =
+                (this._rna?.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length) ? '' : 'none';
+            if (this._chkSsEnds) this._chkSsEnds.style.display = this._rna?.ssEnds ? '' : 'none';
             if (this._alnLegend) this._alnLegend.classList.toggle('rv-visible', !!this._rna?.baseDisplay && !this._alnActive);
         }
         _saveSVG(returnString = false) {
@@ -5642,7 +6232,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const clNaNH = colorMap?.nanColor ? LROW : 0;
             const clH = LY + clGradH + clLblH + clNaNH + LY;
             // Pair-annot legend geometry (no background box)
-            const _helixLegColor = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#ef4444';
+            const _helixLegColor = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
             const _helixEntry = hasHelixAnnot ? [{
                 key: 'Helix-level',
                 color: _helixLegColor,
@@ -5699,7 +6289,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 backboneWidth: _gvn('--rv-backbone-width', 2),
                 basepair: _gv('--rv-basepair') || '#1f2328',
                 basepairWidth: _gvn('--rv-basepair-width', 2.2),
-                pseudopair: _gv('--rv-pseudopair') || '#0969da',
+                pseudopair: _gv('--rv-pseudopair') || '#1f2328',
                 pseudopairWidth: _gvn('--rv-pseudopair-width', 2),
                 baseFill: _gv('--rv-base-fill') || '#eaeef2',
                 baseStroke: _gv('--rv-base-stroke') || '#1f2328',
@@ -5713,6 +6303,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // Font sizes, read from CSS, scaled up for SVG resolution
             const labelFSz = _gvn('--rv-base-label-font-size', 13) * 1.6;
             const indexFSz = _gvn('--rv-base-index-font-size', 12) * 1.6;
+            const rawLSz = indexFSz / 1.6; // unscaled, matches canvas font-size
             const labelColor = C.baseText;
             const indexColor = C.muted;
             // Build SVG
@@ -5723,7 +6314,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             exp.setAttribute('height', vbH * 2);
             // Stylesheet (user units, scales with circles)
             const st = document.createElementNS(NS, 'style');
-            st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`, ].join('\n');
+            st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
+                `.rv-ss-cons-label{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};paint-order:stroke fill}`,
+                `.rv-ss-cons-line{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round;stroke-linejoin:round}`,
+                `.rv-ss-cons-leader{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`,
+                ].join('\n');
             exp.appendChild(st);
             // Scene clone, strip hit circles (mouse-only), shrink erasers, scale real circles
             const sc2 = this._scene.cloneNode(true);
@@ -5739,6 +6334,60 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             });
             sc2.querySelectorAll('text').forEach(t => {
                 t.setAttribute('dy', '0.3em');
+            });
+            // ss_cons labels: rebuild inline style — no stroke halo,
+            // font-size is scaled up (indexFSz = rawLSz * 1.6) for SVG resolution.
+            // We also rescale the bg rects and re-anchor the label positions to match.
+            const svgLScale = indexFSz / rawLSz; // = 1.6
+            sc2.querySelectorAll('text.rv-ss-cons-label').forEach(t => {
+                const anchor = t.getAttribute('text-anchor') || 'middle';
+                // Shift the text anchor point to stay centred after font scale-up.
+                // The extra half-height added by the larger font is (indexFSz - rawLSz) * 0.5
+                // in the vertical direction; horizontal position is already at the anchor edge.
+                t.setAttribute('style',
+                    `font-size:${indexFSz};font-weight:bold;fill:${indexColor};`
+                    +`font-family:${C.indexFont};text-anchor:${anchor};dominant-baseline:middle`);
+                t.removeAttribute('dy'); // dominant-baseline handles vertical centering
+            });
+            // ss_cons bg rects: recompute size from scratch using SVG font metrics.
+            // Paired with text elements by index (same two-pass emission order).
+            // Uses 0.6em char advance (Courier New monospace), tight bgPad for SVG scale.
+            {
+                const rects    = Array.from(sc2.querySelectorAll('rect.rv-ss-cons-bg'));
+                const txts     = Array.from(sc2.querySelectorAll('text.rv-ss-cons-label'));
+                const svgBgPad = indexFSz * 0.25;              // tighter padding at SVG scale
+                const svgTh    = indexFSz * 0.75;              // cap-height approximation
+                const svgNh    = svgTh + svgBgPad * 2;        // total rect height
+                rects.forEach((r, i) => {
+                    const t      = txts[i];
+                    if (!t) return;
+                    const label  = t.textContent || '';
+                    const svgTw  = label.length * indexFSz * 0.6; // true monospace advance
+                    const svgNw  = svgTw + svgBgPad * 2;
+                    // ly = vertical centre, recovered from the old rect
+                    const oldY   = parseFloat(r.getAttribute('y'))      || 0;
+                    const oldH   = parseFloat(r.getAttribute('height')) || 0;
+                    const ly     = oldY + oldH / 2;
+                    // lx and anchor from the paired text element
+                    const lx     = parseFloat(t.getAttribute('x')) || 0;
+                    const anchor = t.getAttribute('text-anchor') || 'middle';
+                    let nx;
+                    if      (anchor === 'end')   nx = lx - svgNw;
+                    else if (anchor === 'start') nx = lx;
+                    else                         nx = lx - svgNw / 2;
+                    r.setAttribute('x',      nx);
+                    r.setAttribute('y',      ly - svgNh / 2);
+                    r.setAttribute('width',  svgNw);
+                    r.setAttribute('height', svgNh);
+                });
+            }
+            // ss_cons lines: use class styling
+            sc2.querySelectorAll('path.rv-ss-cons-line').forEach(p => {
+                p.removeAttribute('style');
+            });
+            // ss_cons leader lines: use class styling
+            sc2.querySelectorAll('line.rv-ss-cons-leader').forEach(l => {
+                l.removeAttribute('style');
             });
             exp.appendChild(sc2);
             //  color-map legend
@@ -6543,14 +7192,27 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                         return;
                     }
                 }
-                this._structLayouts.push(this._computeLayout(sequence, structure, values, colorMap, pAnnots, pAnnotCM, hAnnots, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0));
+                const _sl = this._computeLayout(sequence, structure, values, colorMap, pAnnots, pAnnotCM, hAnnots, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
+                if (s.ssConsFeatures) _sl.ssConsFeatures = s.ssConsFeatures;
+                if (s.ssEnds) _sl.ssEnds = s.ssEnds;
+                this._structLayouts.push(_sl);
             }
             // Ensure every stored structure carries .sequence so future append operations
             // can recover it even when the caller used a shared config.sequence.
-            this._structures = config.structures.map((s, i) => ({
-                ...s,
-                sequence: s.sequence || this._structLayouts[i]?.sequence || '',
-            }));
+            // Also mirror resolved annotations onto each structure record so that
+            // _rebuildCurrentLayout always has the canonical unshifted data on s,
+            // regardless of whether annotations came from the config or a file upload.
+            this._structures = config.structures.map((s, i) => {
+                const sl = this._structLayouts[i];
+                return {
+                    ...s,
+                    sequence:                  s.sequence || sl?.sequence || '',
+                    pairAnnotations:           s.pairAnnotations    || config.pairAnnotations    || sl?.pairAnnotations    || undefined,
+                    pairAnnotColorMap:         s.pairAnnotColorMap  || config.pairAnnotColorMap  || sl?.pairAnnotColorMap  || undefined,
+                    helixAnnotations:          s.helixAnnotations   || config.helixAnnotations   || sl?.helixAnnotations   || undefined,
+                    pseudoHelixCovAnnotations: s.pseudoHelixCovAnnotations || sl?.pseudoHelixCovAnnotations || undefined,
+                };
+            });
             this._lastConfig = config;
             this._buildStructSwitcher();
             this._rna = this._structLayouts[this._currentStructIdx];
@@ -6558,8 +7220,130 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._updateStatusBar();
             if (this._rna.values) this._updateLegend(this._rna.colorMap);
             this._updateLegendVisibility();
+            // Auto-hide/restore indices based on whether the current structure is Stockholm.
+            this._applyStructIndices(this._rna, config);
+            // Auto-activate R3D toggle when SS_cons_ annotations are present,
+            // unless disabled via constructor config or direct instance flag (e.g. headless --noR3d).
+            if (this._rna?.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length > 0) {
+                if (this._constructorConfig?.showR3d !== false && this._showR3d !== false) {
+                    this._showR3d = true;
+                    if (this._chkR3d) this._chkR3d.classList.add('rv--active');
+                }
+            }
+            // If showSsEnds is true and the current structure has trimmed ends, rebuild now.
+            if (this._showSsEnds && this._rna?.ssEnds) {
+                this._rebuildCurrentLayout();
+            } else {
+                this._render();
+                this.fit();
+            }
+        }
+        // Re-layout the current structure using trimmed or full (ss-ends) data
+        // depending on this._showSsEnds. Called when the SS-ends toggle changes.
+        _rebuildCurrentLayout() {
+            const idx   = this._currentStructIdx;
+            const s     = this._structures?.[idx];
+            if (!s) return;
+            const ends  = s.ssEnds;
+            const shift = (this._showSsEnds && ends?.trimS > 0) ? ends.trimS : 0;
+
+            // Read from _base (the trimmed-index canonical), falling back to the layout itself
+            // (when ssEnds is off, _base is not set and the layout IS trimmed-index).
+            const layout = this._structLayouts[idx];
+            if (!layout) return;
+            const src = layout._base || layout;
+
+            // Sequence/structure: trimmed or full depending on toggle
+            const sequence       = this._showSsEnds && ends ? ends.fullSeq.join('')    : s.sequence;
+            const structure      = this._showSsEnds && ends ? ends.fullStruct.join('') : s.structure;
+            const baseDisplay    = this._showSsEnds && ends ? ends.fullBaseDisplay      : s.baseDisplay    || null;
+            const positionLabels = this._showSsEnds && ends ? ends.fullPositionLabels   : s.positionLabels || null;
+
+            const shiftPairs = (arr) => !arr || shift === 0 ? arr :
+                arr.map(p => ({
+                    ...p,
+                    ...(p.i != null ? { i: p.i + shift } : {}),
+                    ...(p.j != null ? { j: p.j + shift } : {}),
+                }));
+
+            const shiftHelixAnnots = (arr) => !arr || shift === 0 ? arr :
+                arr.map(h => ({
+                    ...h,
+                    subHelices: (h.subHelices || []).map(sh => ({
+                        pos5p: sh.pos5p.map(p => p + shift),
+                        pos3p: sh.pos3p.map(p => p + shift),
+                    })),
+                }));
+
+            const _sl = this._computeLayout(
+                sequence, structure,
+                src.values            || null,
+                src.colorMap          || null,
+                shiftPairs(src.pairAnnotations   || null),
+                src.pairAnnotColorMap || null,
+                shiftHelixAnnots(src.helixAnnotations || null),
+                baseDisplay, positionLabels,
+                s.alnSeqs   || null,
+                s.alnStruct || null,
+                s.alnLen    || 0
+            );
+
+            // ssConsFeatures
+            const rawFeatures = src.ssConsFeatures;
+            if (rawFeatures && shift > 0) {
+                const shifted = {};
+                for (const [name, positions] of Object.entries(rawFeatures))
+                    shifted[name] = positions.map(p => p + shift);
+                _sl.ssConsFeatures = shifted;
+            } else {
+                _sl.ssConsFeatures = rawFeatures || undefined;
+            }
+
+            // pseudoHelixCovAnnotations
+            const rawPhc = src.pseudoHelixCovAnnotations;
+            _sl.pseudoHelixCovAnnotations = rawPhc && shift > 0
+                ? rawPhc.map(p => ({ i: p.i + shift, j: p.j + shift }))
+                : rawPhc || undefined;
+
+            // Carry non-annotation data
+            _sl.ssEnds             = ends || undefined;
+            _sl.isCovAnnot         = src.isCovAnnot;
+            _sl.pseudoCovAnnotations = src.pseudoCovAnnotations || undefined;
+
+            // Store the trimmed-index base on the new layout so future rebuilds
+            // always have a stable unshifted source, even after loadCov writes onto _rna.
+            _sl._base = src._base || src;
+            this._structLayouts[idx] = _sl;
+            this._rna = _sl;
             this._render();
             this.fit();
+        }
+        // Update index visibility to match the given structure layout.
+        // Stockholm structures (with ssConsFeatures) hide indices; others restore them,
+        // unless the caller explicitly set showIndices:false in the config.
+        _applyStructIndices(rna, config) {
+            const isStockholm = !!(rna?.ssConsFeatures && Object.keys(rna.ssConsFeatures).length > 0);
+            if (isStockholm) {
+                this._showIndices = false;
+                if (this._chkIndices) this._chkIndices.classList.remove('rv--active');
+            } else {
+                // Restore indices — but only if the user hasn't explicitly disabled them.
+                // Check constructor config first (highest priority), then per-load config.
+                const constructorSaysOff = this._constructorConfig?.showIndices === false;
+                const loadSaysOff = (config ?? {}).showIndices === false;
+                if (!constructorSaysOff && !loadSaysOff) {
+                    this._showIndices = true;
+                    if (this._chkIndices) this._chkIndices.classList.add('rv--active');
+                }
+            }
+            // Reset ss-ends toggle to the config default when switching structures.
+            if (rna?.ssEnds) {
+                this._showSsEnds = this._constructorConfig?.showSsEnds === true;
+                if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
+            } else {
+                this._showSsEnds = false;
+                if (this._chkSsEnds) this._chkSsEnds.classList.remove('rv--active');
+            }
         }
         _buildStructSwitcher() {
             this._structBar.innerHTML = '';
@@ -6669,12 +7453,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._animateTransition(srcRna, tgtRna);
             } else {
                 this._rna = tgtRna;
+                this._applyStructIndices(tgtRna, this._lastConfig);
                 this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
                 this._updateStatusBar();
                 if (tgtRna.values) this._updateLegend(tgtRna.colorMap);
                 this._updateLegendVisibility();
-                this._render();
-                this.fit();
+                if (this._showSsEnds && tgtRna?.ssEnds) {
+                    this._rebuildCurrentLayout();
+                } else {
+                    this._render();
+                    this.fit();
+                }
             }
         }
         _animateTransition(srcRna, tgtRna) {
@@ -6720,14 +7509,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     this._isAnimating = false;
                     this._structBar?.classList.remove('rv--animating');
                     this._rna = tgtRna;
+                    this._applyStructIndices(tgtRna, this._lastConfig);
                     this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
-                    this._render();
-                    // Always refit, alternative structures have independent coordinate spaces
-                    // and the previous viewport is not guaranteed to frame the new one
-                    this.fit();
                     this._updateStatusBar();
                     if (tgtRna.values) this._updateLegend(tgtRna.colorMap);
                     this._updateLegendVisibility();
+                    if (this._showSsEnds && tgtRna?.ssEnds) {
+                        this._rebuildCurrentLayout();
+                    } else {
+                        this._render();
+                        this.fit();
+                    }
                 }
             };
             this._animFrame = requestAnimationFrame(frame);
