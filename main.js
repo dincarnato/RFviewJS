@@ -126,7 +126,27 @@ if (!isCLI) {
         }]));
 
     } 
-    else { Menu.setApplicationMenu(null); }
+    else {
+
+        Menu.setApplicationMenu(Menu.buildFromTemplate([{
+            label: 'File',
+            submenu: [
+                { role: 'quit' },
+            ],
+        }, {
+            label: 'Edit',
+            submenu: [
+                { role: 'undo'      },
+                { role: 'redo'      },
+                { type: 'separator' },
+                { role: 'cut'       },
+                { role: 'copy'      },
+                { role: 'paste'     },
+                { role: 'selectAll' },
+            ],
+        }]));
+
+    }
 
     app.on('browser-window-created', (_, win) => win.setMenu(null));
 
@@ -169,6 +189,20 @@ function createWindow() {
     win.once('ready-to-show', () => win.show());
     win.loadFile(path.join(__dirname, 'scripts', 'index.html'));
     win.on('close', () => saveState(win));
+
+    // Enable Cmd-A (macOS) / Ctrl-A (other) select-all in text inputs
+    win.webContents.on('before-input-event', (event, input) => {
+        if ((input.meta || input.control) && input.key.toLowerCase() === 'a') {
+            win.webContents.executeJavaScript(`
+                (function() {
+                    const el = document.activeElement;
+                    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+                        el.select();
+                    }
+                })();
+            `);
+        }
+    });
 
 }
 

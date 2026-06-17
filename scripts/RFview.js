@@ -2874,12 +2874,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
           <div class="rv-struct-wrap"><button class="rv-struct-arrow rv-struct-arrow-l" aria-label="Previous">&#8249;</button><div class="rv-struct-bar"></div><button class="rv-struct-arrow rv-struct-arrow-r" aria-label="Next">&#8250;</button></div>
           <div class="rv-tooltip"></div>
           <div class="rv-manual-panel">
-            <div class="rv-upload-hdr">
+            <div class="rv-upload-hdr rv-drag-handle">
               <h3>Manually enter sequence &amp; structure</h3>
               <button class="rv-manual-x rv-upload-x" title="Close">&#x2715;</button>
             </div>
             <div class="rv-upload-section">
-              <div class="rv-upload-lbl">Sequence <span>[A, C, G, U/T, N] (optional)</span></div>
+              <div class="rv-upload-lbl">Sequence <span>(optional)</span></div>
               <textarea class="rv-manual-seq" spellcheck="false" rows="3"
                 style="width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;font-size:12px;padding:6px 8px;border:1px solid var(--rv-border,#d0d7de);border-radius:6px;background:var(--rv-bg,#fff);color:var(--rv-text,#1f2328);outline:none;margin-top:4px;display:block"></textarea>
             </div>
@@ -2900,7 +2900,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             </div>
           </div>
           <div class="rv-rfam-panel">
-            <div class="rv-upload-hdr">
+            <div class="rv-upload-hdr rv-drag-handle">
               <h3>Load Rfam alignment</h3>
               <button class="rv-rfam-x rv-upload-x" title="Close">&#x2715;</button>
             </div>
@@ -2937,16 +2937,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			<p style="font-size:11px;color:var(--rv-muted,#656d76);margin:0 0 10px"><b>Note: </b>The Radiate layout was ported from Yann Ponty's <a href="https://github.com/yannponty/VARNA" target="_blank">VARNA</a>,<br>while the NAView layout was ported from <a href="https://github.com/ViennaRNA/RNAcode/blob/master/librna/naview.c" target="_blank">Ivo Hofacker's adaptation</a> of Bruccoleri & Heinrich original algorithm.</p>
 			<p>&nbsp;<p/>
             <div class="rv-about-links">
-			  <p><a class="rv-about-link" href="https://github.com/dincarnato/RFview" target="_blank"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:5px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></p>
+			  <p><a class="rv-about-link" href="https://github.com/dincarnato/RFview" target="_blank"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:3px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></p>
+              <p><a class="rv-about-link" href="https://rfviewjs-docs.readthedocs.io" target="_blank"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px;margin-left:20px;"><path d="M2 3h5a2 2 0 0 1 2 2v8a1.5 1.5 0 0 0-1.5-1.5H2z"/><path d="M14 3H9a2 2 0 0 0-2 2v8a1.5 1.5 0 0 1 1.5-1.5H14z"/></svg>Docs</a></p>
             </div>
           </div>
           <div class="rv-settings-panel">
             <div class="rv-upload-hdr rv-drag-handle">
-              <h3 style="margin:0;font-size:13px;font-weight:600">Settings</h3>
-              <div style="display:flex;gap:6px;align-items:center">
-                <button class="rv-settings-reset" title="Reset all settings to default" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--rv-border,#d0d7de);background:var(--rv-surface,#f6f8fa);color:var(--rv-text,#1f2328);cursor:pointer;line-height:1.4">Reset</button>
-                <button class="rv-upload-x rv-settings-x" title="Close">&#x2715;</button>
-              </div>
+              <h3>Settings</h3>
+              <button class="rv-upload-x rv-settings-x" title="Close">&#x2715;</button>
             </div>
             <div class="rv-settings-tabs">
               <button class="rv-settings-tab rv--active" data-tab="appearance">Appearance</button>
@@ -2995,9 +2993,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 </div>
               </div>
             </div>
+            <div class="rv-upload-actions">
+              <button class="rv-upload-btn rv-upload-btn-load rv-settings-reset">Reset defaults</button>
+            </div>
           </div>
           <div class="rv-upload-panel">
-            <div class="rv-upload-hdr">
+            <div class="rv-upload-hdr rv-drag-handle">
               <h3>Load data</h3>
               <button class="rv-upload-x" title="Close">&#x2715;</button>
             </div>
@@ -3213,6 +3214,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (this._manualBtn) {
                 this._manualBtn.addEventListener('click', () => this._openManualDialog());
             }
+            if (this._manualPanel) {
+                this._makeDraggable(this._manualPanel);
+            }
             if (this._cleanOneBtn) {
                 this._cleanOneBtn.addEventListener('click', () => this.clearCurrent());
             }
@@ -3305,6 +3309,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 };
                 this._rfamPanel.querySelector('.rv-rfam-x').addEventListener('click', rfamClose);
                 this._rfamPanel.querySelector('.rv-rfam-cancel').addEventListener('click', rfamClose);
+                this._makeDraggable(this._rfamPanel);
                 this._rfamPanel.querySelector('.rv-rfam-load').addEventListener('click', () => {
                     const id = this._rfamPanel.querySelector('.rv-rfam-input').value.trim();
                     const status = this._rfamPanel.querySelector('.rv-rfam-status');
@@ -5598,10 +5603,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     return;
                 }
                 const seq = normalizeSeq(seqEl.value.trim()) || 'N'.repeat(str.length);
-                if (seqEl.value.trim() && !/^[ACGNU]+$/.test(seq)) {
-                    showErr('Sequence contains invalid characters (allowed: A/C/U/T/N)');
-                    return;
-                }
                 if (seqEl.value.trim() && seq.length !== str.length) {
                     showErr(`Sequence (${seq.length} nt) and structure (${str.length} nt) have different lengths.`);
                     return;
