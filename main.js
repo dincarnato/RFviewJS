@@ -54,7 +54,7 @@ if (isCLI) {
 if (cliArgs.help || cliArgs.h) {
 
     console.log(`
- RFview (v1.0.0)
+ RFview (v1.1.0)
  RNA Framework Structure Viewer [https://github.com/dincarnato/RFviewJS]
 
  Author:   Danny Incarnato (dincarnato[at]rnaframework.com)
