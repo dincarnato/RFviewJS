@@ -89,6 +89,7 @@ if (cliArgs.help || cliArgs.h) {
  --noLabels                     Omits Stockholm annotation labels (SS_cons lines) from the exported SVG
  --noInsets                     Omits inset panels for non-nested interactions in Stockholm alignments
                                 from the exported SVG
+ --incSsEnds                    Includes single-stranded 5'/3' ends in Stockholm structures
  --help                         Shows this help message
 
 `);
@@ -347,7 +348,7 @@ async function runHeadless(args) {
 
         // Embeds all data as JSON so no IPC hand-off is needed.
         // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets });
+         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds });
 
         const code = `
 (function () {
@@ -396,6 +397,7 @@ async function runHeadless(args) {
     if (d.noPk) viewer._showPseudoknots = false;   
     if (d.noLabels) viewer._showR3dLabels = false;     
     if (d.noInsets) viewer._showR3dInsets = false;
+    if (d.incSsEnds) viewer.setShowSsEnds(true);
     if (!viewer._rna) { window.electronAPI.headlessError('Structure failed to render.'); return; }
 
     /* Apply pair annotations post-load
