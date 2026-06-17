@@ -36,7 +36,7 @@
     const CSS = `
 a, a:visited, a:hover, a:active, a:focus {color: #656d76}
 body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
-.rv{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr;width:100%;height:100%;overflow:hidden;position:relative;box-sizing:border-box;background:var(--rv-bg,#ffffff);color:var(--rv-text,#1f2328);--rv-bg:#ffffff;--rv-surface:#f6f8fa;--rv-border:#d0d7de;--rv-text:#1f2328;--rv-muted:#656d76;--rv-accent:#0969da;--rv-accent2:#2da44e;--rv-accent3:#8250df;--rv-error:#cf222e;--rv-backbone:#1f2328;--rv-backbone-width:2;--rv-basepair:#1f2328;--rv-basepair-width:2.2;--rv-pseudopair:#1f2328;--rv-pseudopair-width:2;--rv-noncanon-dot-r:4.5;--rv-pair-break:#ef4444;--rv-pair-form:#22c55e;--rv-base-fill:#eaeef2;--rv-base-stroke:#1f2328;--rv-base-stroke-width:2;--rv-base-hover:#bbd4f0;--rv-base-label-color:#1f2328;--rv-base-label-font:monospace;--rv-base-label-font-size:13;--rv-base-index-color:#656d76;--rv-base-index-font:monospace;--rv-base-index-font-size:12;--rv-base-radius:11;--rv-base-index-offset:26;--rv-rot-line:#0969da80;--rv-rot-ring:#0969da20;--rv-pair-annot-opacity:0.3;--rv-pair-annot-stroke-width:1.5;--rv-pair-annot-padding:16;--rv-helix-annot-padding:21;--rv-helix-annot-color:#064e3b}
+.rv{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr;width:100%;height:100%;overflow:hidden;position:relative;box-sizing:border-box;background:var(--rv-bg,#ffffff);color:var(--rv-text,#1f2328);--rv-bg:#ffffff;--rv-surface:#f6f8fa;--rv-border:#d0d7de;--rv-text:#1f2328;--rv-muted:#656d76;--rv-accent:#0969da;--rv-accent2:#2da44e;--rv-accent3:#8250df;--rv-error:#cf222e;--rv-backbone:#1f2328;--rv-backbone-width:2;--rv-basepair:#1f2328;--rv-basepair-width:2.2;--rv-pseudopair:#1f2328;--rv-pseudopair-width:2;--rv-noncanon-dot-r:4.5;--rv-pair-break:#ef4444;--rv-pair-form:#22c55e;--rv-base-fill:#eaeef2;--rv-base-stroke:#1f2328;--rv-base-stroke-width:2;--rv-base-hover:#bbd4f0;--rv-base-label-color:#1f2328;--rv-base-label-font:monospace;--rv-base-label-font-size:13;--rv-base-index-color:#656d76;--rv-base-index-font:monospace;--rv-base-index-font-size:12;--rv-base-radius:11;--rv-base-index-offset:26;--rv-rot-line:#0969da80;--rv-rot-ring:#0969da20;--rv-pair-annot-opacity:0.5;--rv-pair-annot-stroke-width:1.5;--rv-pair-annot-padding:16;--rv-helix-annot-padding:25;--rv-helix-annot-opacity:0.5;--rv-helix-annot-color:#aff0a8;--rv-inset-hover-glow:8px}
 .rv *{box-sizing:border-box}
 .rv-toolbar{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--rv-border,#d0d7de);background:var(--rv-bg,#ffffff);flex-wrap:wrap}
 .rv-btn-label{display:none}
@@ -57,7 +57,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-bp-dot{fill:var(--rv-basepair,#000);stroke:none}
 .rv-bp-noncanon{fill:var(--rv-noncanon-dot,var(--rv-basepair,#000));stroke:none}
 .rv-pseudopair{stroke:var(--rv-pseudopair,#1f2328);stroke-width:var(--rv-pseudopair-width,2);fill:none;stroke-linecap:round;stroke-dasharray:5 3}
-.rv-aln-legend{display:none;position:absolute;bottom:32px;left:10px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:var(--rv-text,#1f2328);pointer-events:none;z-index:5;white-space:nowrap}
+.rv-aln-legend{display:none;position:absolute;bottom:16px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:var(--rv-text,#1f2328);pointer-events:none;z-index:5;white-space:nowrap}
 .rv-aln-legend *{pointer-events:none}
 .rv-aln-legend.rv-visible{display:block}
 .rv-aln-legend-cols{display:flex;gap:16px}
@@ -76,10 +76,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 /* --rv-pair-annot-opacity — annotation box fill opacity (declared in .rv{}) */
 /* --rv-pair-annot-stroke-width — annotation box border width (declared in .rv{}) */
 /* --rv-pair-annot-padding — annotation box padding in scene units (declared in .rv{}) */
+.rv-pk-panels{position:absolute;top:52px;left:16px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:10}
+.rv-pk-panel{width:var(--rv-inset-max-width,120px);min-width:var(--rv-inset-min-width,80px);background:var(--rv-bg,#ffffff);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 10px;pointer-events:all;cursor:default;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif}
+.rv-pk-panel svg{display:block;width:100%;height:auto}
+.rv-pk-panel h4{font-size:12px;color:var(--rv-muted,#656d76);margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .rv-pal-legend{position:absolute;top:52px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:10px 14px;font-size:13px;display:none;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;min-width:120px;z-index:10}
 .rv-pal-legend h4{font-size:12px;color:var(--rv-muted,#656d76);margin:0 0 6px;text-transform:uppercase;letter-spacing:.05em}
 .rv-pal-entry{display:flex;align-items:center;gap:7px;margin:2px 0}
-.rv-pal-swatch{width:20px;height:11px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);opacity:var(--rv-pair-annot-opacity,0.3)}
+.rv-pal-swatch{width:20px;height:11px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);opacity:var(--rv-pair-annot-opacity,0.5)}
 .rv-pal-key{font-size:13px}
 .rv-tooltip{position:absolute;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:6px;padding:6px 10px;font-family:monospace;font-size:13px;color:var(--rv-text,#1f2328);pointer-events:none;display:none;z-index:100;max-width:200px;line-height:1.6}
 .rv-legend{position:absolute;bottom:16px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:10px 14px;font-size:13px;display:none;min-width:160px;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;}
@@ -570,7 +574,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 positionLabels.push(col + 1);
             }
             // filenameFallback (caller-provided label) takes priority over #=GF ID / AC
-            const label = (filenameFallback ? filenameFallback.replace(/\.[^.]+$/, '') : null) || id || ac || 'alignment';
+            const label = ac || id || (filenameFallback ? filenameFallback.replace(/\.[^.]+$/, '') : null) || 'alignment';
             // Trims terminal unstructured positions (leading/trailing dots only).
             // Saves the untrimmed data in ssEnds so it can be restored by the toggle.
             let trimS = 0,
@@ -601,21 +605,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // Extra pairs from SS_cons_* features to inject into the structure
             // (bracket chars in these lines represent additional base pairs).
             // We collect all such pairs first, then add them to filteredStruct.
-            const extraPairs = []; // {i, j} in residue indices, i < j
-            const BRACKET_OPEN  = /[([{<A-Z]/;
-            const BRACKET_PAIRS = {'(':')', '[':']', '{':'}', '<':'>'};
+            const ssConsPkPairs = {}; // featureName → [{i,j}] — bracket pairs from SS_cons_* features, rendered as insets only
             for (const [fn, parts] of Object.entries(ssConsFeatureParts)) {
                 const str = parts.join('');
                 if (str.length !== alnLen) continue;
                 const pos = [];
-                // Collect annotation positions (non-structure chars)
-                // and parse bracket pairs for structure injection.
                 const featureStacks = {};
+                const featPairs = [];
                 for (let col = 0; col < alnLen; col++) {
                     const c = str[col];
                     const ri = _colToRi.get(col);
                     if (c === '.' || c === ':' || c === '-' || c === '_') continue;
-                    // Bracket chars: parse as pairs
                     if ('([{<'.includes(c) || (c >= 'A' && c <= 'Z')) {
                         if (!featureStacks[c]) featureStacks[c] = [];
                         featureStacks[c].push(col);
@@ -625,56 +625,27 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             const openCol = featureStacks[openCh].pop();
                             const riOpen = _colToRi.get(openCol);
                             const riClose = ri;
-                            if (riOpen !== undefined && riClose !== undefined) {
-                                extraPairs.push({ i: Math.min(riOpen, riClose), j: Math.max(riOpen, riClose) });
-                            }
+                            if (riOpen !== undefined && riClose !== undefined)
+                                featPairs.push({ i: Math.min(riOpen, riClose), j: Math.max(riOpen, riClose) });
                         }
                     } else if (c >= 'a' && c <= 'z') {
                         const open = c.toUpperCase();
                         if (featureStacks[open]?.length) {
                             const openCol = featureStacks[open].pop();
                             const riOpen = _colToRi.get(openCol);
-                            if (riOpen !== undefined && ri !== undefined) {
-                                extraPairs.push({ i: Math.min(riOpen, ri), j: Math.max(riOpen, ri) });
-                            }
+                            if (riOpen !== undefined && ri !== undefined)
+                                featPairs.push({ i: Math.min(riOpen, ri), j: Math.max(riOpen, ri) });
                         }
                     }
-                    // All non-dot chars are annotation positions
                     if (ri !== undefined) pos.push(ri);
                 }
                 if (pos.length) ssConsFeatures[fn] = pos.sort((a,b)=>a-b);
+                if (featPairs.length) ssConsPkPairs[fn] = featPairs;
             }
-            // Inject extra pairs into filteredStruct if not already paired.
-            // Determine which bracket types are already used in the main structure.
-            if (extraPairs.length) {
-                const structArr = filteredStruct; // already trimmed array of chars
-                const n2 = structArr.length;
-                // Parse existing pairs to know which positions are already paired
-                const existingPaired = new Set();
-                for (let k = 0; k < n2; k++) {
-                    if (structArr[k] !== '.' && structArr[k] !== ':') existingPaired.add(k);
-                }
-                // Find an unused bracket type for the extra pairs
-                const usedBrackets = new Set(structArr);
-                const candidates = ['[', ']', '{', '}', '<', '>', 'A', 'a', 'B', 'b'];
-                let openBk = null, closeBk = null;
-                for (let ci = 0; ci < candidates.length; ci += 2) {
-                    if (!usedBrackets.has(candidates[ci]) && !usedBrackets.has(candidates[ci+1])) {
-                        openBk = candidates[ci]; closeBk = candidates[ci+1];
-                        break;
-                    }
-                }
-                if (openBk) {
-                    for (const { i, j } of extraPairs) {
-                        if (i < 0 || j >= n2 || i >= n2) continue;
-                        if (existingPaired.has(i) || existingPaired.has(j)) continue;
-                        structArr[i] = openBk;
-                        structArr[j] = closeBk;
-                        existingPaired.add(i);
-                        existingPaired.add(j);
-                    }
-                }
-            }
+            // Note: SS_cons_* bracket pairs are NOT injected into filteredStruct.
+            // They are rendered only as inset panels via _renderPkStockholm(ssConsPkPairs).
+            // This handles both pseudoknots and alternative/crossing pairs that conflict
+            // with the main structure.
             records.push({
                 label,
                 sequence: filteredSeq.join(''),
@@ -688,6 +659,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 alnStruct: structFull,
                 alnLen: alnLen,
                 ssConsFeatures,
+                ssConsPkPairs,
                 ssEnds,  // null if no terminal unpaired bases were trimmed
             });
         }
@@ -860,7 +832,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         const COV_COLORS = [{
             limit: 0.05,
             label: 'E < 0.05',
-            color: '#1a7f37'
+            color: '#31a354'
         }, {
             limit: 0.10,
             label: 'E < 0.1',
@@ -874,13 +846,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             label: 'E ≥ 0.2',
             color: '#8b949e'
         }, ];
-        // Detect format from the column-header comment line.
-        // Standard R-scape:  # left_pos  right_pos  score  E-value ...
-        //   data line:       *  181  218  813.4  3.5e-22 ...   (cols: [*,left,right,score,evalue])
-        // CaCoFold R-scape:  # in_fold  in_given  left_pos  right_pos  score  E-value ...
-        //   data line:       *  *  181  218  813.4  3.5e-22 ...   (cols: [*,*,left,right,score,evalue])
-        // Detect by presence of 'in_fold' or 'in_given' in the header.
-        const isCaCoFold = /\bin_fold\b|\bin_given\b/i.test(text);
+        // Detect format: CaCoFold R-scape has TWO leading * columns on data lines.
+        // Some files have 'in_given' in the header but still use single-* format.
+        const dataLines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().startsWith('*'));
+        const isCaCoFold = dataLines.length > 0 && dataLines[0].trim().split(/\s+/)[1] === '*';
         const off = isCaCoFold ? 1 : 0; // extra column offset for CaCoFold format
         const pairs = [];
         for (const raw of text.replace(/\r/g, '').split('\n')) {
@@ -943,7 +912,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }
                     cur.significant = /\*\s*$/.test(line);
                 } else if (line.includes('NONE')) {
-                    cur.significant = cur.nbpCov > 0;
+                    cur.significant = false;
                 }
             }
         }
@@ -1252,12 +1221,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }
         }
         /* 
-         Assign pairs to levels via crossing analysis
-		 Two pairs (a,b) and (c,d) cross (pseudoknot) when a<c<b<d or c<a<d<b.
-		 Level 0 = nsted (no crossings within level 0), layout uses these.
-		 Levels 1+, pseudopairs rendered as dashed lines.
+         Assign pairs to levels via crossing analysis.
+         Two pairs (a,b) and (c,d) cross (pseudoknot) when a<c<b<d or c<a<d<b.
+         Level 0 = nested (no crossings within level 0), layout uses these.
+         Levels 1+, pseudopairs rendered as dashed lines.
+
+         Strategy: sort so that '(' bracket pairs come first within the same
+         start position, ensuring the dominant nested structure (conventionally
+         written with round brackets) is preferred for level 0 over pseudoknot
+         annotations written with [], {}, <> or letter pairs.
         */
-        allPairs.sort((a, b) => a.i - b.i);
+        // Sort: primary by bracket priority ('(' first), secondary by i position.
+        // This ensures round-bracket pairs (the conventional nested structure) are
+        // always processed first and claim level 0, regardless of their position in the sequence.
+        const bracketPriority = { '(': 0, '[': 1, '{': 2, '<': 3 };
+        allPairs.sort((a, b) => {
+            const pa = bracketPriority[a.bracket] ?? 4;
+            const pb = bracketPriority[b.bracket] ?? 4;
+            return pa !== pb ? pa - pb : a.i - b.i;
+        });
         const levels = new Array(allPairs.length).fill(0);
         for (let idx = 0; idx < allPairs.length; idx++) {
             const {
@@ -2705,7 +2687,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     pos3p
                 }],
                 color: ann.color ?? null,
-                opacity: ann.opacity ?? 0.08,
+                opacity: ann.opacity ?? null,
             };
         });
     }
@@ -2839,7 +2821,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // Two-state icon: horizontal bar (top) and vertical bar (left)
             const ICON_TOOLBAR_POS = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" stroke="none"><rect x="2" y="2" width="12" height="3" rx="1"/><rect x="2" y="7" width="3" height="7" rx="1"/><rect x="7" y="7" width="7" height="7" rx="1" opacity=".35"/></svg>`;
             const groups = [
-                [b.upload || b.clean || b.manualInput, [
+                [b.upload || b.rfam || b.cleanOne || b.cleanAll || b.manualInput, [
                     b.manualInput ? btnHTML('rv-btn-manual', '', ICON_MANUAL, 'Manually enter sequence & structure') : '',
                     b.upload ? btnHTML('rv-btn-upload', '', ICON_UPLOAD, 'Load structure/reactivity/annotation') : '',
                     b.rfam ? btnHTML('rv-btn-rfam', '', '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,7 8,12 12,7"/><line x1="8" y1="12" x2="8" y2="3"/><line x1="2" y1="14" x2="14" y2="14"/></svg>', 'Fetch alignment from Rfam') : '',
@@ -2856,13 +2838,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
                 ].join('')],
                 [b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
-                [b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.r3d !== false || b.ssEnds !== false, [
+                [b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.r3d !== false || b.ssEnds !== false, [
                     b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
-                    b.colorMap ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity">${ICON_COLORMAP}<span class="rv-btn-label">Reactivity</span></button>` : '',
-                    b.pairAnnotations ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations">${ICON_PAIR_ANNOT}<span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
-                    b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
-                    b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d" title="SS_cons annotations" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:9px;letter-spacing:-0.5px;line-height:14px;display:inline-block;width:14px;text-align:center">R3D</span><span class="rv-btn-label">Annotations</span></button>` : '',
-                    b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5\'/3\' ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:9px;letter-spacing:-0.5px;line-height:14px;display:inline-block;width:14px;text-align:center">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
+                    b.colorMap !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
+                    b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="13"/><line x1="11" y1="1" x2="11" y2="13"/><line x1="3" y1="3.5" x2="11" y2="3.5"/><line x1="3" y1="7" x2="11" y2="7"/><line x1="3" y1="10.5" x2="11" y2="10.5"/></svg><span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
+                    b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots" style="display:none">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
+                    b.insets !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Toggle inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
+                    b.labels !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Toggle annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
+                    b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5\'/3\' ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
                 ].join('')],
                 // Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
                 [b.layout, [b.layout ? `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>` : '', `<button class="rv-btn rv-btn-toggle rv-btn-aln" title="Alignment view" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span></button>`, ].join('')],
@@ -2940,6 +2923,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             <div class="rv-legend-nan" style="display:none"></div>
           </div>
           <div class="rv-pal-legend"></div>
+          <div class="rv-pk-panels"></div>
           <div class="rv-about-panel">
             <div class="rv-upload-hdr rv-drag-handle">
               <h3 style="margin:0;font-size:13px;font-weight:600">About</h3>
@@ -2959,7 +2943,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
           <div class="rv-settings-panel">
             <div class="rv-upload-hdr rv-drag-handle">
               <h3 style="margin:0;font-size:13px;font-weight:600">Settings</h3>
-              <button class="rv-upload-x rv-settings-x" title="Close">&#x2715;</button>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="rv-settings-reset" title="Reset all settings to default" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--rv-border,#d0d7de);background:var(--rv-surface,#f6f8fa);color:var(--rv-text,#1f2328);cursor:pointer;line-height:1.4">Reset</button>
+                <button class="rv-upload-x rv-settings-x" title="Close">&#x2715;</button>
+              </div>
             </div>
             <div class="rv-settings-tabs">
               <button class="rv-settings-tab rv--active" data-tab="appearance">Appearance</button>
@@ -2999,8 +2986,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 <div class="rv-pa-colors"></div>
                 <div class="rv-ha-settings" style="display:none">
                   <hr style="margin:8px 0;border:none;border-top:1px solid var(--rv-border,#d0d7de)">
-                  <div class="rv-setting-row"><span class="rv-setting-label">Helix box padding <span class="rv-setting-val rv-val-ha-pad">21</span></span>
-                    <input type="range" class="rv-set-ha-pad" min="4" max="48" step="1" value="21"></div>
+                  <div class="rv-setting-row"><span class="rv-setting-label">Helix box opacity <span class="rv-setting-val rv-val-ha-opac">0.5</span></span>
+                    <input type="range" class="rv-set-ha-opac" min="0.02" max="1" step="0.01" value="0.5"></div>
+                  <div class="rv-setting-row"><span class="rv-setting-label">Helix box padding <span class="rv-setting-val rv-val-ha-pad">25</span></span>
+                    <input type="range" class="rv-set-ha-pad" min="4" max="48" step="1" value="25"></div>
                   <div class="rv-setting-row"><span class="rv-setting-label">Helix box color</span>
                     <input type="color" class="rv-set-ha-color" value="#ef4444" style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px"></div>
                 </div>
@@ -3044,7 +3033,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
               <div class="rv-upload-lbl">Apply reactivity to <span>select one or more</span></div>
               <div class="rv-xml-target-list"></div>
             </div>
-            <div class="rv-upload-section">
+            <div class="rv-upload-section" style="margin-top:12px">
               <div class="rv-upload-lbl">Pair annotations <span>(TSV, or R-scape's .cov/.helixcov file)</span></div>
               <div class="rv-upload-drop rv-upload-drop-annot">
                 <input type="file" class="rv-file-annot" accept=".tsv,.txt,.cov,.helixcov" multiple>
@@ -3090,6 +3079,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._legendLabels = q('.rv-legend-labels');
             this._legendNaN = q('.rv-legend-nan');
             this._palLegend = q('.rv-pal-legend');
+            this._pkPanelsEl = q('.rv-pk-panels');
             this._rotRing = q('.rv-rot-ring');
             this._rotCirc = q('.rv-rot-circ');
             this._rotLine = q('.rv-rot-line');
@@ -3099,13 +3089,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._chkColors = q('.rv-chk-colors');
             this._chkPAnnot = q('.rv-chk-pannot');
             this._chkPk = q('.rv-chk-pk');
-            this._chkR3d = q('.rv-chk-r3d');
+            this._chkR3dInsets = q('.rv-chk-r3d-insets');
+            this._chkR3dLabels = q('.rv-chk-r3d-labels');
             this._chkSsEnds = q('.rv-chk-ssends');
             this._alnLegend = q('.rv-aln-legend');
             this._showPseudoknots = this._config?.showPseudoknots !== false;
             if (this._chkPk) this._chkPk.classList.toggle('rv--active', this._showPseudoknots);
-            this._showR3d = this._constructorConfig?.showR3d !== false;
-            if (this._chkR3d) this._chkR3d.classList.toggle('rv--active', this._showR3d);
+            this._showR3dInsets = this._constructorConfig?.showInsets !== false;
+            this._showR3dLabels = this._constructorConfig?.showLabels !== false;
+            if (this._chkR3dInsets) this._chkR3dInsets.classList.toggle('rv--active', this._showR3dInsets);
+            if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
             this._showSsEnds = this._constructorConfig?.showSsEnds === true;
             if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
             this._layoutBtn = q('.rv-btn-layout');
@@ -3165,7 +3158,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 this._chkIndices.addEventListener('click', () => {
                     this._showIndices = !this._showIndices;
                     this._chkIndices.classList.toggle('rv--active', this._showIndices);
-                    this._render();
+                    if (!this._alnActive) this._render();
                 });
             }
             if (this._chkColors) {
@@ -3173,32 +3166,42 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     this._showColors = !this._showColors;
                     this._chkColors.classList.toggle('rv--active', this._showColors);
                     this._updateLegendVisibility();
-                    this._render();
+                    if (!this._alnActive) this._render();
                 });
             }
             if (this._chkPk) {
                 this._chkPk.addEventListener('click', () => {
                     this._showPseudoknots = !this._showPseudoknots;
                     this._chkPk.classList.toggle('rv--active', this._showPseudoknots);
-                    this._render();
+                    if (!this._alnActive) this._render();
                 });
             }
-            if (this._chkR3d) {
-                this._chkR3d.addEventListener('click', () => {
-                    this._showR3d = !this._showR3d;
-                    this._chkR3d.classList.toggle('rv--active', this._showR3d);
-                    this._render();
+            if (this._chkR3dInsets) {
+                this._chkR3dInsets.addEventListener('click', () => {
+                    this._showR3dInsets = !this._showR3dInsets;
+                    this._chkR3dInsets.classList.toggle('rv--active', this._showR3dInsets);
+                    if (!this._alnActive) this._render();
+                });
+            }
+            if (this._chkR3dLabels) {
+                this._chkR3dLabels.addEventListener('click', () => {
+                    this._showR3dLabels = !this._showR3dLabels;
+                    this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
+                    if (!this._alnActive) this._render();
                 });
             }
             if (this._chkSsEnds) {
                 this._chkSsEnds.addEventListener('click', () => {
                     this._showSsEnds = !this._showSsEnds;
                     this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
-                    this._rebuildCurrentLayout();
+                    if (!this._alnActive) this._rebuildCurrentLayout();
                 });
             }
             if (this._chkPAnnot) {
-                this._chkPAnnot.addEventListener('click', () => this.setShowPairAnnotations(!this._showPairAnnotations));
+                this._chkPAnnot.addEventListener('click', () => {
+                    if (!this._alnActive) this.setShowPairAnnotations(!this._showPairAnnotations);
+                    else { this._showPairAnnotations = !this._showPairAnnotations; this._chkPAnnot.classList.toggle('rv--active', this._showPairAnnotations); }
+                });
             }
             // Upload panel
             if (this._uploadBtn) {
@@ -3238,6 +3241,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 const hidePanel = () => this._hideUploadPanel();
                 this._uploadPanel.querySelector('.rv-upload-x').addEventListener('click', hidePanel);
                 this._uploadPanel.querySelector('.rv-upload-btn-cancel').addEventListener('click', hidePanel);
+                this._makeDraggable(this._uploadPanel);
                 // Drag-over highlight, stopPropagation prevents canvas drop handler from also firing
                 for (const drop of this._uploadPanel.querySelectorAll('.rv-upload-drop')) {
                     drop.addEventListener('dragover', e => {
@@ -3377,14 +3381,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 const allFiles = Array.from(e.dataTransfer.files);
                 const dbFiles = allFiles.filter(f => DB_EXTS.test(f.name));
                 const xmlFiles = allFiles.filter(f => /\.xml$/i.test(f.name));
+                // Silently ignore XML files for Stockholm structures
+                const effectiveXmlFiles = this._rna?.baseDisplay ? [] : xmlFiles;
                 const covFiles = allFiles.filter(f => /\.(cov|helixcov)$/i.test(f.name));
-                if (!dbFiles.length && !xmlFiles.length && !covFiles.length) return;
+                if (!dbFiles.length && !effectiveXmlFiles.length && !covFiles.length) return;
                 if (this._alnActive) this._exitAlnView();
                 // XML-only drop: open panel showing both the XML ordering list and
                 // a reorderable list of all structures that match the XML sequences.
-                if (!dbFiles.length && !covFiles.length && xmlFiles.length && this._rna) {
+                if (!dbFiles.length && !covFiles.length && effectiveXmlFiles.length && this._rna) {
                     this._showUploadPanel();
-                    this._accumulatedXmlFiles = [...xmlFiles];
+                    this._accumulatedXmlFiles = [...effectiveXmlFiles];
                     await this._previewXmlFiles();
                     if (!this._pendingXmlData.length) {
                         this._hideUploadPanel();
@@ -3402,7 +3408,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     return;
                 }
                 // .cov-only drop: open panel only when a Stockholm structure is loaded
-                if (!dbFiles.length && !xmlFiles.length && covFiles.length && this._rna) {
+                if (!dbFiles.length && !effectiveXmlFiles.length && covFiles.length && this._rna) {
                     const stockholmStructs = (this._structures?.length ? this._structures : []).filter(s => !!s.baseDisplay);
                     if (!stockholmStructs.length) return;
                     this._showUploadPanel();
@@ -3495,6 +3501,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 return;
             }
             this._lastConfig = config;
+            this._lastCovTexts = []; // annotations must be re-applied explicitly for this new structure
             const {
                 pairs,
                 pseudoPairs
@@ -3548,11 +3555,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         // standard .cov pair-annotation file.
         loadCov(covText) {
             if (!this._rna) throw new Error('No structure loaded — call load() first.');
+            this._lastCovTexts = [...(this._lastCovTexts || []), covText]; // accumulate for reset()
             if (/^#\s+RM_HELIX\b/m.test(covText)) return this.loadHelixCov(covText);
             const pairs = parseCovFile(covText);
             const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
             // Build separate sets for nested vs pseudoknot pairs
             const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
+            if (this._rna.ssConsPkPairs)
+                for (const fps of Object.values(this._rna.ssConsPkPairs))
+                    for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
             const allStructPairs = getStructurePairSet(this._rna.structure || '');
             const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
             const nestedCovPairs = remapped.filter(({i, j}) => nestedStructPairs.has(pairKey(i, j)));
@@ -3622,14 +3633,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 for (let i = 0; i < this._rna.n; i++) o2r.set(i, i);
             const n = this._rna.n;
             const _pairsArr = buildPairsArray(this._rna.structure || '');
-            // Build a combined partner map covering both nested and pseudoknot pairs
+            // Build a combined partner map: ssConsPkPairs first, then pseudoPairs, then main structure.
+            // Later entries overwrite earlier ones, so main structure pairs always take priority
+            // for positions shared between the main helix and ssConsPkPairs (e.g. xc/sc pairs).
             const _partnerMap = new Map();
-            for (let i = 0; i < this._rna.n; i++) {
-                if (_pairsArr[i] >= 0) { _partnerMap.set(i, _pairsArr[i]); }
-            }
+            if (this._rna.ssConsPkPairs)
+                for (const fps of Object.values(this._rna.ssConsPkPairs))
+                    for (const ps of fps) { _partnerMap.set(ps.i, ps.j); _partnerMap.set(ps.j, ps.i); }
             for (const ps of this._rna.pseudoPairs) {
                 _partnerMap.set(ps.i, ps.j);
                 _partnerMap.set(ps.j, ps.i);
+            }
+            for (let i = 0; i < this._rna.n; i++) {
+                if (_pairsArr[i] >= 0) { _partnerMap.set(i, _pairsArr[i]); }
             }
             const helixAnnotations = helices.map(h => {
                 // Collect all rendered positions in the 5' arm range
@@ -3660,7 +3676,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 // Split sub-helices into nested and pseudoknot pairs.
                 // PK helix type from RM_HELIX line takes priority; otherwise check structure brackets.
                 const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
-                const isPkHelix = h.helixType === 'PK';
+                if (this._rna.ssConsPkPairs)
+                    for (const fps of Object.values(this._rna.ssConsPkPairs))
+                        for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
+                const isPkHelix = h.helixType === 'PK' || h.helixType === 'XCOV';
                 const nestedSubs = [], pkPairs = [];
                 for (const sh of subHelices) {
                     const nPos5p = [], nPos3p = [];
@@ -3680,8 +3699,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }).filter(a => a?.nestedSubs?.length > 0 || a?.pkPairs?.length > 0);
             if (!helixAnnotations.length) throw new Error('No significant helix positions could be mapped to the current structure.');
             this._rna.helixAnnotations = helixAnnotations
-                .filter(a => a.nestedSubs.length > 0)
-                .map(a => ({ subHelices: a.nestedSubs, evalue: a.evalue, pvalue: a.pvalue }));
+                .map(a => ({ subHelices: a.nestedSubs, pkPairs: a.pkPairs, evalue: a.evalue, pvalue: a.pvalue }));
             const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
             if (pkGlowPairs.length) this._rna.pseudoHelixCovAnnotations = pkGlowPairs;
             this._rna.isCovAnnot = true;
@@ -3753,8 +3771,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         // Reset layout to the initial radiate drawing
         reset() {
             if (!this._lastConfig) return;
-            const savedIdx = this._currentStructIdx;
+            const savedIdx  = this._currentStructIdx;
+            const savedCovs = this._lastCovTexts ?? [];
             this.load(this._lastConfig);
+            // Re-apply annotations loaded via loadCov() (not captured in _lastConfig)
+            for (const cov of savedCovs) this.loadCov(cov);
             if (savedIdx > 0 && savedIdx < this._structLayouts.length) {
                 this._currentStructIdx = savedIdx;
                 this._rna = this._structLayouts[savedIdx];
@@ -3784,10 +3805,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._render();
         }
         // Toggle SS_cons annotations (R3D) on or off
-        setShowR3d(val) {
-            this._showR3d = !!val;
-            if (this._chkR3d) this._chkR3d.classList.toggle('rv--active', this._showR3d);
-            this._render();
+        // Toggle inset panels visibility (Stockholm PK/R3D structures)
+        setShowInsets(val) {
+            this._showR3dInsets = !!val;
+            if (this._chkR3dInsets) this._chkR3dInsets.classList.toggle('rv--active', this._showR3dInsets);
+            if (!this._alnActive) this._render();
+        }
+        // Toggle annotation labels/lines visibility (Stockholm PK/R3D structures)
+        setShowLabels(val) {
+            this._showR3dLabels = !!val;
+            if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
+            if (!this._alnActive) this._render();
         }
         // Toggle display of trimmed single-stranded 5'/3' end bases on or off.
         // Has no effect if the current structure has no trimmed ss ends.
@@ -3890,17 +3918,506 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 active = false;
             });
         }
+        // Render pseudoknots for Stockholm structures using R3D-style arcs + mini helix panels.
+        // Returns an array of stem descriptors for panel layout.
+        // ── Shared Stockholm rendering helpers ──────────────────────────────────
+        // These are used by both _render() (main structure) and _renderPkStockholm() (insets)
+        // so any change to bond length, glow, layer order etc. only needs to happen once.
+
+        /** White eraser circle that sits behind a base letter */
+        /** Returns true if b1/b2 form a canonical Watson-Crick or wobble pair */
+        _isCanonPair(b1, b2) {
+            const a = b1.toUpperCase(), b = b2.toUpperCase();
+            return (a==='G'&&b==='C')||(a==='C'&&b==='G')||
+                   (a==='A'&&b==='U')||(a==='U'&&b==='A')||
+                   (a==='A'&&b==='T')||(a==='T'&&b==='A')||
+                   (a==='G'&&b==='U')||(a==='U'&&b==='G')||
+                   (a==='G'&&b==='T')||(a==='T'&&b==='G');
+        }
+
+        /**
+         * Copies all runtime annotation properties from one layout object to another.
+         * Used when recomputing coordinates (layout switch, reset) to avoid losing
+         * annotations that were loaded post-layout via loadCov() or drag-drop.
+         */
+        _copyLayoutAnnotations(src, dst) {
+            const props = ['helixAnnotations','isCovAnnot','pseudoCovAnnotations',
+                           'pseudoHelixCovAnnotations','ssConsFeatures','ssConsPkPairs','ssEnds'];
+            for (const p of props) if (src[p]) dst[p] = src[p];
+        }
+
+        /** Creates an SVG line element. cls is optional. Does not append it. */
+        _mkSvgLine(x1, y1, x2, y2, cls) {
+            const l = document.createElementNS(NS, 'line');
+            l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+            l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+            if (cls) l.setAttribute('class', cls);
+            return l;
+        }
+
+        _mkEraserCircle(cx, cy, baseR, bgColor) {
+            const er = document.createElementNS(NS, 'circle');
+            er.setAttribute('cx', cx); er.setAttribute('cy', cy);
+            er.setAttribute('r',  baseR * 1.5);
+            er.style.cssText = `fill:${bgColor};stroke:none`;
+            return er;
+        }
+
+        /** Base letter (text) or fill circle for a Stockholm base */
+        _mkBaseElement(cx, cy, bd, baseR, bsW) {
+            if (bd.letter !== null && bd.letter !== undefined) {
+                const t = document.createElementNS(NS, 'text');
+                t.setAttribute('x', cx); t.setAttribute('y', cy);
+                t.setAttribute('dy', '0.35em');
+                t.setAttribute('text-anchor', 'middle');
+                t.style.cssText = `font-size:${baseR * 3}px;font-family:monospace;font-weight:bold;fill:${bd.textColor || '#1f2328'}`;
+                t.textContent = bd.letter;
+                return t;
+            } else if (bd.fillColor) {
+                const c = document.createElementNS(NS, 'circle');
+                c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+                c.setAttribute('r',  baseR);
+                c.style.cssText = `fill:${bd.fillColor};stroke:#111111;stroke-width:${bsW}`;
+                return c;
+            }
+            return null;
+        }
+
+        /**
+         * Stockholm bond between two base centres at (x1,y1) and (x2,y2).
+         * Returns an array of SVG elements (line and/or dot).
+         * Shortens the line by `shrinkEach` on each end to avoid overlapping eraser circles.
+         */
+        _mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR) {
+            const isCanon = this._isCanonPair(b1, b2);
+            const mkL = (ax, ay, bx, by) => this._mkSvgLine(ax, ay, bx, by, 'rv-basepair');
+            const mkDot = (cx, cy, cls = 'rv-bp-noncanon') => {
+                const c = document.createElementNS(NS, 'circle');
+                c.setAttribute('class', cls);
+                c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+                c.setAttribute('r', dotR);
+                return c;
+            };
+            const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+            const shrink = baseR * 1.44 / len;
+            const dx = x2 - x1, dy = y2 - y1;
+            const sx1 = x1 + dx * shrink, sy1 = y1 + dy * shrink;
+            const sx2 = x2 - dx * shrink, sy2 = y2 - dy * shrink;
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            if (!isCanon) return [mkDot(mx, my)];
+            if (len * (1 - 2 * shrink) <= 0) return []; // too short to draw
+            return [mkL(sx1, sy1, sx2, sy2)];
+        }
+
+        /**
+         * Pair-annotation rectangle centred between two base positions.
+         * Works for any angle — used in both main structure and insets.
+         */
+        _mkPairAnnotRect(x1, y1, x2, y2, color, opa, sw, pad, baseR) {
+            const dist  = Math.hypot(x2 - x1, y2 - y1);
+            const w     = dist + pad * 2;
+            const h     = pad * 2;
+            const mx    = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+            const rect  = document.createElementNS(NS, 'rect');
+            rect.setAttribute('x',      mx - w / 2);
+            rect.setAttribute('y',      my - h / 2);
+            rect.setAttribute('width',  w);
+            rect.setAttribute('height', h);
+            rect.setAttribute('rx',     baseR * 0.6);
+            rect.style.fill          = color;
+            rect.style.fillOpacity   = String(opa);
+            rect.style.stroke        = color;
+            rect.style.strokeWidth   = String(sw);
+            rect.style.strokeOpacity = String(Math.min(1, opa * 2.5));
+            rect.setAttribute('transform', `rotate(${angle},${mx},${my})`);
+            return rect;
+        }
+
+        _renderPkStockholm(gLines, gLabels, coords, n, pseudoPairs, pairs, sequence, cs, skipArcs = false, featureName = null, stemIdxOffset = 0) {
+            if (!pseudoPairs?.length || !this._pkPanelsEl) return 0;
+
+            // ── Group pseudoknot pairs into stems ──────────────────────────────
+            const sorted = [...pseudoPairs].sort((a, b) => a.i - b.i);
+            const stems = [];
+            let cur = null;
+            for (const ps of sorted) {
+                if (cur) {
+                    const last = cur[cur.length - 1];
+                    if (ps.i === last.i + 1 &&
+                        (ps.j === last.j - 1 || ps.j === last.j + 1)) {
+                        cur.push(ps); continue;
+                    }
+                }
+                if (cur) stems.push(cur);
+                cur = [ps];
+            }
+            if (cur) stems.push(cur);
+
+            // ── Build R3D coverage map: pos → feature name ────────────────────
+            // Used to: (a) avoid double-labelling PK positions already in R3D,
+            // and (b) adopt the R3D feature name as the inset label for that stem.
+            const r3dPosToName = new Map(); // residue index → R3D feature name
+            if (this._rna.ssConsFeatures) {
+                for (const [name, positions] of Object.entries(this._rna.ssConsFeatures))
+                    for (const p of positions) r3dPosToName.set(p, name);
+            }
+            // For each stem, resolve the display label:
+            // - If R3D is ON and covers >= 1 position of the 5' arm, use that R3D feature name.
+            // - Otherwise use the generated 'PK1', 'PK2', ... name.
+            // Store resolved labels so the inset panels use the same names.
+            // Label: always use the R3D feature name when the SS_cons covers this stem,
+            // regardless of whether the R3D toggle is currently on or off.
+            const stemLabels = stems.map((stem, si) => {
+                if (featureName) return featureName;
+                for (const p of stem.map(ps => ps.i))
+                    if (r3dPosToName.has(p)) return r3dPosToName.get(p);
+                for (const p of stem.map(ps => ps.j))
+                    if (r3dPosToName.has(p)) return r3dPosToName.get(p);
+                return `PK${si + 1}`;
+            });
+
+            // ── R3D-style arcs on main structure (non-skip path) ──────────────────
+            stems.forEach((stem, si) => {
+                const label  = stemLabels[si];
+                const label2 = label + "'";
+                const r3dOn = this._showR3dInsets !== false;
+                const pos5 = stem.map(p => p.i).filter(p => !r3dOn || !r3dPosToName.has(p));
+                const pos3 = stem.map(p => p.j).filter(p => !r3dOn || !r3dPosToName.has(p));
+                if (!skipArcs) {
+                    if (pos5.length) this._renderSsConsAnnotations(gLines, gLabels, coords, n,
+                        { [label]: pos5 }, pairs, pseudoPairs, cs);
+                    if (pos3.length) this._renderSsConsAnnotations(gLines, gLabels, coords, n,
+                        { [label2]: pos3 }, pairs, pseudoPairs, cs);
+                }
+            });
+
+            // ── CSS vars ────────────────────────────────────────────────────────
+            const baseR      = 11; // fixed in insets — not affected by the base size settings slider
+            const bpW        = parseFloat(cs.getPropertyValue('--rv-basepair-width'))     || 2.2;
+            const bbW        = parseFloat(cs.getPropertyValue('--rv-backbone-width'))     || 2;
+            const bbCol      = cs.getPropertyValue('--rv-backbone').trim()                || '#1f2328';
+            const bpCol      = cs.getPropertyValue('--rv-basepair').trim()                || '#1f2328';
+            const dotR       = parseFloat(cs.getPropertyValue('--rv-noncanon-dot-r'))     || 4.5;
+            const BP_OFF     = 2.8;
+            const bgCol      = cs.getPropertyValue('--rv-bg').trim()                      || '#ffffff';
+            const pkColor    = cs.getPropertyValue('--rv-pseudopair').trim()              || '#1f2328';
+            const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim()       || '#aff0a8';
+            const helixPad   = baseR * 1.7; // fixed in insets, not affected by settings slider
+            const pAnnotOpa  = parseFloat(cs.getPropertyValue('--rv-pair-annot-opacity')) || 0.5;
+            const pAnnotSW   = parseFloat(cs.getPropertyValue('--rv-pair-annot-stroke-width')) || 1.5;
+            const pAnnotPad  = parseFloat(cs.getPropertyValue('--rv-pair-annot-padding')) || 5;
+            const bsW        = parseFloat(cs.getPropertyValue('--rv-base-stroke-width'))  || 2;
+
+            // ── Panel geometry ─────────────────────────────────────────────────
+            const colSep  = baseR * 6;
+            const rowStep = baseR * 3.5;
+            const _helixPadCS = baseR * 1.7; // inset helix pad is fixed, not controlled by settings slider
+            const _annPadInset = _helixPadCS * 1.35; // helix box padding used in insets
+            const col5x   = _annPadInset + baseR * 0.5; // shift right so box doesn't clip left edge
+            const col3x   = col5x + colSep;
+            const svgW    = col3x + _annPadInset + baseR * 0.5; // enough room on right side too
+            // Vertical padding: equal top and bottom
+            // vPad must be at least annPad so the helix box isn't clipped at top/bottom
+            const vPad    = _annPadInset + baseR * 0.5;
+
+            // When featureName is set (ssConsPkPairs call), all stems belong to the same
+            // named feature and go into ONE panel with a gap between runs.
+            // When featureName is null (pseudoPairs call), one panel per stem as before.
+            const stemGroups = featureName
+                ? [stems.map((stem, si) => ({ stem, si }))]          // all stems → one group
+                : stems.map((stem, si) => [{ stem, si }]);            // one stem per group
+
+            const betweenStemGap = rowStep * 0.8;
+
+            stemGroups.forEach(group => {
+                // Build combined inCoords / inPairs for all stems in this group
+                const inCoords = {};
+                const inPairs  = {};
+                let curY = vPad;
+                group.forEach(({ stem }, runIdx) => {
+                    stem.forEach((ps, k) => {
+                        inCoords[ps.i] = { x: col5x, y: curY + k * rowStep };
+                        inCoords[ps.j] = { x: col3x, y: curY + k * rowStep };
+                        inPairs[ps.i]  = ps.j;
+                        inPairs[ps.j]  = ps.i;
+                    });
+                    curY += stem.length * rowStep + (runIdx < group.length - 1 ? betweenStemGap : 0);
+                });
+                const totalBp  = group.reduce((s, { stem }) => s + stem.length, 0);
+                const svgH     = curY - rowStep + baseR * 2 + baseR * 0.8;
+                const label    = stemLabels[group[0].si];
+                const si       = group[0].si; // representative si for this group
+                const nbp      = group[0].stem.length; // for single-stem compat
+
+                const panel = document.createElement('div');
+                panel.className = 'rv-pk-panel';
+                panel.setAttribute('data-pk', si + stemIdxOffset);
+                const _cw = this._canvas?.clientWidth || 0;
+                const _pw = _cw > 0 ? Math.round(_cw / 17.5) : 120;
+                panel.style.width = _pw + 'px';
+
+                const h4 = document.createElement('h4');
+                h4.textContent = label;
+                panel.appendChild(h4);
+
+                const svg = document.createElementNS(NS, 'svg');
+                svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+                svg.setAttribute('width', _pw);
+                svg.setAttribute('height', Math.round(svgH * _pw / svgW));
+                svg.style.cssText = 'display:block';
+
+                const style = document.createElementNS(NS, 'style');
+                style.textContent = [
+                    `.rv-basepair{stroke:${bpCol};stroke-width:${bpW};fill:none;stroke-linecap:round}`,
+                    `.rv-bp-dot{fill:${bpCol};stroke:none}`,
+                    `.rv-bp-noncanon{fill:${bpCol};stroke:none}`,
+                ].join('');
+                svg.appendChild(style);
+
+                // SVG layer groups — order (bottom to top):
+                // backbone → eraser circles → helix boxes → pair annot boxes → bases → bonds
+                const ins_bb    = document.createElementNS(NS, 'g'); // backbone
+                const ins_era   = document.createElementNS(NS, 'g'); // white eraser circles
+                const ins_hbox  = document.createElementNS(NS, 'g'); // helix annotation boxes
+                const ins_abox  = document.createElementNS(NS, 'g'); // pair annotation boxes
+                const ins_base  = document.createElementNS(NS, 'g'); // base letters / fill circles
+                const ins_bp    = document.createElementNS(NS, 'g'); // bonds (base-pair lines) — topmost
+                svg.append(ins_bb, ins_era, ins_hbox, ins_abox, ins_base, ins_bp);
+
+                // Rendering order:
+                // 1. backbone
+                // 2. eraser circles (white, behind everything else)
+                // 3. helix annotation boxes
+                // 4. pair annotation boxes
+                // 5. bases (letters / fill circles)
+                // 6. bonds (base-pair lines) — on top so they aren't hidden by annotation boxes
+
+                // All pairs in this panel (across all runs)
+                const allPairs = group.flatMap(({ stem }) => stem);
+
+                // ── 1. Backbone (one line per run, not spanning gaps) ──────────
+                group.forEach(({ stem }) => {
+                    if (stem.length < 2) return;
+                    const y0 = inCoords[stem[0].i].y;
+                    const yN = inCoords[stem[stem.length-1].i].y;
+                    [col5x, col3x].forEach(cx => {
+                        const l = document.createElementNS(NS, 'line');
+                        l.setAttribute('x1', cx); l.setAttribute('y1', y0);
+                        l.setAttribute('x2', cx); l.setAttribute('y2', yN);
+                        l.style.cssText = `stroke:${bbCol};stroke-width:${bbW};stroke-linecap:round`;
+                        ins_bb.appendChild(l);
+                    });
+                });
+
+                // ── 2. White eraser circles ───────────────────────────────────
+                allPairs.forEach(ps => {
+                    [ps.i, ps.j].forEach(ri => {
+                        const bd = this._rna.baseDisplay?.[ri];
+                        if (!bd || bd.skip) return;
+                        const cx = ri === ps.i ? col5x : col3x;
+                        const ry = inCoords[ri].y;
+                        if (bd.letter !== null && bd.letter !== undefined)
+                            ins_era.appendChild(this._mkEraserCircle(cx, ry, baseR, bgCol));
+                    });
+                });
+
+                // ── 4. Helix annotation box ────────────────────────────────────
+                if (this._showPairAnnotations && this._rna.helixAnnotations?.length) {
+                    for (const ann of this._rna.helixAnnotations) {
+                        const hasPair = (ann.subHelices || []).some(sh =>
+                            sh.pos5p.some(ri => allPairs.some(p => p.i===ri||p.j===ri)) ||
+                            sh.pos3p.some(ri => allPairs.some(p => p.i===ri||p.j===ri)))
+                            || (ann.pkPairs || []).some(pk => allPairs.some(p =>
+                                (p.i===pk.i&&p.j===pk.j)||(p.i===pk.j&&p.j===pk.i)));
+                        if (!hasPair) continue;
+                        const annPad = ann.padding != null ? ann.padding * 1.35 : _annPadInset;
+                        group.forEach(({ stem: runStem }) => {
+                            const inRun = runStem.filter(p =>
+                                (ann.subHelices || []).some(sh => sh.pos5p.includes(p.i) || sh.pos3p.includes(p.j)) ||
+                                (ann.pkPairs || []).some(pk => (pk.i===p.i&&pk.j===p.j)||(pk.i===p.j&&pk.j===p.i)));
+                            if (!inRun.length) return;
+                            const yVals = inRun.map(p => inCoords[p.i].y);
+                            const yTop = Math.min(...yVals) - annPad;
+                            const yBot = Math.max(...yVals) + annPad;
+                            const bw = (col3x - col5x) + annPad * 2;
+                            const bh = yBot - yTop;
+                            const rx = Math.min(baseR * 0.6, bw / 2, bh / 2);
+                            const rect = document.createElementNS(NS, 'rect');
+                            rect.setAttribute('x',            col5x - annPad);
+                            rect.setAttribute('y',            yTop);
+                            rect.setAttribute('width',        bw);
+                            rect.setAttribute('height',       bh);
+                            rect.setAttribute('rx',           rx);
+                            rect.setAttribute('ry',           rx);
+                            rect.setAttribute('fill',         ann.color ?? helixColor);
+                            rect.setAttribute('fill-opacity', String(ann.opacity ?? (parseFloat(cs?.getPropertyValue('--rv-helix-annot-opacity')) || 0.5)));
+                            rect.setAttribute('stroke',       ann.color ?? helixColor);
+                            rect.setAttribute('stroke-opacity', '0.45');
+                            rect.setAttribute('stroke-width', String(ann.strokeWidth ?? 1.5));
+                            ins_hbox.appendChild(rect);
+                        });
+                        break;
+                    }
+                }
+
+                // ── 5. Annotation boxes ────────────────────────────────────────
+                if (this._showPairAnnotations) {
+                    for (const ann of (this._rna.pairAnnotations || [])) {
+                        let ai = ann.i, aj = ann.j;
+                        if (ai != null && aj != null) {
+                            if (allPairs.some(p=>(p.i===ai&&p.j===aj)||(p.i===aj&&p.j===ai))) {
+                                // exact match
+                            } else if (inPairs[ai] != null && inCoords[ai]) {
+                                aj = inPairs[ai];
+                            } else if (inPairs[aj] != null && inCoords[aj]) {
+                                ai = inPairs[aj];
+                            } else continue;
+                        } else if (ai != null) {
+                            aj = inPairs[ai]; if (aj == null) continue;
+                        } else if (aj != null) {
+                            ai = inPairs[aj]; if (ai == null) continue;
+                        } else continue;
+                        const ic5 = inCoords[ai], ic3 = inCoords[aj];
+                        if (!ic5 || !ic3) continue;
+                        let color = ann.color;
+                        if (!color && ann.key != null && this._rna.pairAnnotColorMap) {
+                            const e2 = this._rna.pairAnnotColorMap.find(e => e.key === ann.key);
+                            if (e2) color = e2.color;
+                        }
+                        ins_abox.appendChild(this._mkPairAnnotRect(
+                            ic5.x, ic5.y, ic3.x, ic3.y,
+                            color || '#ffffff', ann.opacity ?? pAnnotOpa, ann.strokeWidth ?? pAnnotSW, ann.padding ?? pAnnotPad, baseR));
+                    }
+                    for (const { i, j, color } of (this._rna.pseudoCovAnnotations || [])) {
+                        if (!allPairs.some(p=>(p.i===i&&p.j===j)||(p.i===j&&p.j===i))) continue;
+                        const ic5 = inCoords[i], ic3 = inCoords[j];
+                        if (!ic5 || !ic3) continue;
+                        ins_abox.appendChild(this._mkPairAnnotRect(
+                            ic5.x, ic5.y, ic3.x, ic3.y,
+                            color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
+                    }
+                }
+
+                // ── 5. Base letters / fill circles ────────────────────────────
+                allPairs.forEach(ps => {
+                    [[col5x, ps.i], [col3x, ps.j]].forEach(([cx, ri]) => {
+                        const bd = this._rna.baseDisplay?.[ri];
+                        if (!bd || bd.skip) return;
+                        const el = this._mkBaseElement(cx, inCoords[ri].y, bd, baseR, bsW);
+                        if (el) ins_base.appendChild(el);
+                    });
+                });
+
+                // ── 6. Bonds (topmost) ─────────────────────────────────────────
+                allPairs.forEach(ps => {
+                    const ry = inCoords[ps.i].y;
+                    const b5 = (sequence?.[ps.i] || '?').toUpperCase();
+                    const b3 = (sequence?.[ps.j] || '?').toUpperCase();
+                    this._mkStockholmBond(col5x, ry, col3x, ry, b5, b3, baseR, dotR)
+                        .forEach(el => ins_bp.appendChild(el));
+                });
+
+                panel.appendChild(svg);
+
+                // ── Hover ──────────────────────────────────────────────────────
+                const stemPositions = allPairs.flatMap(p => [p.i, p.j]);
+                panel.addEventListener('mouseenter', () => {
+                    const glowSize = parseFloat(cs.getPropertyValue('--rv-inset-hover-glow')) || 6;
+                    stemPositions.forEach(idx => {
+                        const grp = this._scene.querySelector(`g[data-idx="${idx}"]`);
+                        if (!grp) return;
+                        grp._pkOrig = { filter: grp.style.filter };
+                        grp.style.filter = `drop-shadow(0 0 ${glowSize * 0.5}px ${pkColor}) drop-shadow(0 0 ${glowSize}px ${pkColor})`;
+                    });
+                });
+                panel.addEventListener('mouseleave', () => {
+                    stemPositions.forEach(idx => {
+                        const grp = this._scene.querySelector(`g[data-idx="${idx}"]`);
+                        if (!grp?._pkOrig) return;
+                        grp.style.filter = grp._pkOrig.filter;
+                        delete grp._pkOrig;
+                    });
+                });
+
+                this._pkPanelsEl.appendChild(panel);
+            });
+
+            this._pkPanelsEl.style.display = 'flex';
+
+            // ── Resize panels + multi-column layout ───────────────────────────
+            requestAnimationFrame(() => {
+                const container = this._pkPanelsEl;
+                if (!container) return;
+                const panels = Array.from(container.children);
+                if (!panels.length) return;
+
+                // Step 1: constrain each panel to 1/15th of canvas width via CSS variable
+                const canvasW = this._canvas?.clientWidth || container.parentElement?.clientWidth || 0;
+                const panelW  = canvasW > 0 ? Math.round(canvasW / 15) : 120;
+                this._root.style.setProperty('--rv-inset-max-width', panelW + 'px');
+
+                // Step 2: multi-column layout (needs a fresh rAF so browser reflects new sizes)
+                requestAnimationFrame(() => {
+                    const canvasH   = this._canvas?.clientHeight || container.parentElement?.clientHeight || 600;
+                    const available = canvasH - 52 - 16 - 16;
+                    const gap       = 8;
+                    const heights   = panels.map(p => p.getBoundingClientRect().height || p.offsetHeight);
+
+                    const cols = [[]];
+                    let colH = 0;
+                    for (let i = 0; i < panels.length; i++) {
+                        const next = colH + (cols[cols.length-1].length > 0 ? gap : 0) + heights[i];
+                        if (next > available && cols[cols.length-1].length > 0) { cols.push([]); colH = 0; }
+                        cols[cols.length-1].push(i);
+                        colH += (cols[cols.length-1].length > 1 ? gap : 0) + heights[i];
+                    }
+                    if (cols.length === 1) return;
+                    cols.forEach((col, ci) => {
+                        let y = 0;
+                        col.forEach(i => {
+                            panels[i].style.position = 'absolute';
+                            panels[i].style.left = (ci * (panelW + gap)) + 'px';
+                            panels[i].style.top  = y + 'px';
+                            y += heights[i] + gap;
+                        });
+                    });
+                    container.style.width  = (cols.length * (panelW + gap) - gap) + 'px';
+                    container.style.height = Math.max(...cols.map(col =>
+                        col.reduce((s, i) => s + heights[i] + gap, 0) - gap
+                    )) + 'px';
+                });
+            });
+            return stemGroups.length;
+        }
+
         _renderSsConsAnnotations(gLines, gLabels, coords, n, features, pairs, pseudoPairs, cs) {
-            const NS = 'http://www.w3.org/2000/svg';
             const cx  = coords.reduce((s,c) => s+c.x, 0) / n;
             const cy  = coords.reduce((s,c) => s+c.y, 0) / n;
+
+            // Compute signed area of backbone polygon to determine winding order.
+            // Positive = counterclockwise (SVG y-down: clockwise visually) → outside is LEFT of forward direction.
+            // We use this to flip normals globally so they always point outside.
+            let signedArea = 0;
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                signedArea += coords[i].x * coords[j].y - coords[j].x * coords[i].y;
+            }
+            // outwardSign: +1 means left-perpendicular (-dy, dx) points outside, -1 means right does
+            const outwardSign = signedArea >= 0 ? -1 : 1;
             const bbW    = parseFloat(cs.getPropertyValue('--rv-backbone-width')) || 2;
             const baseR  = parseFloat(cs.getPropertyValue('--rv-base-radius')) || 11;
             const idxOff = parseFloat(cs.getPropertyValue('--rv-base-index-offset')) || 26;
             const lineCol = cs.getPropertyValue('--rv-text').trim() || '#1f2328';
             const lblCol  = cs.getPropertyValue('--rv-base-index-color').trim() || '#656d76';
             const bgCol   = cs.getPropertyValue('--rv-bg').trim() || '#ffffff';
-            const lSz    = parseFloat(cs.getPropertyValue('--rv-base-index-font-size')) || 12;
+            // Auto-scale label font size so labels stay ~13px on screen regardless of structure size
+            const _minX = Math.min(...coords.map(c => c.x)), _maxX = Math.max(...coords.map(c => c.x));
+            const _minY = Math.min(...coords.map(c => c.y)), _maxY = Math.max(...coords.map(c => c.y));
+            const _pw = this._canvas?.clientWidth  || 800;
+            const _ph = this._canvas?.clientHeight || 600;
+            const _fitScale = Math.min((_pw - 100) / ((_maxX - _minX) || 1), (_ph - 100) / ((_maxY - _minY) || 1), 2);
+            const lSz    = Math.min(baseR * 3, Math.max(baseR * 0.5, 13 / _fitScale));
             const lFont  = cs.getPropertyValue('--rv-base-index-font').trim() || 'monospace';
             // pad < baseR+idxOff so ss_cons lines sit inside the index label radius;
             // loop indices go inward so no conflict; helix indices already outside
@@ -3909,6 +4426,30 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // ── Pseudoknot partner map ─────────────────────────────────────────
             const pkPartner = new Map();
             for (const p of pseudoPairs) { pkPartner.set(p.i, p.j); pkPartner.set(p.j, p.i); }
+
+            // ── Helix position set for arc-vs-line decision ────────────────────
+            const helixPos = new Set();
+            for (let i = 0; i < n; i++) { if (pairs[i] >= 0) helixPos.add(i); }
+
+            // Pre-pass: if any position in a feature's run touches a helix base,
+            // mark ALL positions in that run as helix-like so overlapping features
+            // (e.g. tr_6 and rm2_csra_motif.rev sharing the same bases) both use
+            // straight lines rather than one curve and one straight line.
+            // We must do this before rendering so all features see the same helixPos.
+            for (const [, positions] of Object.entries(features)) {
+                if (!positions.length) continue;
+                // Use a simple gap split here (same threshold as toRuns)
+                const runs2 = []; let r2 = [positions[0]];
+                for (let k = 1; k < positions.length; k++) {
+                    if (positions[k] <= positions[k-1] + 3) r2.push(positions[k]);
+                    else { runs2.push(r2); r2 = [positions[k]]; }
+                }
+                runs2.push(r2);
+                for (const run of runs2) {
+                    if (run.some(i => helixPos.has(i)))
+                        run.forEach(i => helixPos.add(i));
+                }
+            }
 
             // ── Canvas occupancy map ───────────────────────────────────────────
             const occupied = [];
@@ -3920,9 +4461,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     lx < o.x+o.w+2 && lx+tw > o.x-2 && ly < o.y+o.h+2 && ly+th > o.y-2);
             };
 
-            // Pre-fill with index label bounding boxes.
-            // Loop-base indices are now flipped INWARD, so we register them inward.
+            // Pre-fill occupancy with index label boxes AND base circle footprints
             for (let i = 0; i < n; i++) {
+                // Base circle — prevents labels landing on the structure
+                addOccupied(coords[i].x, coords[i].y, baseR * 2 + lSz * 0.8, baseR * 2 + lSz * 0.8);
                 if (i === 0 || (i + 1) % 10 === 0 || i === n - 1) {
                     const pi = Math.max(0,i-1), ni2 = Math.min(n-1,i+1);
                     const tx = coords[ni2].x-coords[pi].x, ty = coords[ni2].y-coords[pi].y;
@@ -3935,6 +4477,41 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     const ix = coords[i].x + inx*(baseR+idxOff);
                     const iy = coords[i].y + iny*(baseR+idxOff);
                     addOccupied(ix, iy, lSz*4.5, lSz*2.2);
+                }
+            }
+
+            // Register helix annotation boxes (rotated rects — use axis-aligned bounding box)
+            if (this._showPairAnnotations && this._rna?.helixAnnotations?.length) {
+                const hPad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || baseR * 1.7;
+                for (const ann of this._rna.helixAnnotations) {
+                    const annPad = ann.padding ?? hPad;
+                    for (const sh of (ann.subHelices || [])) {
+                        const p5 = sh.pos5p.filter(ri => ri >= 0 && ri < n);
+                        const p3 = sh.pos3p.filter(ri => ri >= 0 && ri < n);
+                        if (!p5.length || !p3.length) continue;
+                        const xs = [...p5, ...p3].map(ri => coords[ri].x);
+                        const ys = [...p5, ...p3].map(ri => coords[ri].y);
+                        const bx = Math.min(...xs) - annPad, by = Math.min(...ys) - annPad;
+                        const bw = Math.max(...xs) - Math.min(...xs) + annPad * 2;
+                        const bh = Math.max(...ys) - Math.min(...ys) + annPad * 2;
+                        occupied.push({ x: bx, y: by, w: bw, h: bh });
+                    }
+                }
+            }
+
+            // Register pair annotation boxes
+            if (this._showPairAnnotations && this._rna?.pairAnnotations?.length) {
+                const defPad = parseFloat(cs.getPropertyValue('--rv-pair-annot-padding')) || 5;
+                for (const ann of this._rna.pairAnnotations) {
+                    let i = ann.i, j = ann.j;
+                    if (i == null) { i = pairs[j]; } else if (j == null) { j = pairs[i]; }
+                    if (i == null || j == null || i < 0 || j < 0 || i >= n || j >= n) continue;
+                    const pad2 = ann.padding ?? defPad;
+                    const mx = (coords[i].x + coords[j].x) / 2;
+                    const my = (coords[i].y + coords[j].y) / 2;
+                    const hw = Math.hypot(coords[j].x - coords[i].x, coords[j].y - coords[i].y) / 2 + pad2;
+                    const hh = pad2;
+                    occupied.push({ x: mx - hw, y: my - hh, w: hw * 2, h: hh * 2 });
                 }
             }
 
@@ -3969,10 +4546,29 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
             // ── Merge labels that share a start position ─────────────────────
             const edgeGap = lSz * 3.5;
+            // posDirection: ri → 'open' (5' arm) | 'close' (3' arm)
+            // Built from ssConsPkPairs so arm boundaries are known exactly.
+            const posDirection = new Map();
+            if (this._rna.ssConsPkPairs)
+                for (const fps of Object.values(this._rna.ssConsPkPairs))
+                    for (const ps of fps) {
+                        posDirection.set(ps.i, 'open');
+                        posDirection.set(ps.j, 'close');
+                    }
+            // Also from pseudoPairs
+            for (const ps of pseudoPairs) {
+                posDirection.set(ps.i, 'open');
+                posDirection.set(ps.j, 'close');
+            }
             const toRuns = (positions) => {
+                // Split on direction change (5'→3' arm boundary) or gap > 3 within same arm.
                 const runs = []; let run = [positions[0]];
                 for (let k = 1; k < positions.length; k++) {
-                    if (positions[k] <= positions[k-1]+2) run.push(positions[k]);
+                    const gap = positions[k] - positions[k-1];
+                    const d0 = posDirection.get(positions[k-1]);
+                    const d1 = posDirection.get(positions[k]);
+                    const dirChange = d0 && d1 && d0 !== d1;
+                    if (!dirChange && gap <= 3) run.push(positions[k]);
                     else { runs.push(run); run = [positions[k]]; }
                 }
                 runs.push(run); return runs;
@@ -3997,55 +4593,41 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // ── Render each feature ───────────────────────────────────────────
             // Collect placements: render all bg rects first, then all texts on top
             const labelPlacements = [];
+            // Collect all label tasks first so we can sort by base index before placing
+            const pendingLabels = [];
             for (const [name, positions] of Object.entries(features)) {
                 if (!positions.length) continue;
                 const groups = toRuns(positions);
                 for (const group of groups) {
-                    const lcx = group.reduce((s,i) => s+coords[i].x, 0)/group.length;
-                    const lcy = group.reduce((s,i) => s+coords[i].y, 0)/group.length;
+                    const isNaview = this._rna?._algo === 'naview';
+                    // For helix-arm groups, expand to include all positions between
+                    // first and last so the line passes through every base in the arm.
+                    // Skip in naview — helix arms aren't linear there.
+                    const expandedGroup = (!isNaview && group.some(i => helixPos.has(i)))
+                        ? Array.from({length: group[group.length-1] - group[0] + 1}, (_, k) => group[0] + k)
+                        : group;
+                    const activeGroup = expandedGroup;
+                    // Per-position offset points — always outside via outwardSign
+                    const allLoop = !isNaview && activeGroup.every(i => !helixPos.has(i));
 
-                    // Per-position offset points.
-                    // Each base gets its own outward normal:
-                    //   - paired bases: perpendicular to backbone, pointing away from partner
-                    //   - loop bases: perpendicular to backbone, pointing away from structure centre
-                    // Using a shared normal across all bases in a group caused distortion when
-                    // a group spans both helix and loop positions (e.g. after pseudoknot injection).
-                    const pts = group.map(i => {
-                        let nx, ny;
-                        const partner = pairs[i]>=0 ? pairs[i] : (pkPartner.get(i)??-1);
-                        const pi=Math.max(0,i-1), ni2=Math.min(n-1,i+1);
-                        const tx=coords[ni2].x-coords[pi].x, ty=coords[ni2].y-coords[pi].y;
-                        const tl=Math.hypot(tx,ty)||1;
-                        nx=-ty/tl; ny=tx/tl;
-                        // Pseudoknot bases are treated like loop bases for normal computation —
-                        // using the partner direction causes path distortion in loop regions.
-                        const isHelixBase = pairs[i] >= 0; // only nested pairs, not pseudoknots
-                        if (isHelixBase) {
-                            // Helix base: point away from pair partner
-                            const pdx=coords[pairs[i]].x-coords[i].x, pdy=coords[pairs[i]].y-coords[i].y;
-                            if (pdx*nx+pdy*ny>0) { nx=-nx; ny=-ny; }
-                        } else {
-                            // Loop base (including pseudoknot bases): point away from structure centre.
-                            // For single-base groups lcx==coords[i], so fall back to cx/cy.
-                            const refX = group.length > 1 ? lcx : cx;
-                            const refY = group.length > 1 ? lcy : cy;
-                            if ((coords[i].x-refX)*nx+(coords[i].y-refY)*ny<0) { nx=-nx; ny=-ny; }
-                        }
-                        return { x: coords[i].x+nx*pad, y: coords[i].y+ny*pad, nx, ny };
+                    const pts = activeGroup.map(i => {
+                        const pi  = Math.max(0, i-1), ni2 = Math.min(n-1, i+1);
+                        const tx  = coords[ni2].x - coords[pi].x;
+                        const ty  = coords[ni2].y - coords[pi].y;
+                        const tl  = Math.hypot(tx, ty) || 1;
+                        // Left-perpendicular of forward direction, scaled by outwardSign
+                        const nx  = -ty / tl * outwardSign;
+                        const ny  =  tx / tl * outwardSign;
+                        return { x: coords[i].x + nx*pad, y: coords[i].y + ny*pad, nx, ny };
                     });
 
-                    // Draw annotation path
-                    // Build path: straight lines for ≤2 pts, normal-based cubic Bezier otherwise.
-                    // The stored normal at each pt is perpendicular to the backbone, so rotating
-                    // it 90° gives the backbone tangent — no ghost endpoints, no endpoint arching.
-                    // bezSegs stores cubic bezier segments for accurate curve-point sampling.
+                    // Use curve for pure-loop groups, straight lines for helix-arm groups
                     let d;
                     const bezSegs = []; // { p0,c1,c2,p1 } per segment
-                    if (pts.length < 3) {
+                    if (pts.length < 3 || !allLoop) {
                         d = `M ${pts[0].x} ${pts[0].y}`;
                         for (let k = 1; k < pts.length; k++) {
                             d += ` L ${pts[k].x} ${pts[k].y}`;
-                            // Represent straight segment as a degenerate cubic
                             bezSegs.push({ p0: pts[k-1], c1: pts[k-1], c2: pts[k], p1: pts[k] });
                         }
                     } else {
@@ -4096,11 +4678,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     const path = document.createElementNS(NS,'path');
                     path.setAttribute('d', d);
                     path.setAttribute('class', 'rv-ss-cons-line');
+                    path.setAttribute('data-feat', name);
                     path.style.cssText = `stroke:${lineCol};stroke-width:${bbW};fill:none;stroke-linecap:round;stroke-linejoin:round`;
                     gLines.appendChild(path);
 
                     // Pre-compute segment bounding boxes — added AFTER label placement
-                    const segM = bbW / 2 + edgeGap;
+                    const segM = bbW / 2 + lSz * 0.5;
                     const segBoxes = [];
                     for (let k=0; k<pts.length-1; k++) {
                         segBoxes.push({
@@ -4111,13 +4694,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                         });
                     }
 
-                    // ── Place one label per annotated position owned by this feature ─
+                    // ── Collect label runs for this group ─────────────────────
                     const L = arcLen(pts);
-                    const th = lSz * 1.3;
-                    const occMargin = lSz * 1.5;
-                    const isOccupiedBox = (b) => occupied.some(o =>
-                        b.bx < o.x+o.w+occMargin && b.bx+b.bw > o.x-occMargin &&
-                        b.by < o.y+o.h+occMargin && b.by+b.bh > o.y-occMargin);
 
                     // Collapse consecutive positions with the same label into one label run
                     const labelRuns = [];
@@ -4131,55 +4709,106 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }
                     for (const { labelText, startK, endK } of labelRuns) {
                         const tw = labelText.length * lSz * 0.62 + lSz * 0.5;
-                        const midK = (startK + endK) / 2;
-                        const tBase = group.length > 1 ? midK / (group.length - 1) : 0.5;
-                        const labelLayout = (pt, extraGap = 0) => {
-                            const gap = edgeGap + extraGap;
-                            const isLR = Math.abs(pt.nx) >= Math.abs(pt.ny);
-                            if (isLR) {
-                                if (pt.nx < 0) {
-                                    const ax = pt.x + pt.nx * gap, ay = pt.y + pt.ny * gap;
-                                    return { lx: ax, ly: ay, anchor:'end',   bx: ax-tw, by: ay-th/2, bw: tw, bh: th };
-                                } else {
-                                    const ax = pt.x + pt.nx * gap, ay = pt.y + pt.ny * gap;
-                                    return { lx: ax, ly: ay, anchor:'start', bx: ax,    by: ay-th/2, bw: tw, bh: th };
-                                }
-                            } else {
-                                const lpad2 = th/2 + gap;
-                                const ax = pt.x + pt.nx * lpad2, ay = pt.y + pt.ny * lpad2;
-                                return { lx: ax, ly: ay, anchor:'middle', bx: ax-tw/2, by: ay-th/2, bw: tw, bh: th };
-                            }
-                        };
-                        // Arc midpoint on the ACTUAL drawn curve (not the pts polyline).
-                        const arcMid = curvePtAtT(tBase);
-                        const placeLabel = (layout) => {
-                            labelPlacements.push({ layout, labelText, arcMid });
-                            occupied.push({ x: layout.bx, y: layout.by, w: layout.bw, h: layout.bh });
-                        };
-                        let placed = false;
-                        const steps = 20;
-                        // Pass 1: normal offset, slide ±45% around this position
-                        for (let step=0; step<=steps && !placed; step++) {
-                            for (const sign of (step===0?[0]:[-1,1])) {
-                                const t = Math.max(0, Math.min(1, tBase + sign*step/steps*0.45));
-                                const layout = labelLayout(ptAtT(pts, L, t));
-                                if (!isOccupiedBox(layout)) { placeLabel(layout); placed = true; break; }
-                            }
-                        }
-                        // Pass 2: doubled gap
-                        for (let step=0; step<=steps && !placed; step++) {
-                            for (const sign of (step===0?[0]:[-1,1])) {
-                                const t = Math.max(0, Math.min(1, tBase + sign*step/steps*0.45));
-                                const layout = labelLayout(ptAtT(pts, L, t), edgeGap);
-                                if (!isOccupiedBox(layout)) { placeLabel(layout); placed = true; break; }
-                            }
-                        }
-                        if (!placed) placeLabel(labelLayout(ptAtT(pts, L, tBase)));
-                    } // end labelRuns
+                        const akStart = activeGroup.indexOf(group[startK]);
+                        const akEnd   = activeGroup.indexOf(group[endK]);
+                        const midK = (akStart + akEnd) / 2;
+                        const tBase = activeGroup.length > 1 ? midK / (activeGroup.length - 1) : 0.5;
+                        // Capture all context needed for placement
+                        pendingLabels.push({
+                            baseIdx: group[startK],
+                            labelText, tw, tBase, name,
+                            pts: pts.slice(), L: arcLen(pts),
+                            curvePtAtT,
+                        });
+                    }
 
-                    // Now add segments to occupancy for future labels
+                    // Add segments to occupancy now (they block future labels in the same pass)
                     for (const sb of segBoxes) occupied.push(sb);
                 }
+            }
+
+            // ── Place labels in base-index order (lower index first) ─────────
+            pendingLabels.sort((a, b) => a.baseIdx - b.baseIdx);
+            for (const { labelText, tw, tBase, name, pts, L, curvePtAtT, baseIdx } of pendingLabels) {
+                const th = lSz * 1.3;
+                const occMargin = th * 0.5;
+                const isOccupiedBox = (b) => occupied.some(o =>
+                    b.bx < o.x+o.w+occMargin && b.bx+b.bw > o.x-occMargin &&
+                    b.by < o.y+o.h+occMargin && b.by+b.bh > o.y-occMargin);
+                const placeLabel = (layout, t) => {
+                    const arcMid = curvePtAtT(t);
+                    labelPlacements.push({ layout, labelText, arcMid, name });
+                    const bgP = lSz * 0.35;
+                    occupied.push({ x: layout.bx - bgP, y: layout.by - bgP, w: layout.bw + bgP*2, h: layout.bh + bgP*2 });
+                    // Register leader line as an axis-aligned bounding box
+                    const lx1 = Math.min(arcMid.x, layout.lx), lx2 = Math.max(arcMid.x, layout.lx);
+                    const ly1 = Math.min(arcMid.y, layout.ly), ly2 = Math.max(arcMid.y, layout.ly);
+                    const lm = bbW;
+                    occupied.push({ x: lx1 - lm, y: ly1 - lm, w: lx2 - lx1 + lm*2, h: ly2 - ly1 + lm*2 });
+                };
+                const countOverlaps = (b, arcMid) => {
+                    let n = 0;
+                    for (const o of occupied) {
+                        // Label box overlap
+                        if (b.bx < o.x+o.w+occMargin && b.bx+b.bw > o.x-occMargin &&
+                            b.by < o.y+o.h+occMargin && b.by+b.bh > o.y-occMargin) { n++; continue; }
+                        // Leader line crosses this occupied box (only check if arcMid provided)
+                        if (arcMid && lineIntersectsBox(arcMid.x, arcMid.y, b.lx, b.ly, o.x, o.y, o.x+o.w, o.y+o.h)) n++;
+                    }
+                    return n;
+                };
+                // Check if segment (x1,y1)-(x2,y2) intersects axis-aligned box (bx0,by0)-(bx1,by1)
+                const lineIntersectsBox = (x1, y1, x2, y2, bx0, by0, bx1, by1) => {
+                    // Cohen-Sutherland quick reject
+                    if (Math.min(x1,x2) > bx1 || Math.max(x1,x2) < bx0) return false;
+                    if (Math.min(y1,y2) > by1 || Math.max(y1,y2) < by0) return false;
+                    // Parametric clip
+                    const dx = x2-x1, dy = y2-y1;
+                    let tmin = 0, tmax = 1;
+                    for (const [p, q] of [[-dx, x1-bx0],[dx, bx1-x1],[-dy, y1-by0],[dy, by1-y1]]) {
+                        if (p === 0) { if (q < 0) return false; continue; }
+                        const t = q / p;
+                        if (p < 0) { if (t < tmin) return false; tmax = Math.min(tmax, t); }
+                        else       { if (t > tmax) return false; tmin = Math.max(tmin, t); }
+                    }
+                    return tmin <= tmax;
+                };
+                const labelLayoutDir = (pt, dx, dy, dist) => {
+                    const ax = pt.x + dx * dist, ay = pt.y + dy * dist;
+                    const isLR = Math.abs(dx) >= Math.abs(dy);
+                    if (isLR) {
+                        if (dx < 0) return { lx: ax, ly: ay, anchor:'end',    bx: ax-tw,    by: ay-th/2, bw: tw, bh: th };
+                        else        return { lx: ax, ly: ay, anchor:'start',  bx: ax,        by: ay-th/2, bw: tw, bh: th };
+                    } else {
+                        return      { lx: ax, ly: ay, anchor:'middle',        bx: ax-tw/2,   by: ay-th/2, bw: tw, bh: th };
+                    }
+                };
+                const pt0 = ptAtT(pts, L, tBase);
+                const onx = pt0.nx, ony = pt0.ny;
+                const angles = Array.from({length: 58}, (_, i) => -70 + i * 2.5).map(a => a * Math.PI / 180);
+                const dirs = angles.map(a => {
+                    const cos = Math.cos(a), sin = Math.sin(a);
+                    return { dx: onx*cos - ony*sin, dy: onx*sin + ony*cos };
+                });
+                const dists = Array.from({length: 30}, (_, i) => edgeGap * (0.5 + i * 0.1));
+                let bestLayout = null, bestT = tBase, bestOv = Infinity, bestDist2 = -1;
+                let placed = false;
+                const arcMid0 = curvePtAtT(tBase);
+                outer: for (const dist of dists) {
+                    for (const { dx, dy } of dirs) {
+                        const layout = labelLayoutDir(pt0, dx, dy, dist);
+                        const nov = countOverlaps(layout, arcMid0);
+                        const bcx = layout.bx + layout.bw/2, bcy = layout.by + layout.bh/2;
+                        const minD = occupied.length
+                            ? Math.min(...occupied.map(o => Math.hypot(bcx-(o.x+o.w/2), bcy-(o.y+o.h/2))))
+                            : Infinity;
+                        if (nov < bestOv || (nov === bestOv && minD > bestDist2)) {
+                            bestOv = nov; bestLayout = layout; bestT = tBase; bestDist2 = minD;
+                        }
+                        if (nov === 0) { placeLabel(layout, tBase); placed = true; break outer; }
+                    }
+                }
+                if (!placed) placeLabel(bestLayout ?? labelLayoutDir(pt0, onx, ony, dists[0]), bestT);
             }
             // Helper: find the point on the label bg-box edge that lies on the
             // line from arcMid toward the box centre. This gives a clean edge-exit
@@ -4207,28 +4836,33 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 return { x: px + tMin * dx, y: py + tMin * dy };
             };
 
-            // Three-pass DOM rendering: leader lines, then bg rects, then texts (so text is on top).
+            // Three-pass DOM rendering: leader lines, then bg+text groups (so text is on top of leader).
             const bgPad = lSz * 0.35;
+
+            // Pass 1: leader lines — stored by index so drag can update x1/y1
+            const leaderEls = [];
             for (const { layout, arcMid } of labelPlacements) {
-                // Find where the leader exits the label box on the side facing arcMid
-                const bx = layout.bx - bgPad, by = layout.by - bgPad;
-                const bw = layout.bw + bgPad*2, bh = layout.bh + bgPad*2;
-                const ep = boxEdgePt(bx, by, bw, bh, arcMid.x, arcMid.y);
-                const dist = Math.hypot(ep.x - arcMid.x, ep.y - arcMid.y);
-                // Always draw the leader — it connects the annotation arc to the label.
-                // Only skip if arcMid is literally inside or touching the box already.
+                const dist = Math.hypot(layout.lx - arcMid.x, layout.ly - arcMid.y);
                 if (dist > bbW) {
                     const leader = document.createElementNS(NS,'line');
-                    leader.setAttribute('x1', ep.x);      // starts at label box edge
-                    leader.setAttribute('y1', ep.y);
-                    leader.setAttribute('x2', arcMid.x);  // ends exactly at annotation arc
+                    leader.setAttribute('x1', layout.lx);
+                    leader.setAttribute('y1', layout.ly);
+                    leader.setAttribute('x2', arcMid.x);
                     leader.setAttribute('y2', arcMid.y);
                     leader.setAttribute('class', 'rv-ss-cons-leader');
                     leader.style.cssText = `stroke:${lineCol};stroke-width:${bbW};fill:none;stroke-linecap:round`;
                     gLabels.appendChild(leader);
+                    leaderEls.push(leader);
+                } else {
+                    leaderEls.push(null);
                 }
             }
-            for (const { layout } of labelPlacements) {
+
+            // Pass 2: bg rect + text grouped together, draggable
+            labelPlacements.forEach(({ layout, labelText, name: featName }, idx) => {
+                const g = document.createElementNS(NS, 'g');
+                g.style.cursor = 'grab';
+
                 const bg = document.createElementNS(NS,'rect');
                 bg.setAttribute('x',      layout.bx - bgPad);
                 bg.setAttribute('y',      layout.by - bgPad);
@@ -4237,19 +4871,64 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 bg.setAttribute('fill',   bgCol);
                 bg.setAttribute('stroke', 'none');
                 bg.setAttribute('class',  'rv-ss-cons-bg');
-                gLabels.appendChild(bg);
-            }
-            for (const { layout, labelText } of labelPlacements) {
+                bg.setAttribute('data-feat', featName);
+                g.appendChild(bg);
+
                 const txt = document.createElementNS(NS,'text');
                 txt.setAttribute('x', layout.lx);
                 txt.setAttribute('y', layout.ly);
                 txt.setAttribute('text-anchor', layout.anchor);
                 txt.setAttribute('dominant-baseline','middle');
                 txt.setAttribute('class', 'rv-ss-cons-label');
+                txt.setAttribute('data-feat', featName);
                 txt.style.cssText = `font-size:${lSz}px;font-weight:bold;fill:${lblCol};font-family:${lFont}`;
                 txt.textContent = labelText;
-                gLabels.appendChild(txt);
-            }
+                g.appendChild(txt);
+                gLabels.appendChild(g);
+
+                // Drag handling — SVG coordinate space
+                const leader = leaderEls[idx];
+                let dragging = false, startMx = 0, startMy = 0, startGx = 0, startGy = 0;
+                const svgEl = gLabels.ownerSVGElement ?? gLabels.closest('svg');
+                const toSVG = (clientX, clientY) => {
+                    if (!svgEl) return { x: clientX, y: clientY };
+                    const pt = svgEl.createSVGPoint();
+                    pt.x = clientX; pt.y = clientY;
+                    return pt.matrixTransform(svgEl.getScreenCTM().inverse());
+                };
+                g.addEventListener('mousedown', e => {
+                    if (e.button !== 0) return;
+                    e.preventDefault(); e.stopPropagation();
+                    dragging = true;
+                    g.style.cursor = 'grabbing';
+                    const p = toSVG(e.clientX, e.clientY);
+                    startMx = p.x; startMy = p.y;
+                    // Current translation from transform
+                    const t = g.transform?.baseVal?.[0];
+                    startGx = t ? t.matrix.e : 0;
+                    startGy = t ? t.matrix.f : 0;
+                    const onMove = ev => {
+                        if (!dragging) return;
+                        const p2 = toSVG(ev.clientX, ev.clientY);
+                        const dx = p2.x - startMx, dy = p2.y - startMy;
+                        const nx = startGx + dx, ny = startGy + dy;
+                        g.setAttribute('transform', `translate(${nx},${ny})`);
+                        // Update leader x1/y1 to follow the label anchor
+                        if (leader) {
+                            leader.setAttribute('x1', layout.lx + nx);
+                            leader.setAttribute('y1', layout.ly + ny);
+                        }
+                    };
+                    const onUp = () => {
+                        dragging = false;
+                        g.style.cursor = 'grab';
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                    };
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                });
+            });
         }
         _openAbout() {
             this._settingsPanel?.classList.remove('rv-visible');
@@ -4288,28 +4967,39 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     values: s.values,
                     colorMap: s.colorMap,
                     pairAnnotations: s.pairAnnotations,
+                    pairAnnotColorMap: s.pairAnnotColorMap,
                     helixAnnotations: s.helixAnnotations,
+                    pseudoCovAnnotations: s.pseudoCovAnnotations,
+                    pseudoHelixCovAnnotations: s.pseudoHelixCovAnnotations,
+                    isCovAnnot: s.isCovAnnot,
+                    ssConsFeatures: s.ssConsFeatures,
+                    ssConsPkPairs: s.ssConsPkPairs,
                     baseDisplay: s.baseDisplay,
                     positionLabels: s.positionLabels,
                     alnSeqs: s.alnSeqs,
                     alnStruct: s.alnStruct,
                     alnLen: s.alnLen,
                 }));
+                const newIdx = existing.length + incoming.length - 1;
                 this.load({
                     structures: [...existing, ...incoming],
                     showColors: this._showColors
                 });
+                // Switch to the newly added structure and focus its pill
+                this.switchToStructure(newIdx);
             } else {
                 this.load({
                     structures: incoming,
                     showColors: this._showColors
                 });
+                // Single new structure — switch to it (index 0)
+                this.switchToStructure(0);
             }
         }
         _openSettings() {
             this._aboutPanel?.classList.remove('rv-visible');
             if (!this._settingsPanel) return;
-            const gv = v => getComputedStyle(this._root).getPropertyValue(v).trim();
+            const _gv = v => getComputedStyle(this._root).getPropertyValue(v).trim();
             const q = s => this._settingsPanel.querySelector(s);
             const toHex = color => {
                 const m = color.match(/\d+/g);
@@ -4318,7 +5008,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             };
             // Read  color values: prefer declared CSS custom property, fall back to computed stroke/fill
             const readColor = (cssVar, elSel, cssProp) => {
-                const v = gv(cssVar);
+                const v = _gv(cssVar);
                 if (v) return toHex(v);
                 const el = this._svgEl?.querySelector(elSel);
                 if (el) return toHex(getComputedStyle(el)[cssProp] || '') || null;
@@ -4328,7 +5018,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             q('.rv-set-basepair').value = readColor('--rv-basepair', '.rv-basepair', 'stroke') || '#111111';
             // Read numeric values from CSS var or from actual rendered element attributes
             const readNum = (cssVar, elSel, attr) => {
-                const v = parseFloat(gv(cssVar));
+                const v = parseFloat(_gv(cssVar));
                 if (v) return v;
                 const el = this._svgEl?.querySelector(elSel);
                 return el ? parseFloat(el.getAttribute(attr)) || 0 : 0;
@@ -4402,7 +5092,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }
             if (hasAnnots && paPane) {
                 // Sync slider values from current CSS variables
-                const gvNum = (cssVar, def) => parseFloat(gv(cssVar)) || def;
+                const gvNum = (cssVar, def) => parseFloat(_gv(cssVar)) || def;
                 const setSlider = (sel, valSel, v) => {
                     const el = q(sel);
                     if (!el) return;
@@ -4410,16 +5100,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     const lbl = q(valSel);
                     if (lbl) lbl.textContent = v;
                 };
-                setSlider('.rv-set-pa-opac', '.rv-val-pa-opac', gvNum('--rv-pair-annot-opacity', 0.3));
+                setSlider('.rv-set-pa-opac', '.rv-val-pa-opac', gvNum('--rv-pair-annot-opacity', 0.5));
                 setSlider('.rv-set-pa-stroke', '.rv-val-pa-stroke', gvNum('--rv-pair-annot-stroke-width', 1.5));
                 setSlider('.rv-set-pa-pad', '.rv-val-pa-pad', gvNum('--rv-pair-annot-padding', 16));
-                setSlider('.rv-set-ha-pad', '.rv-val-ha-pad', gvNum('--rv-helix-annot-padding', 21));
+                setSlider('.rv-set-ha-opac', '.rv-val-ha-opac', gvNum('--rv-helix-annot-opacity', 0.5));
+                setSlider('.rv-set-ha-pad', '.rv-val-ha-pad', gvNum('--rv-helix-annot-padding', 25));
                 // Show helix settings section only when helixAnnotations are loaded
                 const haSection = this._settingsPanel.querySelector('.rv-ha-settings');
                 if (haSection) haSection.style.display = this._rna?.helixAnnotations?.length ? 'block' : 'none';
                 const haColorPicker = this._settingsPanel.querySelector('.rv-set-ha-color');
                 if (haColorPicker) {
-                    const cur = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+                    const cur = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
                     const hexMatch = cur.match(/#[0-9a-f]{6}/i);
                     haColorPicker.value = hexMatch ? hexMatch[0] : '#064e3b';
                     haColorPicker.addEventListener('input', () => {
@@ -4528,7 +5219,33 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             bindRange('.rv-set-pa-opac', '--rv-pair-annot-opacity', '.rv-val-pa-opac', '', true);
             bindRange('.rv-set-pa-stroke', '--rv-pair-annot-stroke-width', '.rv-val-pa-stroke', '', true);
             bindRange('.rv-set-pa-pad', '--rv-pair-annot-padding', '.rv-val-pa-pad', '', true);
+            bindRange('.rv-set-ha-opac', '--rv-helix-annot-opacity', '.rv-val-ha-opac', '', true);
             bindRange('.rv-set-ha-pad', '--rv-helix-annot-padding', '.rv-val-ha-pad', '', true);
+
+            // Reset all settings to defaults
+            const SETTINGS_DEFAULTS = {
+                '--rv-base-radius':              ['11',    '.rv-set-radius',    '.rv-val-radius',    ''],
+                '--rv-base-label-font-size':     ['12',    '.rv-set-lbl-font',  '.rv-val-lbl-font',  'px'],
+                '--rv-base-index-font-size':     ['12',    '.rv-set-idx-font',  '.rv-val-idx-font',  'px'],
+                '--rv-pair-annot-opacity':       ['0.5',   '.rv-set-pa-opac',   '.rv-val-pa-opac',   ''],
+                '--rv-pair-annot-stroke-width':  ['1.5',   '.rv-set-pa-stroke', '.rv-val-pa-stroke', ''],
+                '--rv-pair-annot-padding':       ['16',    '.rv-set-pa-pad',    '.rv-val-pa-pad',    ''],
+                '--rv-helix-annot-opacity':      ['0.5',   '.rv-set-ha-opac',   '.rv-val-ha-opac',   ''],
+                '--rv-helix-annot-padding':      ['25',    '.rv-set-ha-pad',    '.rv-val-ha-pad',    ''],
+            };
+            const resetBtn = this._settingsPanel?.querySelector('.rv-settings-reset');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    for (const [cssVar, [defVal, sliderSel, lblSel, unit]] of Object.entries(SETTINGS_DEFAULTS)) {
+                        this._root.style.setProperty(cssVar, defVal + unit);
+                        const sl = q(sliderSel); if (sl) sl.value = defVal;
+                        const lb = q(lblSel);    if (lb) lb.textContent = defVal;
+                    }
+                    // Reset color pickers
+                    const hCol = q('.rv-set-ha-color'); if (hCol) { hCol.value = '#aff0a8'; this._root.style.setProperty('--rv-helix-annot-color', '#aff0a8'); }
+                    rerender();
+                });
+            }
             // NaN color
             q('.rv-set-nan').addEventListener('input', e => {
                 this._applySettingsCM();
@@ -4801,6 +5518,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._currentStructIdx = 0;
             this._scene.innerHTML = '';
             this._structBar.innerHTML = '';
+            if (this._pkPanelsEl) { this._pkPanelsEl.innerHTML = ''; this._pkPanelsEl.style.display = 'none'; }
             this._structWrap?.classList.remove('rv-visible');
             this._legend.style.display = 'none';
             this._palLegend.style.display = 'none';
@@ -5045,29 +5763,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             });
             this._upAnnotTargetSection.style.display = structs.length > 0 ? 'block' : 'none';
         }
-        _renderXmlTargets() {
-            if (!this._upXmlTargetSection || !this._upXmlTargetList) return;
-            const xmlSeqs = new Set((this._pendingXmlData || []).map(r => normalizeSeq(r.sequence)));
-            const allStructs = this._structures?.length ? this._structures : this._rna ? [{
-                label: this._rna._label || 'Structure',
-                sequence: this._rna.sequence,
-            }] : [];
-            const structs = allStructs.filter(s => xmlSeqs.has(normalizeSeq(s.sequence || '')));
-            if (structs.length <= 1) {
-                // Zero or one sequence match — no choice needed, hide the section
-                this._upXmlTargetSection.style.display = 'none';
-                return;
-            }
-            this._upXmlTargetSection.style.display = 'block';
-            this._upXmlTargetList.innerHTML = '';
-            structs.forEach(s => {
-                const origIdx = allStructs.indexOf(s);
-                const row = document.createElement('label');
-                row.className = 'rv-xml-target-row';
-                row.innerHTML = `<input type="checkbox" value="${origIdx}">` + `<span class="rv-xml-target-idx">${origIdx + 1}</span>` + `<span class="rv-xml-target-lbl" title="${s.label}">${s.label}</span>`;
-                this._upXmlTargetList.appendChild(row);
-            });
-        }
         _renderXmlOrder() {
             if (!this._upXmlOrderList) return;
             const recs = this._pendingXmlData;
@@ -5165,12 +5860,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             // Build pairs array from rendered structure (nested + pseudoknot)
                             const _lpa = buildPairsArray(layout.structure || '');
                             const _lpaMap = new Map();
-                            for (let i = 0; i < layout.n; i++) {
-                                if (_lpa[i] >= 0) _lpaMap.set(i, _lpa[i]);
-                            }
+                            // ssConsPkPairs first so main structure pairs take priority for shared positions
+                            if (layout.ssConsPkPairs)
+                                for (const fps of Object.values(layout.ssConsPkPairs))
+                                    for (const ps of fps) { _lpaMap.set(ps.i, ps.j); _lpaMap.set(ps.j, ps.i); }
                             for (const ps of (layout.pseudoPairs || [])) {
                                 _lpaMap.set(ps.i, ps.j);
                                 _lpaMap.set(ps.j, ps.i);
+                            }
+                            for (let i = 0; i < layout.n; i++) {
+                                if (_lpa[i] >= 0) _lpaMap.set(i, _lpa[i]);
                             }
                             const helixAnnotations = sigH.map(h => {
                                 const ri5All = [];
@@ -5181,15 +5880,27 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                                     .map(r => ({ ri5: r, ri3: _lpaMap.get(r) }))
                                     .sort((a, b) => a.ri5 - b.ri5);
                                 if (!hp.length) return null;
-                                // Treat all pairs from this helix arm range as one sub-helix.
-                                const pkSet = new Set(layout.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
-                                const isPkHelix = h.helixType === 'PK';
+                                // Group consecutive pairs into sub-helices (same as loadHelixCov)
+                                const subHelices = [];
+                                let shCur = [hp[0]];
+                                for (let i = 1; i < hp.length; i++) {
+                                    const pv = shCur[shCur.length - 1], nxt = hp[i];
+                                    if (nxt.ri5 === pv.ri5 + 1 && nxt.ri3 === pv.ri3 - 1) shCur.push(nxt);
+                                    else { subHelices.push(shCur); shCur = [nxt]; }
+                                }
+                                subHelices.push(shCur);
+                                const pkSet = new Set((layout.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
+                                if (layout.ssConsPkPairs)
+                                    for (const fps of Object.values(layout.ssConsPkPairs))
+                                        for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
+                                const isPkHelix = h.helixType === 'PK' || h.helixType === 'XCOV';
                                 const nestedSubs = [], pkPairs = [];
-                                {
+                                for (const sh of subHelices) {
                                     const nPos5p = [], nPos3p = [];
-                                    for (const pair of hp) {
-                                        if (isPkHelix || pkSet.has(pairKey(pair.ri5, pair.ri3))) pkPairs.push({ i: pair.ri5, j: pair.ri3 });
-                                        else { nPos5p.push(pair.ri5); nPos3p.push(pair.ri3); }
+                                    for (let k = 0; k < sh.length; k++) {
+                                        if (isPkHelix || pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
+                                            pkPairs.push({ i: sh[k].ri5, j: sh[k].ri3 });
+                                        else { nPos5p.push(sh[k].ri5); nPos3p.push(sh[k].ri3); }
                                     }
                                     if (nPos5p.length) nestedSubs.push({ pos5p: nPos5p, pos3p: nPos3p });
                                 }
@@ -5197,8 +5908,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             }).filter(a => a?.nestedSubs?.length > 0 || a?.pkPairs?.length > 0);
                             if (!helixAnnotations.length) throw new Error(`"${filename}": no helix positions mapped to "${layout.label||'selected'}".`);
                             const helixAnnotFinal = helixAnnotations
-                                .filter(a => a.nestedSubs.length > 0)
-                                .map(a => ({ subHelices: a.nestedSubs, evalue: a.evalue, pvalue: a.pvalue }));
+                                .map(a => ({ subHelices: a.nestedSubs, pkPairs: a.pkPairs, evalue: a.evalue, pvalue: a.pvalue }));
                             layout.helixAnnotations = helixAnnotFinal;
                             const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
                             if (pkGlowPairs.length) layout.pseudoHelixCovAnnotations = pkGlowPairs;
@@ -5215,23 +5925,32 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                         }
                         // If this is a Stockholm-derived structure, remap alignment-space coords to rendered coords
                         const remappedPairs = remapAnnotPairs(pairs, layout.positionLabels);
-                        // Build annotation arrays and apply to the selected layout (in-place, no reload needed)
-                        const {
-                            invalid,
-                            annotArr,
-                            pairAnnotColorMap
-                        } = buildAnnotationArrays(remappedPairs, structPairs, filename, layout.label);
-                        if (invalid.length) {
-                            const warnMsg = `Warning: "${filename}", ${invalid.length} pair${invalid.length > 1 ? 's' : ''} ` + `not found in structure "${layout.label || 'selected'}" were skipped.`;
-                            if (this._upStatus) {
-                                this._upStatus.textContent = warnMsg;
-                                this._upStatus.className = 'rv-upload-status';
-                            }
+                        // Split into nested vs pseudoknot pairs (same logic as loadCov)
+                        const pkSetCov = new Set((layout.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
+                        if (layout.ssConsPkPairs)
+                            for (const fps of Object.values(layout.ssConsPkPairs))
+                                for (const ps of fps) pkSetCov.add(pairKey(ps.i, ps.j));
+                        if (layout.ssConsPkPairs)
+                            for (const fps of Object.values(layout.ssConsPkPairs))
+                                for (const ps of fps) pkSetCov.add(pairKey(ps.i, ps.j));
+                        const nestedStructPairs = new Set([...structPairs].filter(k => !pkSetCov.has(k)));
+                        const nestedCovPairs = remappedPairs.filter(({i, j}) => nestedStructPairs.has(pairKey(i, j)));
+                        const pkCovPairs     = remappedPairs.filter(({i, j}) => pkSetCov.has(pairKey(i, j)));
+                        if (!nestedCovPairs.length && !pkCovPairs.length)
+                            buildAnnotationArrays(remappedPairs, structPairs, filename, layout.label); // throws
+                        let pairAnnotColorMap = layout.pairAnnotColorMap || null;
+                        if (nestedCovPairs.length) {
+                            const res = buildAnnotationArrays(nestedCovPairs, nestedStructPairs, filename, layout.label);
+                            layout.pairAnnotations = res.annotArr;
+                            pairAnnotColorMap = res.pairAnnotColorMap;
                         }
-                        // Apply to the selected layout (in-place, no reload needed).
-                        // Mirror onto _structures[targetIdx] so _rebuildCurrentLayout
-                        // always has the canonical unshifted annotations to work from.
-                        layout.pairAnnotations = annotArr;
+                        if (pkCovPairs.length) {
+                            const pkColorMap = buildAnnotColorMapAuto(pkCovPairs);
+                            layout.pseudoCovAnnotations = pkCovPairs.map(({i, j, category}) => ({
+                                i, j,
+                                color: pkColorMap ? (pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
+                            }));
+                        }
                         layout.pairAnnotColorMap = pairAnnotColorMap;
                         layout.isCovAnnot = !!(isCov || layout.helixAnnotations?.length);
                         this._currentStructIdx = targetIdx;
@@ -5350,17 +6069,29 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                             // Recover the actual used sequence from the layout, structure
                             // objects loaded via the public API may not carry .sequence when
                             // config.sequence was used as a shared value.
-                            sequence: s.sequence || this._structLayouts?.[i]?.sequence || '',
-                            pairAnnotations: this._structLayouts?.[i]?.pairAnnotations || s.pairAnnotations || null,
-                            pairAnnotColorMap: this._structLayouts?.[i]?.pairAnnotColorMap || s.pairAnnotColorMap || null,
+                            sequence:                  s.sequence                  || this._structLayouts?.[i]?.sequence                  || '',
+                            pairAnnotations:           this._structLayouts?.[i]?.pairAnnotations           || s.pairAnnotations           || null,
+                            pairAnnotColorMap:         this._structLayouts?.[i]?.pairAnnotColorMap         || s.pairAnnotColorMap         || null,
+                            helixAnnotations:          this._structLayouts?.[i]?.helixAnnotations          || s.helixAnnotations          || null,
+                            pseudoCovAnnotations:      this._structLayouts?.[i]?.pseudoCovAnnotations      || s.pseudoCovAnnotations      || null,
+                            pseudoHelixCovAnnotations: this._structLayouts?.[i]?.pseudoHelixCovAnnotations || s.pseudoHelixCovAnnotations || null,
+                            isCovAnnot:               this._structLayouts?.[i]?.isCovAnnot                || s.isCovAnnot               || false,
+                            ssConsFeatures:            this._structLayouts?.[i]?.ssConsFeatures            || s.ssConsFeatures            || null,
+                            ssConsPkPairs:             this._structLayouts?.[i]?.ssConsPkPairs             || s.ssConsPkPairs             || null,
                         })) : [{
                             label: this._rna._label || 'Structure 1',
                             sequence: this._rna.sequence,
                             structure: this._rna.structure,
                             values: this._rna.values,
                             colorMap: this._rna.colorMap,
-                            pairAnnotations: this._rna.pairAnnotations || null,
-                            pairAnnotColorMap: this._rna.pairAnnotColorMap || null
+                            pairAnnotations:           this._rna.pairAnnotations           || null,
+                            pairAnnotColorMap:         this._rna.pairAnnotColorMap         || null,
+                            helixAnnotations:          this._rna.helixAnnotations          || null,
+                            pseudoCovAnnotations:      this._rna.pseudoCovAnnotations      || null,
+                            pseudoHelixCovAnnotations: this._rna.pseudoHelixCovAnnotations || null,
+                            isCovAnnot:               this._rna.isCovAnnot                || false,
+                            ssConsFeatures:            this._rna.ssConsFeatures            || null,
+                            ssConsPkPairs:             this._rna.ssConsPkPairs             || null,
                         }];
                         allStructures = [...existing, ...newStructures];
                         startIdx = existing.length; // jump to first newly added structure
@@ -5456,7 +6187,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 key,
                 color
             }) => `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${color};border-color:${color}"></span>` + `<span class="rv-pal-key">${key}</span>` + `</div>`).join('');
-            const _helixAnnotCol = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+            const _helixAnnotCol = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
             const helixRow = hasHelix ? `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${_helixAnnotCol};opacity:0.35;border-color:${_helixAnnotCol}"></span>` + `<span class="rv-pal-key">Helix-level</span></div>` : '';
             const legendTitle = isCov ? 'Covarying pairs' : 'Pair annotations';
             this._palLegend.innerHTML = `<h4>${legendTitle}</h4>${rows}${helixRow}`;
@@ -5488,26 +6219,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     const pacm = existing?.pairAnnotColorMap || normalizePairAnnotColorMap(s.pairAnnotColorMap || cfg.pairAnnotColorMap);
                     const ha = existing?.helixAnnotations || s.helixAnnotations || null;
                     this._structLayouts[savedIdx] = this._computeLayout(s.sequence, s.structure, vals, cm, pa, pacm, ha, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
-					if (existing?.helixAnnotations) this._structLayouts[savedIdx].helixAnnotations = existing.helixAnnotations;
-                    if (existing?.isCovAnnot) this._structLayouts[savedIdx].isCovAnnot = existing.isCovAnnot;
-                    if (existing?.pseudoCovAnnotations) this._structLayouts[savedIdx].pseudoCovAnnotations = existing.pseudoCovAnnotations;
-                    if (existing?.pseudoHelixCovAnnotations) this._structLayouts[savedIdx].pseudoHelixCovAnnotations = existing.pseudoHelixCovAnnotations;
-                    if (existing?.ssConsFeatures) this._structLayouts[savedIdx].ssConsFeatures = existing.ssConsFeatures;
-					this._currentStructIdx = savedIdx;
+                    this._copyLayoutAnnotations(existing, this._structLayouts[savedIdx]);
+                    this._currentStructIdx = savedIdx;
                     this._rna = this._structLayouts[savedIdx];
                     this._render();
+                    if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
                     this.fit();
                 } else {
                     // Single-structure: recompute preserving all current runtime state
                     const prev = this._rna;
                     const rna = this._computeLayout(prev.sequence, prev.structure, prev.values, prev.colorMap, prev.pairAnnotations, prev.pairAnnotColorMap, prev.baseDisplay, prev.positionLabels);
-                    if (prev.helixAnnotations) rna.helixAnnotations = prev.helixAnnotations;
-                    if (prev.isCovAnnot) rna.isCovAnnot = prev.isCovAnnot;
-                    if (prev.pseudoCovAnnotations) rna.pseudoCovAnnotations = prev.pseudoCovAnnotations;
-                    if (prev.pseudoHelixCovAnnotations) rna.pseudoHelixCovAnnotations = prev.pseudoHelixCovAnnotations;
-                    if (prev.ssConsFeatures) rna.ssConsFeatures = prev.ssConsFeatures;
+                    this._copyLayoutAnnotations(prev, rna);
                     this._rna = rna;
                     this._render();
+                    if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
                     this.fit();
                 }
             }
@@ -5551,16 +6276,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             return useNav ? this._autoRotateLayout(nav) : rad;
         }
         /*
-		 Rotate a NAView layout result so the structure fills the canvas as
-		 large as possible after fit().
-		 
-		 Tries 180 candidate angles (every 2°; the bounding-box has period π
-		 so this covers all distinct orientations) and keeps the angle that
-		 maximises min(canvasW/W, canvasH/H).  Falls back to minimising
-		 max(W,H) when the canvas is not yet rendered.
-		 
-		 Both coords and loop-centre arrays are rotated so helix-rotation
-		 interaction remains correct after the transform.
+         Rotate a NAView layout result so the structure fills the canvas as
+         large as possible after fit().
+         
+         Tries 180 candidate angles (every 2°; the bounding-box has period π
+         so this covers all distinct orientations) and keeps the angle that
+         maximises min(canvasW/W, canvasH/H).  Falls back to minimising
+         max(W,H) when the canvas is not yet rendered.
+         
+         Both coords and loop-centre arrays are rotated so helix-rotation
+         interaction remains correct after the transform.
         */
         _autoRotateLayout(result) {
             const n = result.coords.length;
@@ -5614,7 +6339,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (!anns?.length || !this._showPairAnnotations) return;
             const cs = getComputedStyle(this._root);
             const pad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || (baseR * 1.7);
-            const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+            const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
+            const helixOpacity = parseFloat(cs.getPropertyValue('--rv-helix-annot-opacity')) || 0.5;
             // Parse hex → rgba with opacity
             const _hm = helixColor.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
             const _hr = _hm ? parseInt(_hm[1], 16) : 239,
@@ -5622,7 +6348,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 _hb = _hm ? parseInt(_hm[3], 16) : 68;
             const _hexColor = `#${_hr.toString(16).padStart(2,'0')}${_hg.toString(16).padStart(2,'0')}${_hb.toString(16).padStart(2,'0')}`;
             const _helixHex = _hexColor; // kept for SVG legend
-            const NS = 'http://www.w3.org/2000/svg';
             for (const ann of anns) {
                 const annPad = ann.padding ?? pad;
                 for (const sh of (ann.subHelices || [])) {
@@ -5651,7 +6376,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     rect.setAttribute('rx', rx);
                     rect.setAttribute('ry', rx);
                     const annColor = ann.color ?? _helixHex;
-                    const annOpacity = ann.opacity ?? 0.08;
+                    const annOpacity = ann.opacity ?? helixOpacity;
                     const annStrokeWidth = ann.strokeWidth ?? 1.5;
                     rect.setAttribute('fill', annColor);
                     rect.setAttribute('fill-opacity', String(annOpacity));
@@ -5678,7 +6403,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         _renderPairAnnotations(g, coords, pairs, annotations, colorMap, baseR, masterOpacity = 1) {
             // Read CSS variable defaults (per-annotation fields override these)
             const cs = getComputedStyle(this._root);
-            const defOpa = parseFloat(cs.getPropertyValue('--rv-pair-annot-opacity')) || 0.3;
+            const defOpa = parseFloat(cs.getPropertyValue('--rv-pair-annot-opacity')) || 0.5;
             const defSW = parseFloat(cs.getPropertyValue('--rv-pair-annot-stroke-width')) || 1.5;
             const defPad = parseFloat(cs.getPropertyValue('--rv-pair-annot-padding')) || 5;
             for (const ann of annotations) {
@@ -5702,34 +6427,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     if (entry) color = entry.color;
                 }
                 if (!color) color = '#ffffff';
-                const x1 = coords[i].x,
-                    y1 = coords[i].y;
-                const x2 = coords[j].x,
-                    y2 = coords[j].y;
-                const mx = (x1 + x2) / 2,
-                    my = (y1 + y2) / 2;
-                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-                const dist = Math.hypot(x2 - x1, y2 - y1);
+                const x1 = coords[i].x, y1 = coords[i].y;
+                const x2 = coords[j].x, y2 = coords[j].y;
                 const pad = ann.padding ?? defPad;
-                const sw = ann.strokeWidth ?? defSW;
-                const w = dist + pad * 2;
-                const h = pad * 2;
+                const sw  = ann.strokeWidth ?? defSW;
                 const fopacity = (ann.opacity ?? defOpa) * masterOpacity;
-                const sopacity = Math.min(1, fopacity * 2.5);
-                const rect = document.createElementNS(NS, 'rect');
-                rect.setAttribute('x', mx - w / 2);
-                rect.setAttribute('y', my - h / 2);
-                rect.setAttribute('width', w);
-                rect.setAttribute('height', h);
-                rect.setAttribute('rx', baseR * 0.6);
-                rect.setAttribute('ry', baseR * 0.6);
-                rect.style.fill = color;
-                rect.style.fillOpacity = fopacity;
-                rect.style.stroke = color;
-                rect.style.strokeWidth = sw;
-                rect.style.strokeOpacity = sopacity;
-                rect.setAttribute('transform', `rotate(${angle},${mx},${my})`);
-                g.appendChild(rect);
+                g.appendChild(this._mkPairAnnotRect(x1, y1, x2, y2, color, fopacity, sw, pad, baseR));
             }
         }
         /*
@@ -5880,6 +6583,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         _render() {
             if (!this._rna) return;
             this._scene.innerHTML = '';
+            if (this._pkPanelsEl) {
+                this._pkPanelsEl.innerHTML = '';
+                this._pkPanelsEl.style.display       = 'none';
+                this._pkPanelsEl.style.width         = '';
+                this._pkPanelsEl.style.height        = '';
+                this._pkPanelsEl.style.flexDirection = '';
+            }
             const {
                 coords,
                 pairs,
@@ -5898,10 +6608,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const g_pk = document.createElementNS(NS, 'g'); // PK lines, above non-endpoint bases
             const g_pk_top = document.createElementNS(NS, 'g'); // PK endpoint bases, above PK lines
             const g_ss_labels = document.createElementNS(NS, 'g'); // SS_cons labels, topmost
-            // Order: helix boxes → backbone → eraser → pair annots → bases → PK → SS_cons labels
-            this._scene.append(g_bb, g_bp, g_bg, g_helix, g_annot, g_base, g_pk, g_pk_top, g_ss_labels);
-            // Collect PK endpoint indices so their bases render on top of PK lines
-            const pkEndpts = new Set(pseudoPairs.flatMap(ps => [ps.i, ps.j]));
+            // Stockholm structures use a different PK visualization (R3D arcs + mini panels)
+            const isStockholm = !!(this._rna?.baseDisplay);
+            // Layer order differs: Stockholm bonds go ABOVE bases; standard bonds go BELOW bases
+            if (isStockholm) {
+                this._scene.append(g_bb, g_bg, g_helix, g_annot, g_base, g_bp, g_pk, g_pk_top, g_ss_labels);
+            } else {
+                this._scene.append(g_bb, g_bg, g_helix, g_annot, g_bp, g_base, g_pk, g_pk_top, g_ss_labels);
+            }
+            // Collect PK endpoint indices so their bases render on top of PK lines (non-Stockholm only)
+            const pkEndpts = isStockholm ? new Set() : new Set(pseudoPairs.flatMap(ps => [ps.i, ps.j]));
             // Read configurable geometry from CSS variables
             const cs = getComputedStyle(this._root);
             const baseR = parseFloat(cs.getPropertyValue('--rv-base-radius')) || BASE_R;
@@ -5941,15 +6657,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }
             // Helper to make a line element
             const dotR = this._gvn('--rv-noncanon-dot-r', 4.5);
-            const mkLine = (x1, y1, x2, y2, cls) => {
-                const l = document.createElementNS(NS, 'line');
-                l.setAttribute('class', cls);
-                l.setAttribute('x1', x1);
-                l.setAttribute('y1', y1);
-                l.setAttribute('x2', x2);
-                l.setAttribute('y2', y2);
-                return l;
-            };
+            const mkLine = (x1, y1, x2, y2, cls) => this._mkSvgLine(x1, y1, x2, y2, cls);
             // Canonical base pairs (from bracket notation)
             // AU: single line
             // GC: two parallel lines (offset perpendicular to pair axis)
@@ -5973,8 +6681,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
                 const isAU = (b1 === 'A' && b2 === 'U') || (b1 === 'U' && b2 === 'A') || (b1 === 'A' && b2 === 'T') || (b1 === 'T' && b2 === 'A');
                 const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
-                const isCanon = isGC || isAU || isGU;
-                if (!isCanon) {
+                const isCanon = this._isCanonPair(b1, b2);
+                if (isStockholm) {
+                    // Stockholm: simplified — all canonical as single line, non-canonical as dot
+                    // Shortened by 1.44×baseR on each side via _mkStockholmBond
+                    this._mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR)
+                        .forEach(el => g_bp.appendChild(el));
+                } else if (!isCanon) {
                     if (this._relaxedSequence) {
                         // Non-standard bases — render as single line instead of dot
                         g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
@@ -6005,7 +6718,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             }
 			// Per-base highlight boxes for covarying pseudoknot pairs
 			// Gated on both pair-annotations AND pseudoknots toggles
-            if (this._showPairAnnotations && this._showPseudoknots !== false && this._rna.pseudoCovAnnotations?.length) {
+            if (this._showPairAnnotations && this._showPseudoknots !== false && !isStockholm && this._rna.pseudoCovAnnotations?.length) {
                 const s = baseR * 2.4;
                 for (const { i, j, color } of this._rna.pseudoCovAnnotations) {
                     for (const pos of [i, j]) {
@@ -6025,8 +6738,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }
                 }
             }
-            // Pseudoknot pairs — curved dashed arcs; cov color + glow when annotations on
-            if (this._showPseudoknots !== false) {
+            // Pseudoknot pairs — curved dashed arcs (non-Stockholm only; Stockholm uses mini helix panels)
+            if (this._showPseudoknots !== false && !isStockholm) {
 				const _showAnnot = this._showPairAnnotations;
 				const pkCovMap = _showAnnot
 					? new Map((this._rna.pseudoCovAnnotations || []).map(({ i, j, color }) => [pairKey(i, j), color]))
@@ -6034,12 +6747,37 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const pkHelixGlowSet = _showAnnot
 					? new Set((this._rna.pseudoHelixCovAnnotations || []).map(({ i, j }) => pairKey(i, j)))
 					: new Set();
-				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
 				const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
 				const pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
+
+                // Group pseudoPairs into helices (consecutive i,j pairs)
+                const pkHelices = [];
+                const pkSorted = [...pseudoPairs].sort((a, b) => a.i - b.i);
+                let curHelix = null;
+                for (const ps of pkSorted) {
+                    if (curHelix) {
+                        const last = curHelix[curHelix.length - 1];
+                        if (ps.i === last.i + 1 && (ps.j === last.j - 1 || ps.j === last.j + 1)) {
+                            curHelix.push(ps); continue;
+                        }
+                    }
+                    if (curHelix) pkHelices.push(curHelix);
+                    curHelix = [ps];
+                }
+                if (curHelix) pkHelices.push(curHelix);
+
+                // Palette of distinct colors for multiple helices
+                const PK_PALETTE = ['#e05c3a','#3a7fe0','#2ab56e','#b83ab5','#e0a53a','#3ab5b5','#8c5ae0','#b5a03a'];
+                const helixColorMap = new Map();
+                pkHelices.forEach((helix, hi) => {
+                    const col = pkHelices.length > 1 ? PK_PALETTE[hi % PK_PALETTE.length] : pkColor;
+                    helix.forEach(ps => helixColorMap.set(pairKey(ps.i, ps.j), col));
+                });
+
 				for (const ps of pseudoPairs) {
 					const key = pairKey(ps.i, ps.j);
-					const arcColor = pkCovMap.get(key) ?? pkColor;
+					const arcColor = pkCovMap.get(key) ?? helixColorMap.get(key) ?? pkColor;
 					const strokeW = pkCovMap.has(key) ? pkWidth * 1.5 : pkWidth;
 					const ax = coords[ps.i].x, ay = coords[ps.i].y;
 					const bx = coords[ps.j].x, by = coords[ps.j].y;
@@ -6061,9 +6799,33 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					g_pk.appendChild(arc);
 				}
 			}
-            // SS_cons_ feature annotations (gated on R3D toggle)
-            if (this._showR3d !== false && this._rna.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length)
+            // SS_cons_ feature annotations (gated on Labels toggle)
+            if (isStockholm && this._showR3dLabels !== false && this._rna.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length)
                 this._renderSsConsAnnotations(g_annot, g_ss_labels, coords, n, this._rna.ssConsFeatures, pairs, pseudoPairs, cs);
+            // Stockholm PK visualization: R3D-style arcs + mini helix panels
+            // Insets gated by I button, labels gated by L button independently
+            if (isStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
+                // Dedicated group for SS_cons arcs so L-button hiding doesn't affect pair annot boxes
+                const g_ss_arcs = document.createElementNS(NS, 'g');
+                this._scene.appendChild(g_ss_arcs);
+                let stemOffset = 0;
+                if (pseudoPairs?.length)
+                    stemOffset += this._renderPkStockholm(g_ss_arcs, g_ss_labels, coords, n, pseudoPairs, pairs, sequence, cs, false, null, stemOffset);
+                if (this._rna.ssConsPkPairs)
+                    for (const [fn, featPairs] of Object.entries(this._rna.ssConsPkPairs))
+                        if (featPairs.length) {
+                            const label = fn.replace(/^SS_cons_/, '');
+                            stemOffset += this._renderPkStockholm(g_ss_arcs, g_ss_labels, coords, n, featPairs, pairs, sequence, cs, true, label, stemOffset);
+                        }
+                // Hide insets panel if I button is off
+                if (this._showR3dInsets === false && this._pkPanelsEl)
+                    this._pkPanelsEl.style.display = 'none';
+                // Hide SS_cons arcs + labels if L button is off
+                if (this._showR3dLabels === false) {
+                    g_ss_arcs.style.display = 'none';
+                    g_ss_labels.style.display = 'none';
+                }
+            }
             // Bases
             for (let i = 0; i < n; i++) {
                 const grp = document.createElementNS(NS, 'g');
@@ -6090,12 +6852,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                         if (bd.letter !== null) {
                             // Letter-only (Stockholm), white eraser goes to g_bg (behind annotations),
                             // letter goes to g_base (in front of annotations)
-                            circ.setAttribute('class', 'rv-base-circle rv-eraser');
-                            circ.setAttribute('r', baseR * 1.5);
-                            circ.style.fill = bgColor;
-                            circ.style.stroke = 'none';
-                            circ.style.pointerEvents = 'none';
-                            g_bg.appendChild(circ); // eraser behind annotation boxes
+                            const er = this._mkEraserCircle(coords[i].x, coords[i].y, baseR, bgColor);
+                            er.setAttribute('class', 'rv-base-circle rv-eraser');
+                            er.style.pointerEvents = 'none';
+                            g_bg.appendChild(er); // eraser behind annotation boxes
                             // Invisible hit-target in g_base so _onMouseDown finds the base
                             const hit = document.createElementNS(NS, 'circle');
                             hit.setAttribute('class', 'rv-hit');
@@ -6174,10 +6934,28 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 (pkEndpts.has(i) ? g_pk_top : g_base).appendChild(grp);
             }
             if (this._alnBtn) this._alnBtn.style.display = this._rna?.baseDisplay ? '' : 'none';
-            if (this._chkR3d) this._chkR3d.style.display =
-                (this._rna?.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length) ? '' : 'none';
+            if (this._chkPk) this._chkPk.style.display =
+                (!isStockholm && this._rna?.pseudoPairs?.length) ? '' : 'none';
+            // I button: show only when ssConsFeatures has entries (Stockholm with insets)
+            const hasR3dContent = isStockholm && !!(
+                (this._rna?.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length) ||
+                (this._rna?.ssConsPkPairs  && Object.values(this._rna.ssConsPkPairs).some(p => p.length)) ||
+                this._rna?.pseudoPairs?.length
+            );
+            if (this._chkR3dInsets) this._chkR3dInsets.style.display = hasR3dContent ? '' : 'none';
+            if (this._chkR3dLabels) this._chkR3dLabels.style.display = hasR3dContent ? '' : 'none';
+            // PA button: show only if annotations are present (any source, any structure type)
+            const hasPairAnnot = !!(this._rna?.pairAnnotations?.length || this._rna?.helixAnnotations?.length);
+            if (this._chkPAnnot) this._chkPAnnot.style.display = hasPairAnnot ? '' : 'none';
+            // Reactivity button: show only for non-Stockholm with values loaded
+            const hasReactivity = !isStockholm && !!(this._rna?.values);
+            if (this._chkColors) this._chkColors.style.display = hasReactivity ? '' : 'none';
             if (this._chkSsEnds) this._chkSsEnds.style.display = this._rna?.ssEnds ? '' : 'none';
             if (this._alnLegend) this._alnLegend.classList.toggle('rv-visible', !!this._rna?.baseDisplay && !this._alnActive);
+            // XML upload section: hide for Stockholm
+            const xmlSection = this._root?.querySelector('.rv-upload-section:has(.rv-upload-drop-xml)') ??
+                               this._root?.querySelector('.rv-upload-drop-xml')?.closest('.rv-upload-section');
+            if (xmlSection) xmlSection.style.display = isStockholm ? 'none' : '';
         }
         _saveSVG(returnString = false) {
             if (!this._rna) return returnString ? null : undefined;
@@ -6232,7 +7010,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const clNaNH = colorMap?.nanColor ? LROW : 0;
             const clH = LY + clGradH + clLblH + clNaNH + LY;
             // Pair-annot legend geometry (no background box)
-            const _helixLegColor = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#064e3b';
+            const _helixLegColor = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
             const _helixEntry = hasHelixAnnot ? [{
                 key: 'Helix-level',
                 color: _helixLegColor,
@@ -6513,7 +7291,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 const lx = vbX + pad + (hasAlnLegend ? alW + 2 * LX : 0);
                 const ly = vbY + (vbH - lgndH2) + LSEP;
                 // Entries
-                const paOpa = parseFloat(_gv('--rv-pair-annot-opacity')) || 0.3;
+                const paOpa = parseFloat(_gv('--rv-pair-annot-opacity')) || 0.5;
                 const paStroke = parseFloat(_gv('--rv-pair-annot-stroke-width')) || 1.5;
                 paEntries.forEach(({
                     key,
@@ -6595,7 +7373,298 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     exp.appendChild(ll);
                 });
             }
-            // Download or return as string
+            // ── PK inset panels in SVG export ─────────────────────────────────
+            // Mirrors _render() which handles both pseudoPairs and ssConsPkPairs
+            const expIsStockholm = !!this._rna?.baseDisplay;
+            if (expIsStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
+                // Collect all pair sources exactly as _render() does
+                const expPairSources = []; // [{pairs, featureName}]
+                if (this._rna.pseudoPairs?.length)
+                    expPairSources.push({ pairs: this._rna.pseudoPairs, featureName: null });
+                if (this._rna.ssConsPkPairs)
+                    for (const [fn, featPairs] of Object.entries(this._rna.ssConsPkPairs))
+                        if (featPairs.length)
+                            expPairSources.push({ pairs: featPairs, featureName: fn.replace(/^SS_cons_/, '') });
+
+                // Collect all stems across all sources
+                const expAllStems = []; // [{stem, featureName}]
+                const expR3dPosToName = new Map();
+                if (this._rna.ssConsFeatures)
+                    for (const [name, positions] of Object.entries(this._rna.ssConsFeatures))
+                        for (const p of positions) expR3dPosToName.set(p, name);
+
+                for (const { pairs: srcPairs, featureName } of expPairSources) {
+                    const expSorted = [...srcPairs].sort((a, b) => a.i - b.i);
+                    const expStems = [];
+                    let expCur = null;
+                    for (const ps of expSorted) {
+                        if (expCur) {
+                            const last = expCur[expCur.length - 1];
+                            if (ps.i === last.i + 1 && (ps.j === last.j - 1 || ps.j === last.j + 1)) {
+                                expCur.push(ps); continue;
+                            }
+                        }
+                        if (expCur) expStems.push(expCur);
+                        expCur = [ps];
+                    }
+                    if (expCur) expStems.push(expCur);
+                    expStems.forEach((stem, si) => {
+                        let lbl = featureName;
+                        if (!lbl) {
+                            for (const p of stem.map(ps => ps.i))
+                                if (expR3dPosToName.has(p)) { lbl = expR3dPosToName.get(p); break; }
+                            if (!lbl) for (const p of stem.map(ps => ps.j))
+                                if (expR3dPosToName.has(p)) { lbl = expR3dPosToName.get(p); break; }
+                            if (!lbl) lbl = `PK${expAllStems.length + 1}`;
+                        }
+                        expAllStems.push({ stem, featureName: lbl });
+                    });
+                }
+
+                if (expAllStems.length && this._showR3dInsets !== false) {
+                // Panel geometry (same proportions as interactive panels)
+                const pk_baseR  = BASE_R * Math.min(LS, 1.2) * 0.57;
+                const pk_colSep = pk_baseR * 6;
+                const pk_rowStep= pk_baseR * 3.2;
+                const pk_svgW   = pk_colSep + pk_baseR * 4;
+                const pk_col5x  = pk_baseR * 2;
+                const pk_col3x  = pk_col5x + pk_colSep;
+                const _pkHelixPad = ((parseFloat(_gv('--rv-helix-annot-padding')) || BASE_R * 1.7) / BASE_R) * pk_baseR;
+                const pk_vPad   = Math.max(pk_baseR * 1.5, _pkHelixPad / 2 + pk_baseR * 0.5);
+                const pk_hPad   = pk_baseR * 2;
+                const pk_gap    = pk_baseR * 4;
+                const pk_titleH = indexFSz * 1.0 + pk_baseR * 2.5;
+
+                const pk_totalW = expAllStems.length * (pk_svgW + pk_hPad) - pk_hPad;
+                const pk_maxH   = Math.max(...expAllStems.map(({ stem }) =>
+                    (stem.length - 1) * pk_rowStep + pk_baseR * 2 + pk_vPad + pk_vPad * 0.4
+                )) + pk_titleH + pk_vPad;
+
+                const pk_blockH = pk_maxH + pk_gap;
+                const oldVbY = parseFloat(exp.getAttribute('viewBox').split(' ')[1]);
+                const newVbY = oldVbY - pk_blockH;
+                const oldVbH = parseFloat(exp.getAttribute('viewBox').split(' ')[3]);
+                exp.setAttribute('viewBox', `${vbX} ${newVbY} ${vbW} ${oldVbH + pk_blockH}`);
+                exp.setAttribute('height', (oldVbH + pk_blockH) * 2);
+
+                const pk_startX = vbX + (vbW - pk_totalW) / 2;
+                const pk_startY = newVbY + pk_gap * 0.4;
+
+                const _scale2 = pk_baseR / BASE_R;
+                const bpW2    = C.basepairWidth  * _scale2;
+                const bbW2    = C.backboneWidth  * _scale2;
+                const bbCol2  = C.backbone;
+                const bpCol2  = C.basepair;
+                const dotR2   = _gvn('--rv-noncanon-dot-r', 4.5) * _scale2;
+                const BP_OFF2 = 2.8 * _scale2;
+                const helixColor2 = _gv('--rv-helix-annot-color') || '#aff0a8';
+                const helixOpa2   = parseFloat(_gv('--rv-helix-annot-opacity')) || 0.5;
+                const pAnnotOpa2  = parseFloat(_gv('--rv-pair-annot-opacity')) || 0.5;
+                const pAnnotSW2   = (parseFloat(_gv('--rv-pair-annot-stroke-width')) || 1.5) * _scale2;
+                const pAnnotPad2  = (parseFloat(_gv('--rv-pair-annot-padding')) || 16) * _scale2;
+                const bsW2    = _gvn('--rv-base-stroke-width', 2) * _scale2;
+                const bgCol2  = C.bg;
+
+                expAllStems.forEach(({ stem, featureName: lbl }, si) => {
+                    const nbp    = stem.length;
+                    const row0y  = pk_startY + pk_titleH + pk_vPad;
+                    const panelX = pk_startX + si * (pk_svgW + pk_hPad);
+                    const panelG = document.createElementNS(NS, 'g');
+                    exp.appendChild(panelG);
+                    const inCoords = {};
+                    stem.forEach((ps, k) => {
+                        inCoords[ps.i] = { x: panelX + pk_col5x, y: row0y + k * pk_rowStep };
+                        inCoords[ps.j] = { x: panelX + pk_col3x, y: row0y + k * pk_rowStep };
+                    });
+                    const inPairs2 = {};
+                    stem.forEach(ps => { inPairs2[ps.i] = ps.j; inPairs2[ps.j] = ps.i; });
+
+                    // Background
+                    const panelH = (nbp - 1) * pk_rowStep + pk_baseR * 2 + pk_vPad + pk_vPad * 0.4;
+                    const bgRect = document.createElementNS(NS, 'rect');
+                    bgRect.setAttribute('x',      panelX - pk_baseR * 0.5);
+                    bgRect.setAttribute('y',      pk_startY);
+                    bgRect.setAttribute('width',  pk_svgW + pk_baseR);
+                    bgRect.setAttribute('height', pk_titleH + pk_vPad + panelH + pk_vPad * 0.4);
+                    bgRect.setAttribute('rx',     pk_baseR * 0.6);
+                    bgRect.setAttribute('fill',   bgCol2);
+                    bgRect.setAttribute('stroke', 'none');
+                    panelG.appendChild(bgRect);
+
+                    // Title
+                    const titleT = document.createElementNS(NS, 'text');
+                    titleT.setAttribute('x',           panelX + pk_svgW * 0.5);
+                    titleT.setAttribute('y',           pk_startY + pk_titleH * 0.65);
+                    titleT.setAttribute('text-anchor', 'middle');
+                    titleT.setAttribute('font-family', C.indexFont);
+                    titleT.setAttribute('font-size',   indexFSz);
+                    titleT.setAttribute('font-weight', '700');
+                    titleT.setAttribute('fill',        C.muted);
+                    titleT.textContent = lbl.toUpperCase();
+                    panelG.appendChild(titleT);
+
+                    // 1. Backbone
+                    if (nbp > 1) {
+                        [panelX + pk_col5x, panelX + pk_col3x].forEach(cx => {
+                            const l = document.createElementNS(NS, 'line');
+                            l.setAttribute('class', 'rv-backbone');
+                            l.setAttribute('x1', cx); l.setAttribute('y1', row0y);
+                            l.setAttribute('x2', cx); l.setAttribute('y2', row0y + (nbp-1)*pk_rowStep);
+                            panelG.appendChild(l);
+                        });
+                    }
+
+                    // 2. Eraser circles (behind everything)
+                    stem.forEach((ps, k) => {
+                        const ry = row0y + k * pk_rowStep;
+                        [[ps.i, panelX + pk_col5x], [ps.j, panelX + pk_col3x]].forEach(([ri, cx]) => {
+                            const bd = this._rna.baseDisplay?.[ri];
+                            if (!bd || bd.skip || bd.letter == null) return;
+                            const er = document.createElementNS(NS, 'circle');
+                            er.setAttribute('cx', cx); er.setAttribute('cy', ry);
+                            er.setAttribute('r',  pk_baseR * 1.5);
+                            er.style.cssText = `fill:${bgCol2};stroke:none`;
+                            panelG.appendChild(er);
+                        });
+                    });
+
+                    // 3. Helix annotation box
+                    if (this._showPairAnnotations && this._rna.helixAnnotations?.length) {
+                        for (const ann of this._rna.helixAnnotations) {
+                            const hasPair = (ann.subHelices || []).some(sh =>
+                                sh.pos5p.some(ri => stem.some(p => p.i===ri||p.j===ri)) ||
+                                sh.pos3p.some(ri => stem.some(p => p.i===ri||p.j===ri)))
+                                || (ann.pkPairs || []).some(pk => stem.some(p =>
+                                    (p.i===pk.i&&p.j===pk.j)||(p.i===pk.j&&p.j===pk.i)));
+                            if (!hasPair) continue;
+                            const annPad2 = (ann.padding ?? _pkHelixPad);
+                            const cx5 = panelX + pk_col5x, cx3 = panelX + pk_col3x;
+                            const yTop = row0y - annPad2;
+                            const yBot = row0y + (nbp-1)*pk_rowStep + annPad2;
+                            const bw2  = (cx3 - cx5) + annPad2 * 2;
+                            const bh2  = yBot - yTop;
+                            const rx2  = Math.min(pk_baseR * 0.6, bw2/2, bh2/2);
+                            const r = document.createElementNS(NS, 'rect');
+                            r.setAttribute('x',            cx5 - annPad2);
+                            r.setAttribute('y',            yTop);
+                            r.setAttribute('width',        bw2);
+                            r.setAttribute('height',       bh2);
+                            r.setAttribute('rx',           rx2); r.setAttribute('ry', rx2);
+                            r.setAttribute('fill',         ann.color ?? helixColor2);
+                            r.setAttribute('fill-opacity', String(ann.opacity ?? helixOpa2));
+                            r.setAttribute('stroke',       ann.color ?? helixColor2);
+                            r.setAttribute('stroke-opacity', '0.45');
+                            r.setAttribute('stroke-width', String(ann.strokeWidth ?? 1.5));
+                            panelG.appendChild(r);
+                            break;
+                        }
+                    }
+
+                    // 4. Pair annotation boxes
+                    if (this._showPairAnnotations) {
+                        for (const ann of (this._rna.pairAnnotations || [])) {
+                            let ai = ann.i, aj = ann.j;
+                            if (ai != null && aj != null) {
+                                if (!stem.some(p=>(p.i===ai&&p.j===aj)||(p.i===aj&&p.j===ai))) continue;
+                            } else if (ai != null) { aj = inPairs2[ai]; if (aj == null) continue; }
+                              else if (aj != null) { ai = inPairs2[aj]; if (ai == null) continue; }
+                              else continue;
+                            const ic5 = inCoords[ai], ic3 = inCoords[aj];
+                            if (!ic5 || !ic3) continue;
+                            let color = ann.color;
+                            if (!color && ann.key != null && this._rna.pairAnnotColorMap) {
+                                const e2 = this._rna.pairAnnotColorMap.find(e => e.key === ann.key);
+                                if (e2) color = e2.color;
+                            }
+                            panelG.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
+                                color||'#ffffff', ann.opacity??pAnnotOpa2, ann.strokeWidth??pAnnotSW2, ann.padding??pAnnotPad2, pk_baseR));
+                        }
+                        for (const { i, j, color } of (this._rna.pseudoCovAnnotations || [])) {
+                            if (!stem.some(p=>(p.i===i&&p.j===j)||(p.i===j&&p.j===i))) continue;
+                            const ic5 = inCoords[i], ic3 = inCoords[j];
+                            if (!ic5 || !ic3) continue;
+                            panelG.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
+                                color, pAnnotOpa2, pAnnotSW2, pAnnotPad2, pk_baseR));
+                        }
+                    }
+
+                    // 5. Base letters / fill circles
+                    stem.forEach((ps, k) => {
+                        const ry = row0y + k * pk_rowStep;
+                        [[ps.i, panelX + pk_col5x], [ps.j, panelX + pk_col3x]].forEach(([ri, cx]) => {
+                            const bd = this._rna.baseDisplay?.[ri];
+                            if (!bd || bd.skip) return;
+                            if (bd.letter !== null && bd.letter !== undefined) {
+                                const t = document.createElementNS(NS,'text');
+                                t.setAttribute('x', cx);
+                                t.setAttribute('y', ry);
+                                t.setAttribute('dy', '0.35em');
+                                t.setAttribute('text-anchor','middle');
+                                t.setAttribute('font-size', pk_baseR*3);
+                                t.setAttribute('font-family', 'monospace');
+                                t.setAttribute('font-weight', 'bold');
+                                t.setAttribute('fill', bd.textColor || C.baseText);
+                                t.textContent = bd.letter;
+                                panelG.appendChild(t);
+                            } else if (bd.fillColor) {
+                                const circ = document.createElementNS(NS,'circle');
+                                circ.setAttribute('cx', cx); circ.setAttribute('cy', ry);
+                                circ.setAttribute('r',  pk_baseR);
+                                circ.style.cssText = `fill:${bd.fillColor};stroke:#111111;stroke-width:${bsW2}`;
+                                panelG.appendChild(circ);
+                            }
+                        });
+                    });
+
+                    // 6. Bonds (topmost)
+                    stem.forEach((ps, k) => {
+                        const ry  = row0y + k * pk_rowStep;
+                        const cx5 = panelX + pk_col5x, cx3 = panelX + pk_col3x;
+                        const b5  = (this._rna.sequence?.[ps.i] || '?').toUpperCase();
+                        const b3  = (this._rna.sequence?.[ps.j] || '?').toUpperCase();
+                        this._mkStockholmBond(cx5, ry, cx3, ry, b5, b3, pk_baseR, dotR2)
+                            .forEach(el => panelG.appendChild(el));
+                    });
+                });
+                } // end if expAllStems.length
+            }
+            // For Stockholm structures, labels can extend beyond the structure bounding box.
+            // Expand viewBox to include all SS_cons label bg rects and leader lines.
+            if (expIsStockholm && this._showR3dLabels !== false) {
+                // Read current viewBox (may have been expanded by PK inset block)
+                const curVBStr = exp.getAttribute('viewBox');
+                const curVB = curVBStr ? curVBStr.split(' ').map(Number) : [vbX, vbY, vbW, vbH];
+                let [cvX, cvY, cvW, cvH] = curVB;
+                let lMinX = cvX + cvW, lMinY = cvY + cvH, lMaxX = cvX, lMaxY = cvY;
+                let expanded = false;
+                exp.querySelectorAll('.rv-ss-cons-bg').forEach(el => {
+                    const x = parseFloat(el.getAttribute('x') || 0);
+                    const y = parseFloat(el.getAttribute('y') || 0);
+                    const w = parseFloat(el.getAttribute('width') || 0);
+                    const h = parseFloat(el.getAttribute('height') || 0);
+                    lMinX = Math.min(lMinX, x); lMinY = Math.min(lMinY, y);
+                    lMaxX = Math.max(lMaxX, x + w); lMaxY = Math.max(lMaxY, y + h);
+                    expanded = true;
+                });
+                exp.querySelectorAll('.rv-ss-cons-leader').forEach(el => {
+                    [1, 2].forEach(n => {
+                        const x = parseFloat(el.getAttribute(`x${n}`) || 0);
+                        const y = parseFloat(el.getAttribute(`y${n}`) || 0);
+                        lMinX = Math.min(lMinX, x); lMinY = Math.min(lMinY, y);
+                        lMaxX = Math.max(lMaxX, x); lMaxY = Math.max(lMaxY, y);
+                    });
+                    expanded = true;
+                });
+                if (expanded) {
+                    const newX = Math.min(cvX, lMinX - pad);
+                    const newY = Math.min(cvY, lMinY - pad);
+                    const newW = Math.max(cvX + cvW, lMaxX + pad) - newX;
+                    const newH = Math.max(cvY + cvH, lMaxY + pad) - newY;
+                    exp.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
+                    exp.setAttribute('width',  newW * 2);
+                    exp.setAttribute('height', newH * 2);
+                }
+            }
             const exportId = this._id || this._structures?.[this._currentStructIdx]?.label || this._rna?._label || 'RF_structure';
             const exportName = exportId.replace(/[^a-zA-Z0-9_\-\.]/g, '_') + '.svg';
             const svgString = new XMLSerializer().serializeToString(exp);
@@ -7112,7 +8181,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             } = parseDotBracket(structure);
             const result = this._layoutAlgo === 'naview' ? this._autoRotateLayout(drawRNANAView(pairs, sequence.length)) : this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) : this._pickLayout(pairs, sequence.length);
             const _usedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
-            const resolvedHelixAnnotations = helixAnnotations?.length ? resolveHelixAnnotations(helixAnnotations, pairs, positionLabels) : null;
+            // If helixAnnotations are already resolved (have subHelices/pkPairs from loadHelixCov),
+            // skip re-resolution — they're in the final format already.
+            const _alreadyResolved = helixAnnotations?.length && ('subHelices' in helixAnnotations[0] || 'pkPairs' in helixAnnotations[0]);
+            const resolvedHelixAnnotations = helixAnnotations?.length
+                ? (_alreadyResolved ? helixAnnotations : resolveHelixAnnotations(helixAnnotations, pairs, positionLabels))
+                : null;
             return {
                 sequence,
                 structure,
@@ -7139,6 +8213,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             };
         }
         _initStructures(config) {
+			this._lastCovTexts = []; // new structure — annotations must be re-applied explicitly
 			this._lastConfig = config;
 			this._errEl.style.display = 'none';
 			this._legend.style.display = 'none';
@@ -7193,8 +8268,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     }
                 }
                 const _sl = this._computeLayout(sequence, structure, values, colorMap, pAnnots, pAnnotCM, hAnnots, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
-                if (s.ssConsFeatures) _sl.ssConsFeatures = s.ssConsFeatures;
-                if (s.ssEnds) _sl.ssEnds = s.ssEnds;
+                if (s.ssConsFeatures)         _sl.ssConsFeatures         = s.ssConsFeatures;
+                if (s.ssConsPkPairs)          _sl.ssConsPkPairs          = s.ssConsPkPairs;
+                if (s.ssEnds)                 _sl.ssEnds                 = s.ssEnds;
+                if (s.pseudoCovAnnotations)   _sl.pseudoCovAnnotations   = s.pseudoCovAnnotations;
+                if (s.pseudoHelixCovAnnotations) _sl.pseudoHelixCovAnnotations = s.pseudoHelixCovAnnotations;
+                if (s.isCovAnnot)             _sl.isCovAnnot             = s.isCovAnnot;
                 this._structLayouts.push(_sl);
             }
             // Ensure every stored structure carries .sequence so future append operations
@@ -7211,6 +8290,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     pairAnnotColorMap:         s.pairAnnotColorMap  || config.pairAnnotColorMap  || sl?.pairAnnotColorMap  || undefined,
                     helixAnnotations:          s.helixAnnotations   || config.helixAnnotations   || sl?.helixAnnotations   || undefined,
                     pseudoHelixCovAnnotations: s.pseudoHelixCovAnnotations || sl?.pseudoHelixCovAnnotations || undefined,
+                    pseudoCovAnnotations:      s.pseudoCovAnnotations      || sl?.pseudoCovAnnotations      || undefined,
+                    isCovAnnot:               s.isCovAnnot                || sl?.isCovAnnot                || undefined,
+                    ssConsFeatures:            s.ssConsFeatures            || sl?.ssConsFeatures            || undefined,
+                    ssConsPkPairs:             s.ssConsPkPairs             || sl?.ssConsPkPairs             || undefined,
                 };
             });
             this._lastConfig = config;
@@ -7224,10 +8307,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._applyStructIndices(this._rna, config);
             // Auto-activate R3D toggle when SS_cons_ annotations are present,
             // unless disabled via constructor config or direct instance flag (e.g. headless --noR3d).
-            if (this._rna?.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length > 0) {
-                if (this._constructorConfig?.showR3d !== false && this._showR3d !== false) {
-                    this._showR3d = true;
-                    if (this._chkR3d) this._chkR3d.classList.add('rv--active');
+            if (this._rna?.baseDisplay && (
+                (this._rna?.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length > 0) ||
+                (this._rna?.ssConsPkPairs  && Object.values(this._rna.ssConsPkPairs).some(p => p.length)) ||
+                this._rna?.pseudoPairs?.length
+            )) {
+                if (this._constructorConfig?.showInsets !== false && this._showR3dInsets !== false) {
+                    this._showR3dInsets = true;
+                    this._showR3dLabels = true;
+                    if (this._chkR3dInsets) this._chkR3dInsets.classList.add('rv--active');
+                    if (this._chkR3dLabels) this._chkR3dLabels.classList.add('rv--active');
                 }
             }
             // If showSsEnds is true and the current structure has trimmed ends, rebuild now.
@@ -7299,6 +8388,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 _sl.ssConsFeatures = rawFeatures || undefined;
             }
 
+            // ssConsPkPairs
+            const rawPkPairs = src.ssConsPkPairs;
+            if (rawPkPairs && shift > 0) {
+                const shifted = {};
+                for (const [name, fps] of Object.entries(rawPkPairs))
+                    shifted[name] = fps.map(p => ({ i: p.i + shift, j: p.j + shift }));
+                _sl.ssConsPkPairs = shifted;
+            } else {
+                _sl.ssConsPkPairs = rawPkPairs || undefined;
+            }
+
             // pseudoHelixCovAnnotations
             const rawPhc = src.pseudoHelixCovAnnotations;
             _sl.pseudoHelixCovAnnotations = rawPhc && shift > 0
@@ -7322,7 +8422,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         // Stockholm structures (with ssConsFeatures) hide indices; others restore them,
         // unless the caller explicitly set showIndices:false in the config.
         _applyStructIndices(rna, config) {
-            const isStockholm = !!(rna?.ssConsFeatures && Object.keys(rna.ssConsFeatures).length > 0);
+            const isStockholm = !!(rna?.baseDisplay);
             if (isStockholm) {
                 this._showIndices = false;
                 if (this._chkIndices) this._chkIndices.classList.remove('rv--active');
@@ -7442,9 +8542,41 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             // Update pill states immediately so the user gets feedback
             this._root.querySelectorAll('.rv-struct-pill').forEach((p, i) => {
                 p.classList.toggle('rv--active', i === idx);
+                if (i === idx) p.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
             });
             const srcRna = this._structLayouts[this._currentStructIdx];
             const tgtRna = this._structLayouts[idx];
+
+            // Save current toggle state onto the source layout so it's restored when switching back
+            srcRna._toggleState = {
+                showPairAnnotations: this._showPairAnnotations,
+                showColors:          this._showColors,
+                showIndices:         this._showIndices,
+                showPseudoknots:     this._showPseudoknots,
+                showR3dInsets:       this._showR3dInsets,
+                showR3dLabels:       this._showR3dLabels,
+                showSsEnds:          this._showSsEnds,
+            };
+            // Restore toggle state from the target layout (if previously saved)
+            if (tgtRna._toggleState) {
+                const s = tgtRna._toggleState;
+                this._showPairAnnotations = s.showPairAnnotations;
+                this._showColors          = s.showColors;
+                this._showIndices         = s.showIndices;
+                this._showPseudoknots     = s.showPseudoknots;
+                this._showR3dInsets       = s.showR3dInsets;
+                this._showR3dLabels       = s.showR3dLabels;
+                this._showSsEnds          = s.showSsEnds;
+                // Sync button visual states
+                if (this._chkPAnnot)    this._chkPAnnot.classList.toggle('rv--active',    this._showPairAnnotations);
+                if (this._chkColors)    this._chkColors.classList.toggle('rv--active',    this._showColors);
+                if (this._chkIndices)   this._chkIndices.classList.toggle('rv--active',   this._showIndices);
+                if (this._chkPk)        this._chkPk.classList.toggle('rv--active',        this._showPseudoknots);
+                if (this._chkR3dInsets) this._chkR3dInsets.classList.toggle('rv--active', this._showR3dInsets);
+                if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
+                if (this._chkSsEnds)    this._chkSsEnds.classList.toggle('rv--active',    this._showSsEnds);
+            }
+
             this._currentStructIdx = idx;
             // Animate only when both structures share the same sequence — different
             // sequences mean different lengths / base identities which would corrupt
@@ -7536,7 +8668,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             const g_pk_top = document.createElementNS(NS, 'g');
             this._scene.append(g_bb, g_bp, g_helix, g_annot, g_base, g_pk, g_pk_top);
             const pkEndpts = new Set(pseudoPairs.flatMap(ps => [ps.i, ps.j]));
-            this._renderHelixAnnotations(g_helix, coords, n, parseFloat(getComputedStyle(this._root).getPropertyValue('--rv-base-radius')) || BASE_R);
+            const _animBaseR = parseFloat(getComputedStyle(this._root).getPropertyValue('--rv-base-radius')) || BASE_R;
+            this._renderHelixAnnotations(g_helix, coords, n, _animBaseR);
             const dotR = this._gvn('--rv-noncanon-dot-r', 4.5);
             const BP_OFFSET = 2.8;
             // Backbone, skip segments adjacent to skipped alignment positions
@@ -7573,11 +8706,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const pair = [b1, b2].sort().join('');
                 const css = `stroke:${color};stroke-width:${bpWidth};fill:none;stroke-linecap:round;opacity:${opacity}`;
                 const mkL = (x1, y1, x2, y2) => {
-                    const l = document.createElementNS(NS, 'line');
-                    l.setAttribute('x1', x1);
-                    l.setAttribute('y1', y1);
-                    l.setAttribute('x2', x2);
-                    l.setAttribute('y2', y2);
+                    const l = this._mkSvgLine(x1, y1, x2, y2);
                     l.style.cssText = css;
                     g_bp.appendChild(l);
                 };
@@ -7647,7 +8776,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 of gainedPairs) drawPair(i, j, formColor, fadeIn);
             // Pseudoknot pairs (target) fading in, on top of bases
             if (this._showPseudoknots !== false) {
+                const _showAnnot = this._showPairAnnotations;
+                const pkCovMap = _showAnnot
+                    ? new Map((this._rna.pseudoCovAnnotations || []).map(({ i, j, color }) => [pairKey(i, j), color]))
+                    : new Map();
+                const pkHelixGlowSet = _showAnnot
+                    ? new Set((this._rna.pseudoHelixCovAnnotations || []).map(({ i, j }) => pairKey(i, j)))
+                    : new Set();
+                const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
+                const _pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
+                const _pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
 				for (const ps of pseudoPairs) {
+					const key = pairKey(ps.i, ps.j);
+					const arcColor = pkCovMap.get(key) ?? _pkColor;
+					const strokeW = pkCovMap.has(key) ? _pkWidth * 1.5 : _pkWidth;
 					const ax = coords[ps.i].x, ay = coords[ps.i].y;
 					const bx = coords[ps.j].x, by = coords[ps.j].y;
 					const mx = (ax + bx) / 2, my = (ay + by) / 2;
@@ -7734,6 +8876,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             this._root.classList.remove('rv--aln-mode');
             if (this._svgEl) this._svgEl.style.display = '';
             if (this._structWrap) this._structWrap.style.display = '';
+            if (this._pkPanelsEl && this._pkPanelsEl.children.length) {
+                this._pkPanelsEl.style.display = 'flex';
+            }
             if (this._alnBtn) {
                 this._alnBtn.classList.remove('rv--active');
                 this._alnBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span>';
@@ -7748,6 +8893,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             if (this._alnActive) {
                 this._svgEl.style.display = 'none';
                 if (this._structWrap) this._structWrap.style.display = 'none';
+                if (this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
                 this._root.classList.add('rv--aln-mode');
                 this._legend.style.display = 'none';
                 this._palLegend.style.display = 'none';

@@ -74,7 +74,7 @@ xattr -cr /path/to/RFview.app
 
 ## Installation
 
-To install __RFviewJS__ on your webpage, just obtain `RFview.js` (under `renderer/RFview.js` on this repository), upload it to your webserver and include it with a plain `<script>` tag:
+To install __RFviewJS__ on your webpage, just obtain `RFview.js` (under `scripts/RFview.js` on this repository), upload it to your webserver and include it with a plain `<script>` tag:
 
 ```html
 <script src="path/to/RFview.js"></script>

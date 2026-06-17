@@ -84,7 +84,11 @@ if (cliArgs.help || cliArgs.h) {
  --svg              <string>    Path to the output SVG file (Default: <structureFile basename>.svg)
  --noLegend                     Omits legends from the exported SVG
  --noPk                         Omits pseudoknot archs from the exported SVG
- --noR3d                        Omits CaCoFold-R3D annotations from the exported SVG
+                                Note: this has no effect on Stockholm alignments (use --noLabels and
+                                      --noInsets instead)
+ --noLabels                     Omits Stockholm annotation labels (SS_cons lines) from the exported SVG
+ --noInsets                     Omits inset panels for non-nested interactions in Stockholm alignments
+                                from the exported SVG
  --help                         Shows this help message
 
 `);
@@ -162,7 +166,7 @@ function createWindow() {
     if (s.maximized) win.maximize();
 
     win.once('ready-to-show', () => win.show());
-    win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+    win.loadFile(path.join(__dirname, 'scripts', 'index.html'));
     win.on('close', () => saveState(win));
 
 }
@@ -337,13 +341,13 @@ async function runHeadless(args) {
 
     // Loads the existing index.html and loads RFview.js.
     // app.js also runs, creating a GUI viewer, but we create a second one below
-    headlessWin.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+    headlessWin.loadFile(path.join(__dirname, 'scripts', 'index.html'));
 
     headlessWin.webContents.once('did-finish-load', () => {
 
         // Embeds all data as JSON so no IPC hand-off is needed.
         // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noR3d: !!args.noR3d });
+         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets });
 
         const code = `
 (function () {
@@ -355,8 +359,6 @@ async function runHeadless(args) {
     const viewer = new RFviewJS(document.getElementById('viewer'), { statusBar: false });
     if (d.layout && d.layout !== 'auto') viewer.setLayoutAlgorithm(d.layout);
     if (d.noLegend) viewer._noLegend = true;
-    if (d.noPk) viewer._showPseudoknots = false;
-    if (d.noR3d) viewer._showR3d = false;
 
     /* Parse structure */
     let structs;
@@ -391,6 +393,9 @@ async function runHeadless(args) {
     } : undefined;
     viewer.load({ sequence: structs[0].sequence, structures: structs, colorMap: defaultCM });
     if (hasReact) viewer._showColors = true;
+    if (d.noPk) viewer._showPseudoknots = false;   
+    if (d.noLabels) viewer._showR3dLabels = false;     
+    if (d.noInsets) viewer._showR3dInsets = false;
     if (!viewer._rna) { window.electronAPI.headlessError('Structure failed to render.'); return; }
 
     /* Apply pair annotations post-load
@@ -398,73 +403,11 @@ async function runHeadless(args) {
        pair table) to remap Stockholm alignment coordinates and filter out
        any pairs that are not present in the consensus structure.            */
     if (d.annotText) {
-      let rawPairs;
       try {
-        const isCov = /\\.cov$/i.test(d.annotName || '');
-        rawPairs = isCov ? RFviewJS.parseCovFile(d.annotText) : RFviewJS.parsePairAnnotFile(d.annotText);
-      } catch (e) { window.electronAPI.headlessError('Cannot parse annotations: ' + e.message); return; }
-
-      /* Remap alignment-space coordinates to filtered-sequence coordinates.
-         positionLabels[renderedIdx] = original 1-based alignment column.    */
-      let pairs = rawPairs;
-      const posLabels = viewer._rna.positionLabels;
-      if (posLabels && posLabels.length) {
-        const origToRendered = new Map();
-        posLabels.forEach(function(origCol1, renderedIdx) {
-          origToRendered.set(origCol1 - 1, renderedIdx);
-        });
-        const looksOriginal = pairs.some(function(p) {
-          return origToRendered.has(p.i) || origToRendered.has(p.j);
-        });
-        if (looksOriginal) {
-          pairs = pairs.map(function(p) {
-            return Object.assign({}, p, {
-              i: origToRendered.has(p.i) ? origToRendered.get(p.i) : p.i,
-              j: origToRendered.has(p.j) ? origToRendered.get(p.j) : p.j,
-            });
-          });
-        }
-      }
-
-      /* Keep only pairs that exist in the structure's pair table. */
-      const pairTable = viewer._rna.pairs;
-      const seqLen    = viewer._rna.n;
-      pairs = pairs.filter(function(p) {
-        return p.i >= 0 && p.j >= 0 && p.i < seqLen && p.j < seqLen &&
-               pairTable[p.i] === p.j && pairTable[p.j] === p.i;
-      });
-
-      if (pairs.length) {
-        /* Build color map */
-        let cmObj = null;
-        if (pairs.some(function(p) { return p._color; })) {
-          cmObj = {};
-          for (const p of pairs) {
-            const key = p.category || '—';
-            if (!(key in cmObj)) cmObj[key] = p._color || '#888';
-          }
-        } else if (RFviewJS.buildAnnotColorMap) {
-          cmObj = RFviewJS.buildAnnotColorMap(pairs);
-        }
-        const pairAnnotColorMap = cmObj
-          ? Object.entries(cmObj).map(function(e) { return { key: e[0], color: e[1] }; })
-          : null;
-
-        /* Convert to the {i, j, key, color} format _renderPairAnnotations expects.
-           Raw parseCovFile/parsePairAnnotFile pairs carry {category, _color};
-           _renderPairAnnotations reads ann.color and ann.key, so we normalise here. */
-        const annotArr = pairs.map(function(p) {
-          const key   = p.category != null ? p.category : '—';
-          const color = cmObj ? (cmObj[key] || '#888888') : '#888888';
-          return { i: p.i, j: p.j, key: key, color: color };
-        });
-
-        /* Attach to the current layout and re-render. */
-        viewer._rna.pairAnnotations   = annotArr;
-        viewer._rna.pairAnnotColorMap = pairAnnotColorMap;
-        viewer._rna.isCovAnnot        = /\.cov$/i.test(d.annotName || '');
-        viewer._showPairAnnotations   = true;
-        viewer._render();
+        viewer.loadCov(d.annotText);
+      } catch (e) {
+        window.electronAPI.headlessError('Cannot load annotations: ' + e.message);
+        return;
       }
     }
 
@@ -479,6 +422,7 @@ async function runHeadless(args) {
     }
 
     /* Export SVG (synchronous, no download dialog) */
+    viewer._render();  // re-render to apply any visibility flags (noPk, noLabels, noInsets)
     const svgText = viewer.exportSVGString();
     if (!svgText) { window.electronAPI.headlessError('exportSVGString() returned empty.'); return; }
 

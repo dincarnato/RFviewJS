@@ -42,8 +42,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**/*",
-      "!renderer/**/*.map"
+      "scripts/**/*",
+      "!scripts/**/*.map"
     ],
     "mac": {
       "target": [

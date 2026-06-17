@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RFview - RFAM example</title>
-<script src="../RFview.js"></script>
+<script src="../scripts/RFview.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
@@ -207,10 +207,10 @@ NESTED  <<<<<<<-<<<<<<___>->>>>>>>>>>>>
     0.07, 0.71, 0.63, 0.63, 0.78, 0.73,
     0.07, 0.92, 0.80, 0.81, 0.70, 0.63];
 
-  const VALS_COV = [0.52, 0.68, 0.59, 0.71, 0.73, 0.02,
+  const VALS_COV = [-0.52, 0.68, 0.59, 0.71, 0.73, 0.02,
     0.01, 0.10, 0.53, 0.52, 0.92, 0.64,
     0.83, 0.06, 0.08, 0.03, 0.08, 0.11,
-    0.07, 0.79, 0.75, 0.43, 0.79, 0.71,
+    0.07, 0.79, -0.75, 0.43, 0.79, 0.71,
     0.04, 0.42, 0.85, 0.65, 0.77, 0.86];
 
   const VALS_ENT = [0.12, 0.09, 0.16, 0.10, 0.08, 0.68,
@@ -249,7 +249,7 @@ NESTED  <<<<<<<-<<<<<<___>->>>>>>>>>>>>
   // cov: white → red (covariation score)
   const CM_COV = {
     type: 'gradient', nanColor: '#ccc',
-    stops: [{ value: 0, color: '#fff1f2' }, { value: 1, color: '#b91c1c' }],
+    stops: [{ value: -1, color: '#fff1f2' }, { value: 1, color: '#b91c1c' }],
     title: 'Covariation', showTitle: true,
   };
 

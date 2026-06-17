@@ -1,5 +1,5 @@
 'use strict';
-// RFview Desktop — renderer/app.js
+// RFview Desktop App
 // Feeds files directly into RFview's _loadFromFiles pipeline
 
 let viewer = null;
