@@ -2796,8 +2796,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				cleanAll: true,
 				manualInput: true,
 				toolbarPos: true,
-				r3d: true,
 				ssEnds: true,
+				autoRefit: true,
 			};
 			const b = config.buttons;
 			this._btns = b === false ? {
@@ -2816,8 +2816,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				cleanAll: false,
 				manualInput: false,
 				toolbarPos: false,
-				r3d: false,
 				ssEnds: false,
+				autoRefit: false,
 			} : (b && typeof b === 'object' ? {
 				...ALL_ON,
 				...b
@@ -2831,6 +2831,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._panStart = null;
 			this._rotState = null;
 			this._flipState = null;
+			this._autoRefit = config.autoRefit !== false;
 			this._showIndices = config.showIndices !== false; // default true
 			this._showColors = config.showColors !== false; // default true
 			this._relaxedSequence = config.relaxedSequence !== false;
@@ -2904,16 +2905,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				].join('')],
 				[b.fit || b.reset, [
 					b.fit ? btnHTML('rv-fit', '', ICONS.fit, 'Fit to canvas') : '',
+					b.autoRefit ? `<button class="rv-btn rv-btn-toggle rv-chk-autofit rv--active" title="Auto-refit on helix move"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5.5 12L8 5l2.5 7M6.4 9.5h3.2"/></svg><span class="rv-btn-label">Auto-refit</span></button>` : '',
 					b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
 				].join('')],
 				[b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
-				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.r3d !== false || b.ssEnds !== false, [
+				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.ssEnds !== false, [
 					b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
 					b.colorMap !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
 					b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="13"/><line x1="11" y1="1" x2="11" y2="13"/><line x1="3" y1="3.5" x2="11" y2="3.5"/><line x1="3" y1="7" x2="11" y2="7"/><line x1="3" y1="10.5" x2="11" y2="10.5"/></svg><span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
 					b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots" style="display:none">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
-					b.insets !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
-					b.labels !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
+					b.insets !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
+					b.labels !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
 					b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5&prime;/3&prime; ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
 				].join('')],
 				// Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
@@ -3239,6 +3241,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			on('.rv-zoom-in', 'click', () => this._zoomBy(1.2));
 			on('.rv-zoom-out', 'click', () => this._zoomBy(1 / 1.2));
 			on('.rv-fit', 'click', () => this.fit());
+			on('.rv-chk-autofit', 'click', e => {
+				this._autoRefit = !this._autoRefit;
+				e.currentTarget.classList.toggle('rv--active', this._autoRefit);
+			});
 			on('.rv-reset', 'click', () => this.reset());
 			on('.rv-save', 'click', () => this._saveSVG());
 			if (this._layoutBtn) {
@@ -8914,7 +8920,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						break;
 					}
 				}
-				if (outside) this.fit();
+				if (outside && this._autoRefit) this.fit();
 			}
 		}
 		// Multi-structure support
