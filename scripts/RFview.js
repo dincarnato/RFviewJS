@@ -3821,7 +3821,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const nPos5p = [],
 						nPos3p = [];
 					for (let k = 0; k < sh.length; k++) {
-						if (isPkHelix || pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
+						if (pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
 							pkPairs.push({
 								i: sh[k].ri5,
 								j: sh[k].ri3
@@ -6384,7 +6384,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 									const nPos5p = [],
 										nPos3p = [];
 									for (let k = 0; k < sh.length; k++) {
-										if (isPkHelix || pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
+										if (pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
 											pkPairs.push({
 												i: sh[k].ri5,
 												j: sh[k].ri3
