@@ -68,6 +68,11 @@
   --rv-pair-annot-padding:      5;
   --rv-helix-annot-padding:     21;
   --rv-helix-annot-color:       #ef4444;
+  --rv-helix-annot-opacity:     0.08;
+  --rv-inset-hover-glow:        8px;
+  --rv-inset-max-width:         120px;
+  --rv-inset-min-width:         80px;
+  --rv-logo-filter:             none;
 
   /* Non-canonical dot colour */
   --rv-noncanon-dot: #2da44e;
