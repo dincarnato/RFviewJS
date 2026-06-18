@@ -2994,7 +2994,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
               <button class="rv-upload-btn rv-upload-btn-load rv-rfam-load">Load</button>
             </div>
           </div>
-          <div class="rv-aln-legend"><div class="rv-aln-legend-cols"><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide present</div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#cc0000" stroke="#111" stroke-width="1"/></svg><span>97%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#111111" stroke="#111" stroke-width="1"/></svg><span>90%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#888888" stroke="#111" stroke-width="1"/></svg><span>75%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#fff" stroke="#111" stroke-width="1.5"/></svg><span>50%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide identity</div><div class="rv-aln-legend-row"><b style="color:#cc0000;font-size:14px">N</b><span>97%</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><span>90%</span></div><div class="rv-aln-legend-row"><b style="color:#888888;font-size:14px">N</b><span>75%</span></div></div></div></div>
+          <div class="rv-aln-legend"><div class="rv-aln-legend-cols"><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide present</div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#cc0000" stroke="#111" stroke-width="1"/></svg><span>97%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#111111" stroke="#111" stroke-width="1"/></svg><span>90%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#888888" stroke="#111" stroke-width="1"/></svg><span>75%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#fff" stroke="#111" stroke-width="1.5"/></svg><span>50%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide identity</div><div class="rv-aln-legend-row"><b style="color:#cc0000;font-size:14px">N</b><span>97%</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><span>90%</span></div><div class="rv-aln-legend-row"><b style="color:#888888;font-size:14px">N</b><span>75%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">base-pair type</div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><svg width="18" height="11" viewBox="0 0 18 11" style="flex-shrink:0"><line x1="1" y1="5.5" x2="17" y2="5.5" stroke="var(--rv-basepair,#1f2328)" stroke-width="1.5"/></svg><b style="color:#111111;font-size:14px">N</b><span>Watson-Crick</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><svg width="18" height="11" viewBox="0 0 18 11" style="flex-shrink:0"><circle cx="9" cy="5.5" r="2" fill="var(--rv-noncanon-dot,var(--rv-basepair,#1f2328))"/></svg><b style="color:#111111;font-size:14px">N</b><span>Non-canonical</span></div></div></div></div>
           <div class="rv-legend">
             <h4>Value</h4>
             <div class="rv-legend-gradient"></div>
@@ -3708,8 +3708,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					i,
 					j,
 					color: pkColorMap ?
-						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) :
-						ANNOT_DEFAULT_COLOR,
+						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
 				}));
 			}
 			this._rna.isCovAnnot = true;
@@ -4295,8 +4294,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// When featureName is set (ssConsPkPairs call), all stems belong to the same
 			// named feature and go into ONE panel with a gap between runs.
 			// When featureName is null (pseudoPairs call), one panel per stem as before.
-			const stemGroups = featureName ?
-				[stems.map((stem, si) => ({
+			const stemGroups = featureName ? [stems.map((stem, si) => ({
 					stem,
 					si
 				}))] // all stems → one group
@@ -4913,15 +4911,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const tangs = pts.map((p, k) => {
 							const t1x = p.ny,
 								t1y = -p.nx;
-							const ref = k < pts.length - 1 ?
-								{
-									x: pts[k + 1].x - p.x,
-									y: pts[k + 1].y - p.y
-								} :
-								{
-									x: p.x - pts[k - 1].x,
-									y: p.y - pts[k - 1].y
-								};
+							const ref = k < pts.length - 1 ? {
+								x: pts[k + 1].x - p.x,
+								y: pts[k + 1].y - p.y
+							} : {
+								x: p.x - pts[k - 1].x,
+								y: p.y - pts[k - 1].y
+							};
 							const fwd = ref.x * t1x + ref.y * t1y >= 0;
 							return fwd ? {
 								x: t1x,
@@ -7630,7 +7626,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const alCol1W = alCR * 2 + LX + alLblW;
 			const alCol2W = LFONT * 1.4 + LX + alLblW;
 			const alW = alCol1W + 2 * LX + alCol2W;
-			const alH = LY + ALN_CIRC.length * LROW + LY;
+			const alH = LY + ALN_CIRC.length * LROW + LROW * 0.6 + 2 * LROW + LY;
 			// Extra vertical space for legends row
 			const lgndH2 = (hasColorLegend || hasPAnnotLegend || hasAlnLegend) ? Math.max(hasColorLegend ? clH : 0, hasPAnnotLegend ? paH : 0, hasAlnLegend ? alH : 0) + LSEP : 0;
 			vbH += lgndH2;
@@ -7746,8 +7742,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			sc2.querySelectorAll('path.rv-ss-cons-line').forEach(p => {
 				p.removeAttribute('style');
 			});
-			// ss_cons leader lines: use class styling
+			// ss_cons leader lines: use class styling + tiny gap at label end
 			sc2.querySelectorAll('line.rv-ss-cons-leader').forEach(l => {
+				const x1 = parseFloat(l.getAttribute('x1'));
+				const y1 = parseFloat(l.getAttribute('y1'));
+				const x2 = parseFloat(l.getAttribute('x2'));
+				const y2 = parseFloat(l.getAttribute('y2'));
+				const dist = Math.hypot(x2 - x1, y2 - y1);
+				const gap = Math.min(rawLSz * 1.0, dist * 0.15);
+				if (dist > gap) {
+					const dx = (x2 - x1) / dist;
+					const dy = (y2 - y1) / dist;
+					l.setAttribute('x1', x1 + dx * gap);
+					l.setAttribute('y1', y1 + dy * gap);
+				}
 				l.removeAttribute('style');
 			});
 			exp.appendChild(sc2);
@@ -7955,6 +7963,81 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					ll.textContent = label;
 					exp.appendChild(ll);
 				});
+				// ── base-pair type rows (under circles column) ────────────
+				const bpRow0Y = rowY0 + ALN_CIRC.length * LROW + LROW * 0.6;
+				const bpNW = LFONT * 1.4;
+				const bpBond = LFONT * 0.8;
+				// Place the two Ns at fixed centres so the bond sits exactly between them
+				const bpNcL = lx + alCR; // centre-x of left N (aligns with circle column)
+				const bpNcR = bpNcL + bpNW + bpBond; // centre-x of right N
+				[{
+						bond: 'wc',
+						label: 'Watson-Crick'
+					},
+					{
+						bond: 'nc',
+						label: 'Non-canonical'
+					},
+				].forEach(({
+					bond,
+					label
+				}, idx) => {
+					const ry = bpRow0Y + idx * LROW + alCR;
+					// left N — matches inset base letter pattern: y=ry, dy=0.35em
+					const nL = document.createElementNS(NS, 'text');
+					nL.setAttribute('x', bpNcL);
+					nL.setAttribute('y', ry);
+					nL.setAttribute('dy', '0.3em');
+					nL.setAttribute('text-anchor', 'middle');
+					nL.setAttribute('font-family', 'monospace');
+					nL.setAttribute('font-size', LFONT * 1.4);
+					nL.setAttribute('font-weight', 'bold');
+					nL.setAttribute('fill', '#111111');
+					nL.textContent = 'N';
+					exp.appendChild(nL);
+					// bond at ry (same as inset bonds)
+					const bx1 = bpNcL + bpNW * 0.5 + LX * 0.2;
+					const bx2 = bpNcR - bpNW * 0.5 - LX * 0.2;
+					if (bond === 'wc') {
+						const ln = document.createElementNS(NS, 'line');
+						ln.setAttribute('x1', bx1);
+						ln.setAttribute('y1', ry);
+						ln.setAttribute('x2', bx2);
+						ln.setAttribute('y2', ry);
+						ln.setAttribute('stroke', C.basepair || '#1f2328');
+						ln.setAttribute('stroke-width', Math.max(0.5, LS * 1.2));
+						exp.appendChild(ln);
+					} else {
+						const dot = document.createElementNS(NS, 'circle');
+						dot.setAttribute('cx', (bx1 + bx2) * 0.5);
+						dot.setAttribute('cy', ry);
+						dot.setAttribute('r', Math.max(0.8, LS * 1.5));
+						dot.setAttribute('fill', C.basepair || '#1f2328');
+						exp.appendChild(dot);
+					}
+					// right N
+					const nR = document.createElementNS(NS, 'text');
+					nR.setAttribute('x', bpNcR);
+					nR.setAttribute('y', ry);
+					nR.setAttribute('dy', '0.3em');
+					nR.setAttribute('text-anchor', 'middle');
+					nR.setAttribute('font-family', 'monospace');
+					nR.setAttribute('font-size', LFONT * 1.4);
+					nR.setAttribute('font-weight', 'bold');
+					nR.setAttribute('fill', '#111111');
+					nR.textContent = 'N';
+					exp.appendChild(nR);
+					// label
+					const bpLbl = document.createElementNS(NS, 'text');
+					bpLbl.setAttribute('x', bpNcR + bpNW * 0.5 + LX);
+					bpLbl.setAttribute('y', ry);
+					bpLbl.setAttribute('dy', '0.3em');
+					bpLbl.setAttribute('font-family', 'monospace');
+					bpLbl.setAttribute('font-size', LFONT);
+					bpLbl.setAttribute('fill', C.baseText);
+					bpLbl.textContent = label;
+					exp.appendChild(bpLbl);
+				});
 			}
 			// ── PK inset panels in SVG export ─────────────────────────────────
 			// Mirrors _render() which handles both pseudoPairs and ssConsPkPairs
@@ -8027,7 +8110,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 				if (expAllStems.length && this._showR3dInsets !== false) {
 					// Panel geometry (same proportions as interactive panels)
-					const pk_baseR = BASE_R * Math.min(LS, 1.2) * 0.57;
+					const pk_baseR = BASE_R * Math.min(LS, 1.2) * 0.57 * 1.2;
 					const pk_colSep = pk_baseR * 6;
 					const pk_rowStep = pk_baseR * 3.2;
 					const pk_svgW = pk_colSep + pk_baseR * 4;
