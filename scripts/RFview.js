@@ -849,23 +849,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	    E ≥ 0.2 is "E ≥ 0.2" (grey)
 	 */
 	function parseCovFile(text) {
-		const COV_COLORS = [{
-			limit: 0.05,
-			label: 'E < 0.05',
-			color: '#31a354'
-		}, {
-			limit: 0.10,
-			label: 'E < 0.1',
-			color: '#0969da'
-		}, {
-			limit: 0.20,
-			label: 'E < 0.2',
-			color: '#7c3aed'
-		}, {
-			limit: Infinity,
-			label: 'E ≥ 0.2',
-			color: '#8b949e'
-		}, ];
+		const COV_COLORS = [
+			{ limit: 0.05,     label: 'E < 0.05', color: '#31a354' },
+			{ limit: 0.10,     label: 'E < 0.1',  color: '#0969da' },
+			{ limit: 0.20,     label: 'E < 0.2',  color: '#7c3aed' },
+			{ limit: Infinity, label: 'E ≥ 0.2',  color: '#8b949e' },
+		];
+		// Detect if file has % canonical_pairs column (last header column)
+		const hasCanon = /\bcanonical_pairs\b/i.test(text);
 		// Detect format: CaCoFold R-scape has TWO leading * columns on data lines.
 		// Some files have 'in_given' in the header but still use single-* format.
 		const dataLines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().startsWith('*'));
@@ -874,7 +865,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		const pairs = [];
 		for (const raw of text.replace(/\r/g, '').split('\n')) {
 			const line = raw.trim();
-			if (!line.startsWith('*')) continue;
+			if (!line.startsWith('*') && !line.startsWith(' ')) continue;
+			if (line.startsWith('#')) continue;
 			// cols[0]='*', [1+off]=left_pos, [2+off]=right_pos, [3+off]=score, [4+off]=E-value
 			const cols = line.split(/\s+/);
 			if (cols.length < 5 + off) continue;
@@ -883,15 +875,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const evalue = parseFloat(cols[4 + off]);
 			if (!Number.isInteger(left) || !Number.isInteger(right) || left < 1 || right < 1) continue;
 			if (isNaN(evalue)) continue;
+			// only include significant pairs (first col is '*')
+			if (cols[0] !== '*') continue;
 			const bucket = COV_COLORS.find(b => evalue < b.limit) ?? COV_COLORS[COV_COLORS.length - 1];
-			pairs.push({
+			const pair = {
 				i: left - 1,
 				j: right - 1,
 				category: bucket.label,
 				_color: bucket.color
-			});
+			};
+			if (hasCanon) {
+				const canonVal = parseFloat(cols[cols.length - 1]);
+				if (!isNaN(canonVal)) pair.canonPct = canonVal;
+			}
+			pairs.push(pair);
 		}
 		if (!pairs.length) throw new Error('No significantly covarying pairs found');
+		pairs.hasCovCanon = hasCanon && pairs.some(p => p.canonPct != null);
 		return pairs;
 	}
 	// Parse R-scape .helixcov file.
@@ -2796,8 +2796,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				cleanAll: true,
 				manualInput: true,
 				toolbarPos: true,
+				r3d: true,
 				ssEnds: true,
-				autoRefit: true,
 			};
 			const b = config.buttons;
 			this._btns = b === false ? {
@@ -2816,8 +2816,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				cleanAll: false,
 				manualInput: false,
 				toolbarPos: false,
+				r3d: false,
 				ssEnds: false,
-				autoRefit: false,
 			} : (b && typeof b === 'object' ? {
 				...ALL_ON,
 				...b
@@ -2831,7 +2831,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._panStart = null;
 			this._rotState = null;
 			this._flipState = null;
-			this._autoRefit = config.autoRefit !== false;
 			this._showIndices = config.showIndices !== false; // default true
 			this._showColors = config.showColors !== false; // default true
 			this._relaxedSequence = config.relaxedSequence !== false;
@@ -2905,17 +2904,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				].join('')],
 				[b.fit || b.reset, [
 					b.fit ? btnHTML('rv-fit', '', ICONS.fit, 'Fit to canvas') : '',
-					b.autoRefit ? `<button class="rv-btn rv-btn-toggle rv-chk-autofit rv--active" title="Auto-refit on helix move"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5.5 12L8 5l2.5 7M6.4 9.5h3.2"/></svg><span class="rv-btn-label">Auto-refit</span></button>` : '',
 					b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
 				].join('')],
 				[b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
-				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.ssEnds !== false, [
+				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.r3d !== false || b.ssEnds !== false, [
 					b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
 					b.colorMap !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
 					b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="13"/><line x1="11" y1="1" x2="11" y2="13"/><line x1="3" y1="3.5" x2="11" y2="3.5"/><line x1="3" y1="7" x2="11" y2="7"/><line x1="3" y1="10.5" x2="11" y2="10.5"/></svg><span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
+					b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-cov-canon" title="Color by % canonical pairs" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="5.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5"/><line x1="11" y1="4" x2="5" y2="12"/></svg><span class="rv-btn-label">% Canonical pairs</span></button>` : '',
 					b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots" style="display:none">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
-					b.insets !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
-					b.labels !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
+					b.insets !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
+					b.labels !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
 					b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5&prime;/3&prime; ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
 				].join('')],
 				// Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
@@ -3180,6 +3179,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._chkIndices = q('.rv-chk-indices');
 			this._chkColors = q('.rv-chk-colors');
 			this._chkPAnnot = q('.rv-chk-pannot');
+			this._chkCovCanon = q('.rv-chk-cov-canon');
 			this._chkPk = q('.rv-chk-pk');
 			this._chkR3dInsets = q('.rv-chk-r3d-insets');
 			this._chkR3dLabels = q('.rv-chk-r3d-labels');
@@ -3241,10 +3241,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			on('.rv-zoom-in', 'click', () => this._zoomBy(1.2));
 			on('.rv-zoom-out', 'click', () => this._zoomBy(1 / 1.2));
 			on('.rv-fit', 'click', () => this.fit());
-			on('.rv-chk-autofit', 'click', e => {
-				this._autoRefit = !this._autoRefit;
-				e.currentTarget.classList.toggle('rv--active', this._autoRefit);
-			});
 			on('.rv-reset', 'click', () => this.reset());
 			on('.rv-save', 'click', () => this._saveSVG());
 			if (this._layoutBtn) {
@@ -3300,6 +3296,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						this._showPairAnnotations = !this._showPairAnnotations;
 						this._chkPAnnot.classList.toggle('rv--active', this._showPairAnnotations);
 					}
+				});
+			}
+			if (this._chkCovCanon) {
+				this._chkCovCanon.addEventListener('click', () => {
+					if (this._alnActive) return;
+					this._covCanonMode = !this._covCanonMode;
+					this._chkCovCanon.classList.toggle('rv--active', this._covCanonMode);
+					this._applyCovCanonColoring();
 				});
 			}
 			// Upload panel
@@ -3674,6 +3678,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._lastCovTexts = [...(this._lastCovTexts || []), covText]; // accumulate for reset()
 			if (/^#\s+RM_HELIX\b/m.test(covText)) return this.loadHelixCov(covText);
 			const pairs = parseCovFile(covText);
+			this._rna.covRawPairs = pairs; // keep for canon toggle recolour
+			if (pairs.hasCovCanon && this._chkCovCanon) {
+				this._chkCovCanon.style.display = '';
+			}
 			const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
 			// Build separate sets for nested vs pseudoknot pairs
 			const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
@@ -3714,7 +3722,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					i,
 					j,
 					color: pkColorMap ?
-						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
+						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) :
+						ANNOT_DEFAULT_COLOR,
 				}));
 			}
 			this._rna.isCovAnnot = true;
@@ -3749,6 +3758,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					_base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i', 'j']) || _base.pseudoHelixCovAnnotations;
 					_base.pseudoCovAnnotations = _unshift(this._rna.pseudoCovAnnotations, ['i', 'j']) || _base.pseudoCovAnnotations;
 					_base.isCovAnnot = this._rna.isCovAnnot;
+					_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
 				}
 			}
 			this._render();
@@ -3891,6 +3901,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					_base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i', 'j']) || _base.pseudoHelixCovAnnotations;
 					_base.pseudoCovAnnotations = _unshift(this._rna.pseudoCovAnnotations, ['i', 'j']) || _base.pseudoCovAnnotations;
 					_base.isCovAnnot = this._rna.isCovAnnot;
+					_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
 				}
 			}
 			this._render();
@@ -4300,7 +4311,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// When featureName is set (ssConsPkPairs call), all stems belong to the same
 			// named feature and go into ONE panel with a gap between runs.
 			// When featureName is null (pseudoPairs call), one panel per stem as before.
-			const stemGroups = featureName ? [stems.map((stem, si) => ({
+			const stemGroups = featureName ?
+				[stems.map((stem, si) => ({
 					stem,
 					si
 				}))] // all stems → one group
@@ -4421,7 +4433,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 
 				// ── 4. Helix annotation box ────────────────────────────────────
-				if (this._showPairAnnotations && this._rna.helixAnnotations?.length) {
+				if (this._showPairAnnotations && !this._covCanonMode && this._rna.helixAnnotations?.length) {
 					for (const ann of this._rna.helixAnnotations) {
 						const hasPair = (ann.subHelices || []).some(sh =>
 								sh.pos5p.some(ri => allPairs.some(p => p.i === ri || p.j === ri)) ||
@@ -4727,7 +4739,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 
 			// Register helix annotation boxes (rotated rects — use axis-aligned bounding box)
-			if (this._showPairAnnotations && this._rna?.helixAnnotations?.length) {
+			if (this._showPairAnnotations && !this._covCanonMode && this._rna?.helixAnnotations?.length) {
 				const hPad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || baseR * 1.7;
 				for (const ann of this._rna.helixAnnotations) {
 					const annPad = ann.padding ?? hPad;
@@ -4917,13 +4929,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const tangs = pts.map((p, k) => {
 							const t1x = p.ny,
 								t1y = -p.nx;
-							const ref = k < pts.length - 1 ? {
-								x: pts[k + 1].x - p.x,
-								y: pts[k + 1].y - p.y
-							} : {
-								x: p.x - pts[k - 1].x,
-								y: p.y - pts[k - 1].y
-							};
+							const ref = k < pts.length - 1 ?
+								{
+									x: pts[k + 1].x - p.x,
+									y: pts[k + 1].y - p.y
+								} :
+								{
+									x: p.x - pts[k - 1].x,
+									y: p.y - pts[k - 1].y
+								};
 							const fwd = ref.x * t1x + ref.y * t1y >= 0;
 							return fwd ? {
 								x: t1x,
@@ -5579,6 +5593,28 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const paColorDiv = this._settingsPanel.querySelector('.rv-pa-colors');
 				if (paColorDiv) {
 					paColorDiv.innerHTML = '';
+					// ── canonical pairs gradient pickers ─────────────────────
+					if (this._covCanonMode) {
+						const gradStops = [
+							{ key: 'Low (0%)',  prop: '_covCanonLow',  def: '#d73027' },
+							{ key: 'Mid (50%)', prop: '_covCanonMid',  def: '#fee090' },
+							{ key: 'High (100%)', prop: '_covCanonHigh', def: '#1a9850' },
+						];
+						gradStops.forEach(({ key, prop, def }) => {
+							const row = document.createElement('div');
+							row.className = 'rv-setting-row';
+							row.innerHTML = `<span class="rv-setting-label">${key}</span>` +
+								`<input type="color" value="${this[prop] || def}" ` +
+								`style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
+							const picker = row.querySelector('input[type=color]');
+							picker.addEventListener('input', () => {
+								this[prop] = picker.value;
+								this._applyCovCanonColoring();
+								this._buildPairAnnotLegend(null, true);
+							});
+							paColorDiv.appendChild(row);
+						});
+					} else {
 					const cm = this._rna.pairAnnotColorMap;
 					if (cm?.length) {
 						cm.forEach(({
@@ -5632,6 +5668,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						});
 						paColorDiv.appendChild(row);
 					}
+					} // end else (non-canon mode)
 				}
 			}
 			// Sync General tab checkbox
@@ -6181,6 +6218,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const helices = parseHelixCovFile(text);
 						this._pendingAnnotData.push({
 							filename: file.name,
+							rawText: text,
 							helices,
 							isHelixCov: true,
 							pairs: []
@@ -6189,6 +6227,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const pairs = isCov ? parseCovFile(text) : parsePairAnnotFile(text);
 						this._pendingAnnotData.push({
 							filename: file.name,
+							rawText: text,
 							pairs,
 							isCov
 						});
@@ -6304,6 +6343,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					for (let annotFileIdx = 0; annotFileIdx < this._pendingAnnotData.length; annotFileIdx++) {
 						const {
 							filename,
+							rawText,
 							pairs,
 							isCov,
 							isHelixCov,
@@ -6324,160 +6364,49 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const layout = layouts[targetIdx];
 						if (!layout) throw new Error('Selected structure not found.');
 						_lastAnnotLabel = layout.label || 'structure';
-						const structPairs = getStructurePairSet(layout.structure || '');
-						// ── .helixcov: build helix bounding-box annotations ──────────────────
-						if (isHelixCov) {
-							const sigH = (helices || []).filter(h => h.significant);
-							if (!sigH.length) throw new Error(`"${filename}": no significant helices.`);
-							const o2r = new Map();
-							if (layout.positionLabels?.length) layout.positionLabels.forEach((col1, ri) => o2r.set(col1 - 1, ri));
-							else
-								for (let i = 0; i < layout.n; i++) o2r.set(i, i);
-							// Build pairs array from rendered structure (nested + pseudoknot)
-							const _lpa = buildPairsArray(layout.structure || '');
-							const _lpaMap = new Map();
-							// ssConsPkPairs first so main structure pairs take priority for shared positions
-							if (layout.ssConsPkPairs)
-								for (const fps of Object.values(layout.ssConsPkPairs))
-									for (const ps of fps) {
-										_lpaMap.set(ps.i, ps.j);
-										_lpaMap.set(ps.j, ps.i);
-									}
-							for (const ps of (layout.pseudoPairs || [])) {
-								_lpaMap.set(ps.i, ps.j);
-								_lpaMap.set(ps.j, ps.i);
-							}
-							for (let i = 0; i < layout.n; i++) {
-								if (_lpa[i] >= 0) _lpaMap.set(i, _lpa[i]);
-							}
-							const helixAnnotations = sigH.map(h => {
-								const ri5All = [];
-								for (let c = h.start5p; c <= h.end5p; c++)
-									if (o2r.has(c)) ri5All.push(o2r.get(c));
-								const hp = ri5All
-									.filter(r => _lpaMap.has(r))
-									.map(r => ({
-										ri5: r,
-										ri3: _lpaMap.get(r)
-									}))
-									.sort((a, b) => a.ri5 - b.ri5);
-								if (!hp.length) return null;
-								// Group consecutive pairs into sub-helices (same as loadHelixCov)
-								const subHelices = [];
-								let shCur = [hp[0]];
-								for (let i = 1; i < hp.length; i++) {
-									const pv = shCur[shCur.length - 1],
-										nxt = hp[i];
-									if (nxt.ri5 === pv.ri5 + 1 && nxt.ri3 === pv.ri3 - 1) shCur.push(nxt);
-									else {
-										subHelices.push(shCur);
-										shCur = [nxt];
-									}
-								}
-								subHelices.push(shCur);
-								const pkSet = new Set((layout.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
-								if (layout.ssConsPkPairs)
-									for (const fps of Object.values(layout.ssConsPkPairs))
-										for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
-								const isPkHelix = h.helixType === 'PK' || h.helixType === 'XCOV';
-								const nestedSubs = [],
-									pkPairs = [];
-								for (const sh of subHelices) {
-									const nPos5p = [],
-										nPos3p = [];
-									for (let k = 0; k < sh.length; k++) {
-										if (pkSet.has(pairKey(sh[k].ri5, sh[k].ri3)))
-											pkPairs.push({
-												i: sh[k].ri5,
-												j: sh[k].ri3
-											});
-										else {
-											nPos5p.push(sh[k].ri5);
-											nPos3p.push(sh[k].ri3);
-										}
-									}
-									if (nPos5p.length) nestedSubs.push({
-										pos5p: nPos5p,
-										pos3p: nPos3p
-									});
-								}
-								return {
-									nestedSubs,
-									pkPairs,
-									evalue: h.evalue,
-									pvalue: h.pvalue
-								};
-							}).filter(a => a?.nestedSubs?.length > 0 || a?.pkPairs?.length > 0);
-							if (!helixAnnotations.length) throw new Error(`"${filename}": no helix positions mapped to "${layout.label||'selected'}".`);
-							const helixAnnotFinal = helixAnnotations
-								.map(a => ({
-									subHelices: a.nestedSubs,
-									pkPairs: a.pkPairs,
-									evalue: a.evalue,
-									pvalue: a.pvalue
-								}));
-							layout.helixAnnotations = helixAnnotFinal;
-							const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
-							if (pkGlowPairs.length) layout.pseudoHelixCovAnnotations = pkGlowPairs;
-							layout.isCovAnnot = true;
+						// ── .cov and .helixcov: route through the canonical load methods ──────
+						if (isCov || isHelixCov) {
 							this._currentStructIdx = targetIdx;
 							this._rna = layout;
-							if (this._constructorConfig?.showPairAnnotations !== false) this._showPairAnnotations = true;
-							if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-							this._buildPairAnnotLegend(layout.pairAnnotColorMap, true);
+							this.loadCov(rawText);
 							this._buildStructSwitcher();
-							this._render();
 							this.fit();
 							continue;
 						}
-						// If this is a Stockholm-derived structure, remap alignment-space coords to rendered coords
+						// ── generic pair annotation file (inline path) ───────────────────────
+						const structPairs = getStructurePairSet(layout.structure || '');
+						// Generic pair annotation file
 						const remappedPairs = remapAnnotPairs(pairs, layout.positionLabels);
-						// Split into nested vs pseudoknot pairs (same logic as loadCov)
-						const pkSetCov = new Set((layout.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
+						const pkSetAnnot = new Set((layout.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
 						if (layout.ssConsPkPairs)
 							for (const fps of Object.values(layout.ssConsPkPairs))
-								for (const ps of fps) pkSetCov.add(pairKey(ps.i, ps.j));
-						if (layout.ssConsPkPairs)
-							for (const fps of Object.values(layout.ssConsPkPairs))
-								for (const ps of fps) pkSetCov.add(pairKey(ps.i, ps.j));
-						const nestedStructPairs = new Set([...structPairs].filter(k => !pkSetCov.has(k)));
-						const nestedCovPairs = remappedPairs.filter(({
-							i,
-							j
-						}) => nestedStructPairs.has(pairKey(i, j)));
-						const pkCovPairs = remappedPairs.filter(({
-							i,
-							j
-						}) => pkSetCov.has(pairKey(i, j)));
-						if (!nestedCovPairs.length && !pkCovPairs.length)
+								for (const ps of fps) pkSetAnnot.add(pairKey(ps.i, ps.j));
+						const nestedStructPairs = new Set([...structPairs].filter(k => !pkSetAnnot.has(k)));
+						const nestedAnnotPairs = remappedPairs.filter(({ i, j }) => nestedStructPairs.has(pairKey(i, j)));
+						const pkAnnotPairs = remappedPairs.filter(({ i, j }) => pkSetAnnot.has(pairKey(i, j)));
+						if (!nestedAnnotPairs.length && !pkAnnotPairs.length)
 							buildAnnotationArrays(remappedPairs, structPairs, filename, layout.label); // throws
-						let pairAnnotColorMap = layout.pairAnnotColorMap || null;
-						if (nestedCovPairs.length) {
-							const res = buildAnnotationArrays(nestedCovPairs, nestedStructPairs, filename, layout.label);
+						let pairAnnotColorMap = null;
+						if (nestedAnnotPairs.length) {
+							const res = buildAnnotationArrays(nestedAnnotPairs, nestedStructPairs, filename, layout.label);
 							layout.pairAnnotations = res.annotArr;
 							pairAnnotColorMap = res.pairAnnotColorMap;
 						}
-						if (pkCovPairs.length) {
-							const pkColorMap = buildAnnotColorMapAuto(pkCovPairs);
-							layout.pseudoCovAnnotations = pkCovPairs.map(({
-								i,
-								j,
-								category
-							}) => ({
-								i,
-								j,
+						if (pkAnnotPairs.length) {
+							const pkColorMap = buildAnnotColorMapAuto(pkAnnotPairs);
+							layout.pseudoCovAnnotations = pkAnnotPairs.map(({ i, j, category }) => ({
+								i, j,
 								color: pkColorMap ? (pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
 							}));
 						}
 						layout.pairAnnotColorMap = pairAnnotColorMap;
-						layout.isCovAnnot = !!(isCov || layout.helixAnnotations?.length);
 						this._currentStructIdx = targetIdx;
 						this._rna = layout;
 						if (this._constructorConfig?.showPairAnnotations !== false) {
 							this._showPairAnnotations = true;
 							if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
 						}
-						this._buildPairAnnotLegend(pairAnnotColorMap, isCov);
+						this._buildPairAnnotLegend(pairAnnotColorMap, false);
 						this._buildStructSwitcher();
 						this._render();
 						this.fit();
@@ -6693,9 +6622,101 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// re-dropping the file.
 			}
 		}
+		_canonPctToColor(pct) {
+			// User-adjustable stops: low (0%) → mid (50%) → high (100%)
+			const lo = this._covCanonLow  || '#d73027';
+			const mi = this._covCanonMid  || '#fee090';
+			const hi = this._covCanonHigh || '#1a9850';
+			const hexToRgb = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+			const lerp = (a,b,t) => Math.round(a + (b-a)*t);
+			const lerpRgb = (c1,c2,t) => c1.map((v,i) => lerp(v,c2[i],t));
+			const t = Math.max(0, Math.min(100, pct)) / 100;
+			const [rLo,gLo,bLo] = hexToRgb(lo);
+			const [rMi,gMi,bMi] = hexToRgb(mi);
+			const [rHi,gHi,bHi] = hexToRgb(hi);
+			let r,g,b;
+			if (t < 0.5) {
+				[r,g,b] = lerpRgb([rLo,gLo,bLo],[rMi,gMi,bMi], t*2);
+			} else {
+				[r,g,b] = lerpRgb([rMi,gMi,bMi],[rHi,gHi,bHi], (t-0.5)*2);
+			}
+			return `rgb(${r},${g},${b})`;
+		}
+		_applyCovCanonColoring() {
+			if (!this._rna?.covRawPairs) return;
+			const pairs = this._rna.covRawPairs;
+			// Remap to rendered coords so keys match pairAnnotations entries
+			const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
+			if (this._covCanonMode) {
+				// Build lookup from rendered pairKey → canonPct
+				const canonMap = new Map();
+				for (let k = 0; k < remapped.length; k++) {
+					const rp = remapped[k];
+					const pct = pairs[k]?.canonPct;
+					if (pct != null) {
+						canonMap.set(pairKey(rp.i, rp.j), pct);
+						canonMap.set(pairKey(rp.j, rp.i), pct); // both orientations
+					}
+				}
+				if (this._rna.pairAnnotations) {
+					for (const ann of this._rna.pairAnnotations) {
+						const pct = canonMap.get(pairKey(ann.i, ann.j));
+						if (pct != null) ann.color = this._canonPctToColor(pct);
+					}
+				}
+				if (this._rna.pseudoCovAnnotations) {
+					for (const ann of this._rna.pseudoCovAnnotations) {
+						const pct = canonMap.get(pairKey(ann.i, ann.j));
+						if (pct != null) ann.color = this._canonPctToColor(pct);
+					}
+				}
+				this._rna.pairAnnotColorMap = null;
+				this._buildPairAnnotLegend(null, true);
+			} else {
+				// Restore original E-value colours
+				const evalColorMap = new Map();
+				for (let k = 0; k < remapped.length; k++) {
+					const rp = remapped[k];
+					const col = pairs[k]?._color;
+					evalColorMap.set(pairKey(rp.i, rp.j), col);
+					evalColorMap.set(pairKey(rp.j, rp.i), col);
+				}
+				if (this._rna.pairAnnotations) {
+					for (const ann of this._rna.pairAnnotations) {
+						const col = evalColorMap.get(pairKey(ann.i, ann.j));
+						if (col) ann.color = col;
+					}
+				}
+				if (this._rna.pseudoCovAnnotations) {
+					for (const ann of this._rna.pseudoCovAnnotations) {
+						const col = evalColorMap.get(pairKey(ann.i, ann.j));
+						if (col) ann.color = col;
+					}
+				}
+				const colorMap = buildAnnotColorMapAuto(pairs);
+				const pairAnnotColorMap = colorMap
+					? Object.entries(colorMap).map(([key, color]) => ({ key, color }))
+					: null;
+				this._rna.pairAnnotColorMap = pairAnnotColorMap;
+				this._buildPairAnnotLegend(pairAnnotColorMap, true);
+			}
+			this._render();
+		}
 		_buildPairAnnotLegend(colorMap, isCov = false) {
 			if (!this._palLegend) return;
-			const hasHelix = !!this._rna?.helixAnnotations?.length;
+			const hasHelix = !!this._rna?.helixAnnotations?.length && !this._covCanonMode;
+			// ── canonical pairs gradient legend ──────────────────────────────
+			if (this._covCanonMode && isCov && !colorMap) {
+				const lo = this._covCanonLow  || '#d73027';
+				const mi = this._covCanonMid  || '#fee090';
+				const hi = this._covCanonHigh || '#1a9850';
+				this._palLegend.innerHTML =
+					`<h4>% canonical pairs</h4>` +
+					`<div style="height:10px;border-radius:4px;background:linear-gradient(to right,${lo},${mi},${hi});margin:4px 0 2px"></div>` +
+					`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--rv-muted,#656d76)"><span>0%</span><span>50%</span><span>100%</span></div>`;
+				this._palLegend.style.display = this._showPairAnnotations ? 'block' : 'none';
+				return;
+			}
 			if (!colorMap?.length && !hasHelix) {
 				this._palLegend.style.display = 'none';
 				this._palLegend.innerHTML = '';
@@ -6854,7 +6875,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Draw semi-transparent bounding boxes for significant helices (.helixcov)
 		_renderHelixAnnotations(g, coords, n, baseR) {
 			const anns = this._rna?.helixAnnotations;
-			if (!anns?.length || !this._showPairAnnotations) return;
+			if (!anns?.length || !this._showPairAnnotations || this._covCanonMode) return;
 			const cs = getComputedStyle(this._root);
 			const pad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || (baseR * 1.7);
 			const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
@@ -7570,7 +7591,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			let vbH = maxY - minY + 2 * pad;
 			// Decide which legends to export
 			const hasColorLegend = !this._noLegend && this._showColors && values && colorMap?.stops?.length;
-			const hasHelixAnnot = !this._noLegend && this._showPairAnnotations && !!this._rna?.helixAnnotations?.length;
+			const hasHelixAnnot = !this._noLegend && this._showPairAnnotations && !this._covCanonMode && !!this._rna?.helixAnnotations?.length;
 			const hasPAnnotLegend = !this._noLegend && this._showPairAnnotations && ((pairAnnotColorMap?.length && this._rna.isCovAnnot) || hasHelixAnnot);
 			const hasAlnLegend = !this._noLegend && !!this._rna?.baseDisplay;
 			// Legend scale, proportional to the shorter viewBox dimension
@@ -7887,7 +7908,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (hasPAnnotLegend) {
 				const lx = vbX + pad + (hasAlnLegend ? alW + 2 * LX : 0);
 				const ly = vbY + (vbH - lgndH2) + LSEP;
-				// Entries
 				const paOpa = parseFloat(_gv('--rv-pair-annot-opacity')) || 0.5;
 				const paStroke = parseFloat(_gv('--rv-pair-annot-stroke-width')) || 1.5;
 				paEntries.forEach(({
@@ -7971,23 +7991,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 				// ── base-pair type rows (under circles column) ────────────
 				const bpRow0Y = rowY0 + ALN_CIRC.length * LROW + LROW * 0.6;
-				const bpNW = LFONT * 1.4;
+				const bpNW   = LFONT * 1.4;
 				const bpBond = LFONT * 0.8;
 				// Place the two Ns at fixed centres so the bond sits exactly between them
-				const bpNcL = lx + alCR; // centre-x of left N (aligns with circle column)
-				const bpNcR = bpNcL + bpNW + bpBond; // centre-x of right N
-				[{
-						bond: 'wc',
-						label: 'Watson-Crick'
-					},
-					{
-						bond: 'nc',
-						label: 'Non-canonical'
-					},
-				].forEach(({
-					bond,
-					label
-				}, idx) => {
+				const bpNcL = lx + alCR;                  // centre-x of left N (aligns with circle column)
+				const bpNcR = bpNcL + bpNW + bpBond;      // centre-x of right N
+				[
+					{ bond: 'wc', label: 'Watson-Crick'  },
+					{ bond: 'nc', label: 'Non-canonical' },
+				].forEach(({ bond, label }, idx) => {
 					const ry = bpRow0Y + idx * LROW + alCR;
 					// left N — matches inset base letter pattern: y=ry, dy=0.35em
 					const nL = document.createElementNS(NS, 'text');
@@ -8006,10 +8018,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const bx2 = bpNcR - bpNW * 0.5 - LX * 0.2;
 					if (bond === 'wc') {
 						const ln = document.createElementNS(NS, 'line');
-						ln.setAttribute('x1', bx1);
-						ln.setAttribute('y1', ry);
-						ln.setAttribute('x2', bx2);
-						ln.setAttribute('y2', ry);
+						ln.setAttribute('x1', bx1); ln.setAttribute('y1', ry);
+						ln.setAttribute('x2', bx2); ln.setAttribute('y2', ry);
 						ln.setAttribute('stroke', C.basepair || '#1f2328');
 						ln.setAttribute('stroke-width', Math.max(0.5, LS * 1.2));
 						exp.appendChild(ln);
@@ -8044,6 +8054,63 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					bpLbl.textContent = label;
 					exp.appendChild(bpLbl);
 				});
+				// ── % canonical pairs gradient (beside base-pair type column) ──
+				if (this._covCanonMode && this._rna?.covRawPairs) {
+					const lo = this._covCanonLow  || '#d73027';
+					const mi = this._covCanonMid  || '#fee090';
+					const hi = this._covCanonHigh || '#1a9850';
+					// x: right of the bp label column ("Watson-Crick" ~ 11 chars at LFONT)
+					const canonX = bpNcR + bpNW * 0.5 + LX + LFONT * 7.5 + LX * 4;
+					const gradW = LROW * 5;
+					const gradH = LSWH;
+					const hdrY  = rowY0 + ALN_LETT.length * LROW + LROW * 1.7;
+					const barY  = hdrY + LROW * 0.85;
+					// sub-header
+					const canonHdr = document.createElementNS(NS, 'text');
+					canonHdr.setAttribute('x', canonX + gradW * 0.5);
+					canonHdr.setAttribute('y', hdrY);
+					canonHdr.setAttribute('text-anchor', 'middle');
+					canonHdr.setAttribute('dy', '0.35em');
+					canonHdr.setAttribute('font-family', 'monospace');
+					canonHdr.setAttribute('font-size', LFONT_SM);
+					canonHdr.setAttribute('font-weight', 'bold');
+					canonHdr.setAttribute('fill', C.muted);
+					canonHdr.textContent = '% Canonical pairs';
+					exp.appendChild(canonHdr);
+					// gradient def
+					const defs = document.createElementNS(NS, 'defs');
+					const grad = document.createElementNS(NS, 'linearGradient');
+					const gradId = 'rv-canon-grad';
+					grad.setAttribute('id', gradId);
+					[{ offset: '0%', color: lo }, { offset: '50%', color: mi }, { offset: '100%', color: hi }].forEach(({ offset, color }) => {
+						const stop = document.createElementNS(NS, 'stop');
+						stop.setAttribute('offset', offset);
+						stop.setAttribute('stop-color', color);
+						grad.appendChild(stop);
+					});
+					defs.appendChild(grad);
+					exp.appendChild(defs);
+					const bar = document.createElementNS(NS, 'rect');
+					bar.setAttribute('x', canonX);
+					bar.setAttribute('y', barY);
+					bar.setAttribute('width', gradW);
+					bar.setAttribute('height', gradH);
+					bar.setAttribute('rx', 2 * LS);
+					bar.setAttribute('fill', `url(#${gradId})`);
+					exp.appendChild(bar);
+					// 0% / 50% / 100% labels
+					[{ pct: '0%', anchor: 'middle', x: canonX }, { pct: '50%', anchor: 'middle', x: canonX + gradW * 0.5 }, { pct: '100%', anchor: 'middle', x: canonX + gradW }].forEach(({ pct, anchor, x }) => {
+						const lbl = document.createElementNS(NS, 'text');
+						lbl.setAttribute('x', x);
+						lbl.setAttribute('y', barY + gradH + LFONT * 1.1);
+						lbl.setAttribute('text-anchor', anchor);
+						lbl.setAttribute('font-family', 'monospace');
+						lbl.setAttribute('font-size', LFONT_SM);
+						lbl.setAttribute('fill', C.muted);
+						lbl.textContent = pct;
+						exp.appendChild(lbl);
+					});
+				}
 			}
 			// ── PK inset panels in SVG export ─────────────────────────────────
 			// Mirrors _render() which handles both pseudoPairs and ssConsPkPairs
@@ -8242,7 +8309,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						});
 
 						// 3. Helix annotation box
-						if (this._showPairAnnotations && this._rna.helixAnnotations?.length) {
+						if (this._showPairAnnotations && !this._covCanonMode && this._rna.helixAnnotations?.length) {
 							for (const ann of this._rna.helixAnnotations) {
 								const hasPair = (ann.subHelices || []).some(sh =>
 										sh.pos5p.some(ri => stem.some(p => p.i === ri || p.j === ri)) ||
@@ -8920,7 +8987,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						break;
 					}
 				}
-				if (outside && this._autoRefit) this.fit();
+				if (outside) this.fit();
 			}
 		}
 		// Multi-structure support
@@ -9195,12 +9262,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			_sl.ssEnds = ends || undefined;
 			_sl.isCovAnnot = src.isCovAnnot;
 			_sl.pseudoCovAnnotations = src.pseudoCovAnnotations || undefined;
+			_sl.covRawPairs = src.covRawPairs || layout.covRawPairs || undefined;
 
 			// Store the trimmed-index base on the new layout so future rebuilds
 			// always have a stable unshifted source, even after loadCov writes onto _rna.
 			_sl._base = src._base || src;
 			this._structLayouts[idx] = _sl;
 			this._rna = _sl;
+			// Re-apply canonical pairs colouring if the toggle is active
+			if (this._covCanonMode && _sl.covRawPairs) this._applyCovCanonColoring();
 			this._render();
 			this.fit();
 		}

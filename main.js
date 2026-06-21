@@ -74,6 +74,8 @@ if (cliArgs.help || cliArgs.h) {
                                 Note: --rfam and --structureFile are mutually exclusive
  --xml              <string>    Reactivity file (in RNA Framework's XML format)
  --basePairAnno     <string>    Pair-annotation file (.tsv, .txt) or R-scape's .cov file
+ --percCanonical                If an R-scape's .cov file containing the "% canonical_pairs" field is
+                                provided, base-pairs will be colored according to its value
  --helixCovAnno     <string>    R-scape's .helixcov helix-level covariation file
  --layout           <string>    Layout for RNA secondary structure rendering:
                                   - auto (automatically determines the best layout 
@@ -82,13 +84,14 @@ if (cliArgs.help || cliArgs.h) {
                                   - naview
                                   - radiate
  --svg              <string>    Path to the output SVG file (Default: <structureFile basename>.svg)
- --noLegend                     Omits legends from the exported SVG
- --noPk                         Omits pseudoknot archs from the exported SVG
+ --pdf              <string>    Path to the output PDF file
+ --noLegend                     Omits legends from the exported SVG/PDF
+ --noPk                         Omits pseudoknot archs from the exported SVG/PDF
                                 Note: this has no effect on Stockholm alignments (use --noLabels and
                                       --noInsets instead)
- --noLabels                     Omits Stockholm annotation labels (SS_cons lines) from the exported SVG
- --noInsets                     Omits inset panels for non-nested interactions in Stockholm alignments
-                                from the exported SVG
+ --noLabels                     Omits Stockholm annotation labels (SS_cons lines) from the exported SVG/PDF
+ --noInsets                     Omits inset panels for non-nested interactions in Stockholm alignments from 
+                                the exported SVG/PDF
  --incSsEnds                    Includes single-stranded 5'/3' ends in Stockholm structures
  --help                         Shows this help message
 
@@ -225,13 +228,45 @@ ipcMain.handle('save-svg-dialog', async (_, name) => {
 });
 
 // IPC for headless SVG result
-ipcMain.handle('headless-done', async (_, svgText, outPath) => {
-
+ipcMain.handle('headless-done', async (_, svgText, outPath, pdfPath) => {
     fs.writeFileSync(outPath, svgText, 'utf8');
     console.log(`SVG written to: ${outPath}`);
+    if (pdfPath) {
+        try {
+            const hw = BrowserWindow.getAllWindows().find(w => !w.isVisible());
+
+            // Extract SVG dimensions from viewBox or width/height attributes
+            const vbMatch = svgText.match(/viewBox=["'][\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)["']/);
+            const wMatch  = svgText.match(/\bwidth=["']([\d.]+)["']/);
+            const hMatch  = svgText.match(/\bheight=["']([\d.]+)["']/);
+            const svgW = vbMatch ? parseFloat(vbMatch[1]) : wMatch ? parseFloat(wMatch[1]) : 800;
+            const svgH = vbMatch ? parseFloat(vbMatch[2]) : hMatch ? parseFloat(hMatch[1]) : 600;
+
+            const html =
+                '<!DOCTYPE html><html><head><style>' +
+                `@page { margin: 0; size: ${svgW}px ${svgH}px; }` +
+                'html, body { margin: 0; padding: 0; background: white; width: ' + svgW + 'px; height: ' + svgH + 'px; overflow: hidden; }' +
+                'svg { display: block; width: ' + svgW + 'px !important; height: ' + svgH + 'px !important; }' +
+                '</style></head><body>' + svgText + '</body></html>';
+
+            await hw.webContents.executeJavaScript(`
+                document.open();
+                document.write(${JSON.stringify(html)});
+                document.close();
+            `);
+            await new Promise(r => setTimeout(r, 200));
+            const pdfData = await hw.webContents.printToPDF({
+                printBackground: true,
+                margins: { marginType: 'none' },
+            });
+            fs.writeFileSync(pdfPath, pdfData);
+            console.log(`PDF written to: ${pdfPath}`);
+        } catch (err) {
+            console.error(`[!] PDF export failed: ${err.message}`);
+        }
+    }
     app.quit();
     return true;
-
 });
 
 ipcMain.handle('headless-error', async (_, message) => {
@@ -336,6 +371,9 @@ async function runHeadless(args) {
                 path.basename(args.structureFile, path.extname(args.structureFile)) + '.svg'
               )
             : path.join(process.cwd(), args.rfam.toUpperCase() + '.svg');
+    console.log(`SVG output: ${outPath}`);
+    const pdfPath = args.pdf ? path.resolve(args.pdf) : null;
+    if (pdfPath) console.log(`PDF output: ${pdfPath}`);
 
     console.log(`Loading:  ${structureName}`);
 
@@ -344,7 +382,6 @@ async function runHeadless(args) {
     if (helixCovText) console.log(`Helix covariation file: ${args.helixCovAnno}`);
 
     console.log(`Layout: ${layout}`);
-    console.log(`Output: ${outPath}`);
 
     const headlessWin = new BrowserWindow({
 
@@ -382,7 +419,7 @@ async function runHeadless(args) {
 
         // Embeds all data as JSON so no IPC hand-off is needed.
         // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-         const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds });
+        const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, pdfPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds, percCanonical: !!args.percCanonical });
 
         const code = `
 (function () {
@@ -441,6 +478,10 @@ async function runHeadless(args) {
     if (d.annotText) {
       try {
         viewer.loadCov(d.annotText);
+        if (d.percCanonical && viewer._rna?.covRawPairs?.hasCovCanon) {
+            viewer._covCanonMode = true;
+            viewer._applyCovCanonColoring();
+        }
       } catch (e) {
         window.electronAPI.headlessError('Cannot load annotations: ' + e.message);
         return;
@@ -462,7 +503,7 @@ async function runHeadless(args) {
     const svgText = viewer.exportSVGString();
     if (!svgText) { window.electronAPI.headlessError('exportSVGString() returned empty.'); return; }
 
-    window.electronAPI.headlessDone(svgText, d.outPath);
+    window.electronAPI.headlessDone(svgText, d.outPath, d.pdfPath);
 
   } catch (err) {
     window.electronAPI.headlessError(err && err.message ? err.message : String(err));
