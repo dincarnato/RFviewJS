@@ -68,14 +68,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-base-circle:hover{fill:var(--rv-base-hover,#ccc)}
 .rv-base-label{font-family:var(--rv-base-label-font,monospace);font-size:var(--rv-base-label-font-size,16px);fill:var(--rv-base-label-color,#1f2328);text-anchor:middle;dominant-baseline:central;pointer-events:none;user-select:none}
 .rv-base-index{font-family:var(--rv-base-index-font,monospace);font-size:var(--rv-base-index-font-size,16px);fill:var(--rv-base-index-color,#656d76);text-anchor:middle;dominant-baseline:central;pointer-events:none;user-select:none}
-/* Configurable base geometry */
-/* --rv-base-radius: visual radius of the nucleotide circles (default 11, unitless SVG) */
-/* --rv-base-index-offset: extra clearance beyond the circle edge for index labels (default 26) */
-/* Pair annotation boxes */
-/* --rv-noncanon-dot-r:4.5 — non-canonical base-pair dot radius */
-/* --rv-pair-annot-opacity — annotation box fill opacity (declared in .rv{}) */
-/* --rv-pair-annot-stroke-width — annotation box border width (declared in .rv{}) */
-/* --rv-pair-annot-padding — annotation box padding in scene units (declared in .rv{}) */
+/* Configurable base geometry
+   --rv-base-radius: visual radius of the nucleotide circles (default 11, unitless SVG)
+   --rv-base-index-offset: extra clearance beyond the circle edge for index labels (default 26)
+   Pair annotation boxes
+   --rv-noncanon-dot-r:4.5 — non-canonical base-pair dot radius
+   --rv-pair-annot-opacity — annotation box fill opacity (declared in .rv{})
+   --rv-pair-annot-stroke-width — annotation box border width (declared in .rv{})
+   --rv-pair-annot-padding — annotation box padding in scene units (declared in .rv{})
+*/
 .rv-pk-panels{position:absolute;top:52px;left:16px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:10}
 .rv-pk-panel{width:var(--rv-inset-max-width,120px);min-width:var(--rv-inset-min-width,80px);background:var(--rv-bg,#ffffff);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 10px;pointer-events:all;cursor:default;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif}
 .rv-pk-panel svg{display:block;width:100%;height:auto}
@@ -248,23 +249,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-aln-thead .rv-aln-name,.rv-aln-tfoot .rv-aln-name{z-index:4;background:var(--rv-surface,#f6f8fa);color:var(--rv-text,#1f2328);font-weight:bold}
 .rv-aln-c{width:1ch;min-width:1ch;max-width:1ch;text-align:center}
 `;
-	/* File parsers
-	   Parse one or more dot-bracket structure records from a .db file.
-	   Format per record:
-	     >NAME
-	     SEQUENCE
-	     DOT-BRACKET [optional free-energy e.g. (-88.93)]
-	  
-	   Returns [{label, sequence, structure}, ...]
-
-	   or
-
-	   Parse a CT (connectivity table) file.
-	   Header line: <nBases> [ENERGY = <e>] [label]
-	   Data lines: n Base n-1 n+1 pairedWith naturalIndex
-	   Multiple structures allowed (one header block each)
-	   Pseudoknots are detected and encoded with [], {}, <> brackets
-	 */
+	// File parsers
+	// Parse one or more dot-bracket structure records from a .db file.
+	// Format per record:
+	// >NAME
+	// SEQUENCE
+	// DOT-BRACKET [optional free-energy e.g. (-88.93)]
+	//
+	// Returns [{label, sequence, structure}, ...]
+	//
+	// or
+	//
+	// Parse a CT (connectivity table) file.
+	// Header line: <nBases> [ENERGY = <e>] [label]
+	// Data lines: n Base n-1 n+1 pairedWith naturalIndex
+	// Multiple structures allowed (one header block each)
+	// Pseudoknots are detected and encoded with [], {}, <> brackets
+	//
 	function parseCTFile(text) {
 		const VALID_SEQ_RE = /^[ACGUTRYSWKMBDHVNacgutryswkmbdhvn]+$/;
 		const records = [];
@@ -375,12 +376,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		return db.slice(1).join('');
 	}
-	/*
-	  Parses a Stockholm 1.0 multiple sequence alignment file.
-	  Requires #=GC SS_cons line for the consensus structure.
-	  Name taken from #=GF ID or #=GF AC, or falls back to filename hint.
-	  Returns [{label, sequence, structure, baseDisplay}], one record per alignment block.
-	 */
+	// Parses a Stockholm 1.0 multiple sequence alignment file.
+	// Requires #=GC SS_cons line for the consensus structure.
+	// Name taken from #=GF ID or #=GF AC, or falls back to filename hint.
+	// Returns [{label, sequence, structure, baseDisplay}], one record per alignment block.
+	//
 	function parseStockholmFile(text, filenameFallback) {
 		const BRACKET_RE = /[()[\]{}<>A-Za-z]/;
 		const NUC_SET = new Set(['A', 'C', 'G', 'U']);
@@ -541,6 +541,33 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				pairs: pairsFull,
 				pseudoPairs: pseudoFull
 			} = parseDotBracket(structFull);
+			// Compute % canonical base-pairs per paired column across all sequences
+			const CANON_PAIRS = new Set(['AU', 'UA', 'CG', 'GC', 'GU', 'UG']);
+			const canonPctFull = new Array(alnLen).fill(null);
+			const allPairedCols = [];
+			for (let i = 0; i < alnLen; i++)
+				if (pairsFull[i] > i) allPairedCols.push([i, pairsFull[i]]);
+			for (const {
+					i,
+					j
+				}
+				of pseudoFull)
+				if (i < j) allPairedCols.push([i, j]);
+			for (const [ci, cj] of allPairedCols) {
+				let canonCount = 0,
+					totalSeqs = 0;
+				for (const seq of seqs) {
+					const bi = (seq[ci] || '-').toUpperCase().replace('T', 'U');
+					const bj = (seq[cj] || '-').toUpperCase().replace('T', 'U');
+					if (NUC_SET.has(bi) && NUC_SET.has(bj)) {
+						totalSeqs++;
+						if (CANON_PAIRS.has(bi + bj)) canonCount++;
+					}
+				}
+				const pct = totalSeqs > 0 ? (canonCount / totalSeqs) * 100 : 0;
+				canonPctFull[ci] = pct;
+				canonPctFull[cj] = pct;
+			}
 			for (let i = 0; i < alnLen; i++) {
 				const j = pairsFull[i];
 				if (j > i && (allBD[i].skip || allBD[j].skip)) {
@@ -571,12 +598,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const filteredSeq = [];
 			const filteredStruct = [];
 			const positionLabels = []; // 1-based original alignment index per kept position
+			const filteredCanonPct = [];
 			for (let col = 0; col < alnLen; col++) {
 				if (allBD[col].skip) continue;
 				filteredSeq.push(allSeq[col]);
 				filteredStruct.push(structFull[col]);
 				baseDisplay.push(allBD[col]);
 				positionLabels.push(col + 1);
+				filteredCanonPct.push(canonPctFull[col]);
 			}
 			// filenameFallback (caller-provided label) takes priority over #=GF ID / AC
 			const label = ac || id || (filenameFallback ? filenameFallback.replace(/\.[^.]+$/, '') : null) || 'alignment';
@@ -595,15 +624,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					fullStruct: filteredStruct.slice(),
 					fullBaseDisplay: baseDisplay.slice(),
 					fullPositionLabels: positionLabels.slice(),
+					fullCanonPct: filteredCanonPct.slice(),
 				};
 				filteredSeq.splice(trimE + 1);
 				filteredStruct.splice(trimE + 1);
 				baseDisplay.splice(trimE + 1);
 				positionLabels.splice(trimE + 1);
+				filteredCanonPct.splice(trimE + 1);
 				filteredSeq.splice(0, trimS);
 				filteredStruct.splice(0, trimS);
 				baseDisplay.splice(0, trimS);
 				positionLabels.splice(0, trimS);
+				filteredCanonPct.splice(0, trimS);
 			}
 			const _colToRi = new Map();
 			positionLabels.forEach((col1, ri) => _colToRi.set(col1 - 1, ri));
@@ -673,6 +705,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				structure: filteredStruct.join(''),
 				baseDisplay,
 				positionLabels,
+				pairCanonPct: filteredCanonPct,
 				alnSeqs: [...seqMap.entries()].map(([name, seq]) => ({
 					name,
 					seq
@@ -785,12 +818,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (!records.length) throw new Error('No valid records found');
 		return records;
 	}
-	/*
-	  Parse an RNA Framework's reactivity XML file produced by rf-norm.
-	  Extracts <sequence> and <reactivity> from each <transcript>.
-	  Returns [{id, sequence, values: number[]}, ...]
-	  NaN and missing entries are stored as null.
-	 */
+	//
+	// Parse an RNA Framework's reactivity XML file produced by rf-norm.
+	// Extracts <sequence> and <reactivity> from each <transcript>.
+	// Returns [{id, sequence, values: number[]}, ...]
+	// NaN and missing entries are stored as null.
+	//
 	function parseXmlReactivity(text) {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(text, 'application/xml');
@@ -811,12 +844,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 		});
 	}
-	/*
-	  Parses a custom format tab-separated pair-annotation file.
-	  Format: i<TAB>j[<TAB>category] (i and j are 0-based)
-	  Lines starting with # are comments.
-	  Returns [{i, j, category}], with category = null when not provided.
-	 */
+	//
+	// Parses a custom format tab-separated pair-annotation file.
+	// Format: i<TAB>j[<TAB>category] (i and j are 0-based)
+	// Lines starting with # are comments.
+	// Returns [{i, j, category}], with category = null when not provided.
+	//
 	function parsePairAnnotFile(text) {
 		const lines = text.replace(/\r/g, '').split('\n');
 		const pairs = [];
@@ -838,36 +871,46 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (!pairs.length) throw new Error('no valid pairs found');
 		return pairs;
 	}
-	/*
-	  Parses an R-scape covariation .cov file.
-	  Data lines start with '*' followed by whitespace-separated columns:
-	    * <left_pos (1-based)> <right_pos (1-based)> <score> <E-value> <pvalue> <substitutions> <power>
-	  Positions are converted to 0-based.  Category is derived from E-value:
-	    E < 0.05 is "E < 0.05" (green)
-	    E < 0.1 is "E < 0.1" (blue)
-	    E < 0.2 is "E < 0.2" (purple)
-	    E ≥ 0.2 is "E ≥ 0.2" (grey)
-	 */
+	//
+	// Parses an R-scape covariation .cov file.
+	// Data lines start with '*' followed by whitespace-separated columns:
+	// <left_pos (1-based)> <right_pos (1-based)> <score> <E-value> <pvalue> <substitutions> <power>
+	// Positions are converted to 0-based.  Category is derived from E-value:
+	// E < 0.05 is "E < 0.05" (green)
+	// E < 0.1 is "E < 0.1" (blue)
+	// E < 0.2 is "E < 0.2" (purple)
+	// E ≥ 0.2 is "E ≥ 0.2" (grey)
+	//
 	function parseCovFile(text) {
-		const COV_COLORS = [
-			{ limit: 0.05,     label: 'E < 0.05', color: '#31a354' },
-			{ limit: 0.10,     label: 'E < 0.1',  color: '#0969da' },
-			{ limit: 0.20,     label: 'E < 0.2',  color: '#7c3aed' },
-			{ limit: Infinity, label: 'E ≥ 0.2',  color: '#8b949e' },
+		const COV_COLORS = [{
+				limit: 0.05,
+				label: 'E < 0.05',
+				color: '#31a354'
+			},
+			{
+				limit: 0.10,
+				label: 'E < 0.1',
+				color: '#0969da'
+			},
+			{
+				limit: 0.20,
+				label: 'E < 0.2',
+				color: '#7c3aed'
+			},
+			{
+				limit: Infinity,
+				label: 'E ≥ 0.2',
+				color: '#8b949e'
+			},
 		];
-		// Detect if file has % canonical_pairs column (last header column)
-		const hasCanon = /\bcanonical_pairs\b/i.test(text);
-		// Detect format: CaCoFold R-scape has TWO leading * columns on data lines.
-		// Some files have 'in_given' in the header but still use single-* format.
-		const dataLines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().startsWith('*'));
-		const isCaCoFold = dataLines.length > 0 && dataLines[0].trim().split(/\s+/)[1] === '*';
-		const off = isCaCoFold ? 1 : 0; // extra column offset for CaCoFold format
+		// Detect format from header: presence of 'in_CaCoFold' or 'in_fold' means two leading * columns.
+		const isCaCoFold = /^#.*\bin_(?:CaCoFold|fold)\b/m.test(text);
+		const off = isCaCoFold ? 1 : 0;
 		const pairs = [];
 		for (const raw of text.replace(/\r/g, '').split('\n')) {
 			const line = raw.trim();
-			if (!line.startsWith('*') && !line.startsWith(' ')) continue;
+			if (!line.startsWith('*')) continue;
 			if (line.startsWith('#')) continue;
-			// cols[0]='*', [1+off]=left_pos, [2+off]=right_pos, [3+off]=score, [4+off]=E-value
 			const cols = line.split(/\s+/);
 			if (cols.length < 5 + off) continue;
 			const left = parseInt(cols[1 + off]);
@@ -875,8 +918,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const evalue = parseFloat(cols[4 + off]);
 			if (!Number.isInteger(left) || !Number.isInteger(right) || left < 1 || right < 1) continue;
 			if (isNaN(evalue)) continue;
-			// only include significant pairs (first col is '*')
-			if (cols[0] !== '*') continue;
 			const bucket = COV_COLORS.find(b => evalue < b.limit) ?? COV_COLORS[COV_COLORS.length - 1];
 			const pair = {
 				i: left - 1,
@@ -884,14 +925,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				category: bucket.label,
 				_color: bucket.color
 			};
-			if (hasCanon) {
-				const canonVal = parseFloat(cols[cols.length - 1]);
-				if (!isNaN(canonVal)) pair.canonPct = canonVal;
-			}
 			pairs.push(pair);
 		}
 		if (!pairs.length) throw new Error('No significantly covarying pairs found');
-		pairs.hasCovCanon = hasCanon && pairs.some(p => p.canonPct != null);
 		return pairs;
 	}
 	// Parse R-scape .helixcov file.
@@ -1096,7 +1132,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// Assigns  colors to annotation categories
 	const ANNOT_PALETTE = ['#0969da', '#1a7f37', '#d1242f', '#bf8700', '#8250df', '#0550ae', '#116329', '#a40e26', '#7d4e00', '#6639ba', '#086f75', '#5c6c00', '#c84801', '#1d6a96', '#5c3d8f', ];
 	const ANNOT_MISSING_KEY = '(undefined)';
-	const ANNOT_MISSING_COLOR = '#999999';
 	const ANNOT_DEFAULT_COLOR = '#0969da';
 
 	function buildAnnotColorMap(pairs) {
@@ -1108,21 +1143,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			map[c] = ANNOT_PALETTE[i % ANNOT_PALETTE.length];
 		});
 		// Include a visible entry for pairs that have no category
-		if (pairs.some(p => p.category === null)) map[ANNOT_MISSING_KEY] = ANNOT_MISSING_COLOR;
+		if (pairs.some(p => p.category === null)) map[ANNOT_MISSING_KEY] = ANNOT_DEFAULT_COLOR;
 		return map;
 	}
-	/*
-	  Build a colormap from pairs.  If pairs carry inline `_color` properties
-	  (produced by parseCovFile), use those directly per category.
-	  Otherwise delegate to buildAnnotColorMap with the auto-palette.
-	 */
+	//
+	// Build a colormap from pairs.  If pairs carry inline `_color` properties
+	// (produced by parseCovFile), use those directly per category.
+	// Otherwise delegate to buildAnnotColorMap with the auto-palette.
+	//
 	function buildAnnotColorMapAuto(pairs) {
 		if (pairs.some(p => p._color)) {
 			// .cov mode: each category has a fixed  color embedded in the pair
 			const map = {};
 			for (const p of pairs) {
 				const key = p.category ?? ANNOT_MISSING_KEY;
-				if (!(key in map)) map[key] = p._color || ANNOT_MISSING_COLOR;
+				if (!(key in map)) map[key] = p._color || ANNOT_DEFAULT_COLOR;
 			}
 			return map;
 		}
@@ -1202,15 +1237,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		return x;
 	}
-	/* 
-     Dot-bracket parser
-	 Returns:
-	 - pairs       [Int32Array] Nested pairs (used for layout + helix tree)
-	 - pseudoPairs [Array]      Pseudoknot pairs rendered as dashed lines
-	
-	 ALL bracket types are treated equally: (), [], {}, <>, Aa ... Zz.
-	 Nestedness is determined by crossing analysis, not by bracket choice
-    */
+	//
+	// Dot-bracket parser
+	// Returns:
+	// - pairs       [Int32Array] Nested pairs (used for layout + helix tree)
+	// - pseudoPairs [Array]      Pseudoknot pairs rendered as dashed lines
+	//
+	// ALL bracket types are treated equally: (), [], {}, <>, Aa ... Zz.
+	// Nestedness is determined by crossing analysis, not by bracket choice
+	//
 	function parseDotBracket(structure) {
 		const n = structure.length;
 		const pairs = new Int32Array(n).fill(-1);
@@ -1252,17 +1287,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			}
 		}
-		/* 
-		 Assign pairs to levels via crossing analysis.
-		 Two pairs (a,b) and (c,d) cross (pseudoknot) when a<c<b<d or c<a<d<b.
-		 Level 0 = nested (no crossings within level 0), layout uses these.
-		 Levels 1+, pseudopairs rendered as dashed lines.
-
-		 Strategy: sort so that '(' bracket pairs come first within the same
-		 start position, ensuring the dominant nested structure (conventionally
-		 written with round brackets) is preferred for level 0 over pseudoknot
-		 annotations written with [], {}, <> or letter pairs.
-		*/
+		//
+		// Assign pairs to levels via crossing analysis.
+		// Two pairs (a,b) and (c,d) cross (pseudoknot) when a<c<b<d or c<a<d<b.
+		// Level 0 = nested (no crossings within level 0), layout uses these.
+		// Levels 1+, pseudopairs rendered as dashed lines.
+		//
+		// Strategy: sort so that '(' bracket pairs come first within the same
+		// start position, ensuring the dominant nested structure (conventionally
+		// written with round brackets) is preferred for level 0 over pseudoknot
+		// annotations written with [], {}, <> or letter pairs.
+		//
 		// Sort: primary by bracket priority ('(' first), secondary by i position.
 		// This ensures round-bracket pairs (the conventional nested structure) are
 		// always processed first and claim level 0, regardless of their position in the sequence.
@@ -1534,31 +1569,31 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			n
 		};
 	}
-	/* 
-     NAView hybrid layout
-	 Flat exterior loop (VARNA radiate) + size-proportional angle allocation at
-	 every internal junction (NAView principle).
-	
-	 The key insight of NAView: at a multi-loop junction, each outgoing helix
-	 receives an angular sector PROPORTIONAL TO ITS SUB-TREE SIZE.  A stem leading
-	 to 80 bases gets 8x more arc than one leading to 10 bases.  The loop radius is
-	 then the minimum that keeps every chord >= the required distance, so the circle
-	 expands as needed instead of forcing elements to overlap.
-	
-	 Contrast with radiate: every helix gets the same fixed arc regardless of size,
-	 so large sub-trees always crash into each other on complex structures.
-
-	 NAView (port of Ivo Hofacker's adaptation of Bruccoleri & Heinrich original algorithm), 
-     adapted to enable helix rotation in a Radiate-like fashion
-
-	 Key differences from the radiate layout:
-	  - Angles are derived from the SEQUENTIAL position of each region on a
-	    conceptual full-circle, not from sub-tree sizes or unpaired-base counts.
-	  - The most-connected loop is drawn at the centre, not the exterior loop.
-	  - The loop radius is chosen by least-squares to minimise deviation from
-	    unit base-separation; crowded segments are "extruded" outside the circle.
-	  - Produces near-overlap-free layouts for complex multi-junction structures.
-    */
+	//
+	// NAView hybrid layout
+	// Flat exterior loop (VARNA radiate) + size-proportional angle allocation at
+	// every internal junction (NAView principle).
+	//
+	// The key insight of NAView: at a multi-loop junction, each outgoing helix
+	// receives an angular sector PROPORTIONAL TO ITS SUB-TREE SIZE.  A stem leading
+	// to 80 bases gets 8x more arc than one leading to 10 bases.  The loop radius is
+	// then the minimum that keeps every chord >= the required distance, so the circle
+	// expands as needed instead of forcing elements to overlap.
+	//
+	// Contrast with radiate: every helix gets the same fixed arc regardless of size,
+	// so large sub-trees always crash into each other on complex structures.
+	//
+	// NAView (port of Ivo Hofacker's adaptation of Bruccoleri & Heinrich original algorithm),
+	// adapted to enable helix rotation in a Radiate-like fashion
+	//
+	// Key differences from the radiate layout:
+	// - Angles are derived from the SEQUENTIAL position of each region on a
+	// conceptual full-circle, not from sub-tree sizes or unpaired-base counts.
+	// - The most-connected loop is drawn at the centre, not the exterior loop.
+	// - The loop radius is chosen by least-squares to minimise deviation from
+	// unit base-separation; crowded segments are "extruded" outside the circle.
+	// - Produces near-overlap-free layouts for complex multi-junction structures.
+	//
 	function drawRNANAView(pairs, n) {
 		var PI = Math.PI;
 		var ANUM = 9999.0;
@@ -1712,7 +1747,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 		}
 		// determine_radius
-		function determineRadius(lp) {
+		function naviewDetermineRadius(lp) {
 			var RT2_2 = 0.7071068;
 			var radius, mindit, sumn, sumd, imindit, restart;
 			do {
@@ -1944,7 +1979,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			var globalRestart;
 			do {
 				globalRestart = false;
-				determineRadius(lp);
+				naviewDetermineRadius(lp);
 				var radius = lp.radius;
 				var xc, yc;
 				if (anchorConnection === null) {
@@ -2136,7 +2171,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					var dcpF = ((cpNF.angle - cpF.angle) + 2 * PI) % (2 * PI);
 					if (Math.abs(danF - dcpF) > PI) {
 						if (cpF.extruded) {
-							/* warning: crossed regions, skip */
+							// warning: crossed regions, skip
 						} else if ((cpNF.start - cpF.end) !== 1) {
 							cpF.extruded = true;
 							globalRestart = true;
@@ -2796,8 +2831,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				cleanAll: true,
 				manualInput: true,
 				toolbarPos: true,
-				r3d: true,
 				ssEnds: true,
+				autoRefit: true,
+				percCanonical: true,
 			};
 			const b = config.buttons;
 			this._btns = b === false ? {
@@ -2816,8 +2852,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				cleanAll: false,
 				manualInput: false,
 				toolbarPos: false,
-				r3d: false,
 				ssEnds: false,
+				autoRefit: false,
+				percCanonical: false,
 			} : (b && typeof b === 'object' ? {
 				...ALL_ON,
 				...b
@@ -2828,6 +2865,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._vx = 0;
 			this._vy = 0;
 			this._vscale = 1;
+			this._autoRefit = config.autoRefit !== false;
+			this._covCanonMode = !!config.showPercCanonical;
 			this._panStart = null;
 			this._rotState = null;
 			this._flipState = null;
@@ -2905,16 +2944,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				[b.fit || b.reset, [
 					b.fit ? btnHTML('rv-fit', '', ICONS.fit, 'Fit to canvas') : '',
 					b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
+					b.autoRefit ? `<button class="rv-btn rv-btn-toggle rv-chk-autofit rv--active" title="Auto-refit on helix move"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5.5 12L8 5l2.5 7M6.4 9.5h3.2"/></svg><span class="rv-btn-label">Auto-refit</span></button>` : '',
 				].join('')],
 				[b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
-				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.r3d !== false || b.ssEnds !== false, [
+				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.ssEnds !== false, [
 					b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
 					b.colorMap !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
 					b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="13"/><line x1="11" y1="1" x2="11" y2="13"/><line x1="3" y1="3.5" x2="11" y2="3.5"/><line x1="3" y1="7" x2="11" y2="7"/><line x1="3" y1="10.5" x2="11" y2="10.5"/></svg><span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
-					b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-cov-canon" title="Color by % canonical pairs" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="5.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5"/><line x1="11" y1="4" x2="5" y2="12"/></svg><span class="rv-btn-label">% Canonical pairs</span></button>` : '',
+					b.pairAnnotations !== false && b.percCanonical !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-cov-canon" title="Color by % canonical pairs" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="5.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5"/><line x1="11" y1="4" x2="5" y2="12"/></svg><span class="rv-btn-label">% Canonical pairs</span></button>` : '',
 					b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots" style="display:none">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
-					b.insets !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
-					b.labels !== false && b.r3d !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
+					b.insets !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
+					b.labels !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
 					b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5&prime;/3&prime; ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
 				].join('')],
 				// Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
@@ -2995,7 +3035,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
               <button class="rv-upload-btn rv-upload-btn-load rv-rfam-load">Load</button>
             </div>
           </div>
-          <div class="rv-aln-legend"><div class="rv-aln-legend-cols"><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide present</div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#cc0000" stroke="#111" stroke-width="1"/></svg><span>97%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#111111" stroke="#111" stroke-width="1"/></svg><span>90%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#888888" stroke="#111" stroke-width="1"/></svg><span>75%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#fff" stroke="#111" stroke-width="1.5"/></svg><span>50%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide identity</div><div class="rv-aln-legend-row"><b style="color:#cc0000;font-size:14px">N</b><span>97%</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><span>90%</span></div><div class="rv-aln-legend-row"><b style="color:#888888;font-size:14px">N</b><span>75%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">base-pair type</div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><svg width="18" height="11" viewBox="0 0 18 11" style="flex-shrink:0"><line x1="1" y1="5.5" x2="17" y2="5.5" stroke="var(--rv-basepair,#1f2328)" stroke-width="1.5"/></svg><b style="color:#111111;font-size:14px">N</b><span>Watson-Crick</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><svg width="18" height="11" viewBox="0 0 18 11" style="flex-shrink:0"><circle cx="9" cy="5.5" r="2" fill="var(--rv-noncanon-dot,var(--rv-basepair,#1f2328))"/></svg><b style="color:#111111;font-size:14px">N</b><span>Non-canonical</span></div></div></div></div>
+          <div class="rv-aln-legend"><div class="rv-aln-legend-cols"><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide present</div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#cc0000" stroke="#111" stroke-width="1"/></svg><span>97%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#111111" stroke="#111" stroke-width="1"/></svg><span>90%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#888888" stroke="#111" stroke-width="1"/></svg><span>75%</span></div><div class="rv-aln-legend-row"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="4.5" fill="#fff" stroke="#111" stroke-width="1.5"/></svg><span>50%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">nucleotide identity</div><div class="rv-aln-legend-row"><b style="color:#cc0000;font-size:14px">N</b><span>97%</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><span>90%</span></div><div class="rv-aln-legend-row"><b style="color:#888888;font-size:14px">N</b><span>75%</span></div></div><div class="rv-aln-legend-col"><div class="rv-aln-legend-hdr">base-pair type</div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><svg width="18" height="11" viewBox="0 0 18 11" style="flex-shrink:0"><line x1="1" y1="5.5" x2="17" y2="5.5" stroke="var(--rv-basepair,#1f2328)" stroke-width="1.5"/></svg><b style="color:#111111;font-size:14px">N</b><span>Canonical</span></div><div class="rv-aln-legend-row"><b style="color:#111111;font-size:14px">N</b><svg width="18" height="11" viewBox="0 0 18 11" style="flex-shrink:0"><circle cx="9" cy="5.5" r="2" fill="var(--rv-noncanon-dot,var(--rv-basepair,#1f2328))"/></svg><b style="color:#111111;font-size:14px">N</b><span>Non-canonical</span></div></div></div></div>
           <div class="rv-legend">
             <h4>Value</h4>
             <div class="rv-legend-gradient"></div>
@@ -3241,6 +3281,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			on('.rv-zoom-in', 'click', () => this._zoomBy(1.2));
 			on('.rv-zoom-out', 'click', () => this._zoomBy(1 / 1.2));
 			on('.rv-fit', 'click', () => this.fit());
+			on('.rv-chk-autofit', 'click', e => {
+				this._autoRefit = !this._autoRefit;
+				e.currentTarget.classList.toggle('rv--active', this._autoRefit);
+			});
 			on('.rv-reset', 'click', () => this.reset());
 			on('.rv-save', 'click', () => this._saveSVG());
 			if (this._layoutBtn) {
@@ -3305,8 +3349,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._chkCovCanon.classList.toggle('rv--active', this._covCanonMode);
 					this._applyCovCanonColoring();
 				});
-			}
-			// Upload panel
+			} // Upload panel
 			if (this._uploadBtn) {
 				this._uploadBtn.addEventListener('click', () => this._showUploadPanel());
 			}
@@ -3497,7 +3540,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// Silently ignore XML files for Stockholm structures
 				const effectiveXmlFiles = this._rna?.baseDisplay ? [] : xmlFiles;
 				const covFiles = allFiles.filter(f => /\.(cov|helixcov)$/i.test(f.name));
-				if (!dbFiles.length && !effectiveXmlFiles.length && !covFiles.length) return;
+				if (!dbFiles.length && !effectiveXmlFiles.length && !covFiles.length) {
+					const unrecognized = allFiles.filter(f =>
+						!DB_EXTS.test(f.name) && !/\.(xml|cov|helixcov)$/i.test(f.name)
+					);
+					if (unrecognized.length) {
+						const names = unrecognized.map(f => f.name).join(', ');
+						if (this._rna) this._showErrorDialog(`Unrecognized file format: ${names}\n\nSupported formats: .db, .dbn, .ct, .sto, .stk, .stockholm, .txt, .xml, .cov, .helixcov`);
+						else this._showError(`Unrecognized file format: ${names}`);
+					}
+					return;
+				}
 				if (this._alnActive) this._exitAlnView();
 				// XML-only drop: open panel showing both the XML ordering list and
 				// a reorderable list of all structures that match the XML sequences.
@@ -3647,6 +3700,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			// Remember any explicitly-provided colorMap so file-loader reuses it after clear()
 			this._rna.helices = buildHelixTree(pairs, sequence.length, result.centers);
+			// For Stockholm alignments: store pairCanonPct and show the canon toggle
+			if (config.pairCanonPct?.length) {
+				this._rna.pairCanonPct = config.pairCanonPct;
+				if (this._chkCovCanon) this._chkCovCanon.style.display = '';
+			}
 			// Validate pair annotations before rendering
 			if (this._rna.pairAnnotations) {
 				const err = this._validatePairAnnotationsWithMap(this._rna.pairAnnotations, pairs, sequence.length, this._rna.pairAnnotColorMap);
@@ -3678,16 +3736,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._lastCovTexts = [...(this._lastCovTexts || []), covText]; // accumulate for reset()
 			if (/^#\s+RM_HELIX\b/m.test(covText)) return this.loadHelixCov(covText);
 			const pairs = parseCovFile(covText);
-			this._rna.covRawPairs = pairs; // keep for canon toggle recolour
-			if (pairs.hasCovCanon && this._chkCovCanon) {
+			// For Stockholm: keep the alignment-derived covRawPairs (synthetic pairs
+			// covering ALL base-pairs with pairCanonPct). Only use .cov pairs for
+			// E-value boxes, not for the canon toggle.
+			if (!this._rna.pairCanonPct) {
+				this._rna.covRawPairs = pairs;
+			}
+			// Show canon toggle whenever the structure has alignment-derived canonPct
+			if (this._rna.pairCanonPct && this._chkCovCanon) {
 				this._chkCovCanon.style.display = '';
 			}
 			const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
 			// Build separate sets for nested vs pseudoknot pairs
-			const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
-			if (this._rna.ssConsPkPairs)
-				for (const fps of Object.values(this._rna.ssConsPkPairs))
-					for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
+			const pkSet = this._buildPkSet(this._rna);
 			const allStructPairs = getStructurePairSet(this._rna.structure || '');
 			const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
 			const nestedCovPairs = remapped.filter(({
@@ -3722,8 +3783,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					i,
 					j,
 					color: pkColorMap ?
-						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) :
-						ANNOT_DEFAULT_COLOR,
+						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
 				}));
 			}
 			this._rna.isCovAnnot = true;
@@ -3733,34 +3793,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			// Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
 			// always has the canonical unshifted source regardless of ssEnds state.
-			{
-				const _layout = this._structLayouts[this._currentStructIdx];
-				const _base = _layout?._base;
-				if (_base && _base !== _layout) {
-					const _shift = _base.ssEnds?.trimS || 0;
-					const _unshift = (arr, keys) => arr?.map(p => {
-						const r = {
-							...p
-						};
-						for (const k of keys)
-							if (r[k] != null) r[k] -= _shift;
-						return r;
-					});
-					_base.pairAnnotations = _unshift(this._rna.pairAnnotations, ['i', 'j']) || _base.pairAnnotations;
-					_base.pairAnnotColorMap = this._rna.pairAnnotColorMap || _base.pairAnnotColorMap;
-					_base.helixAnnotations = this._rna.helixAnnotations?.map(h => ({
-						...h,
-						subHelices: h.subHelices.map(sh => ({
-							pos5p: sh.pos5p.map(p => p - _shift),
-							pos3p: sh.pos3p.map(p => p - _shift),
-						}))
-					})) || _base.helixAnnotations;
-					_base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i', 'j']) || _base.pseudoHelixCovAnnotations;
-					_base.pseudoCovAnnotations = _unshift(this._rna.pseudoCovAnnotations, ['i', 'j']) || _base.pseudoCovAnnotations;
-					_base.isCovAnnot = this._rna.isCovAnnot;
-					_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
-				}
-			}
+			this._syncBaseAnnotations();
 			this._render();
 		}
 		// Load significant helix-level covariation from .helixcov text.
@@ -3823,13 +3856,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				}
 				subHelices.push(cur);
-				// Split sub-helices into nested and pseudoknot pairs.
-				// PK helix type from RM_HELIX line takes priority; otherwise check structure brackets.
-				const pkSet = new Set(this._rna.pseudoPairs.map(ps => pairKey(ps.i, ps.j)));
-				if (this._rna.ssConsPkPairs)
-					for (const fps of Object.values(this._rna.ssConsPkPairs))
-						for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
-				const isPkHelix = h.helixType === 'PK' || h.helixType === 'XCOV';
+				// Split sub-helices into nested and pseudoknot pairs based on structure brackets.
+				const pkSet = this._buildPkSet(this._rna);
 				const nestedSubs = [],
 					pkPairs = [];
 				for (const sh of subHelices) {
@@ -3876,34 +3904,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, true);
 			// Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
 			// always has the canonical unshifted source regardless of ssEnds state.
-			{
-				const _layout = this._structLayouts[this._currentStructIdx];
-				const _base = _layout?._base;
-				if (_base && _base !== _layout) {
-					const _shift = _base.ssEnds?.trimS || 0;
-					const _unshift = (arr, keys) => arr?.map(p => {
-						const r = {
-							...p
-						};
-						for (const k of keys)
-							if (r[k] != null) r[k] -= _shift;
-						return r;
-					});
-					_base.pairAnnotations = _unshift(this._rna.pairAnnotations, ['i', 'j']) || _base.pairAnnotations;
-					_base.pairAnnotColorMap = this._rna.pairAnnotColorMap || _base.pairAnnotColorMap;
-					_base.helixAnnotations = this._rna.helixAnnotations?.map(h => ({
-						...h,
-						subHelices: h.subHelices.map(sh => ({
-							pos5p: sh.pos5p.map(p => p - _shift),
-							pos3p: sh.pos3p.map(p => p - _shift),
-						}))
-					})) || _base.helixAnnotations;
-					_base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i', 'j']) || _base.pseudoHelixCovAnnotations;
-					_base.pseudoCovAnnotations = _unshift(this._rna.pseudoCovAnnotations, ['i', 'j']) || _base.pseudoCovAnnotations;
-					_base.isCovAnnot = this._rna.isCovAnnot;
-					_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
-				}
-			}
+			this._syncBaseAnnotations();
 			this._render();
 		}
 		// Fit the structure to fill the canvas
@@ -4002,16 +4003,22 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!valid.includes(algo)) throw new Error(`Unknown layout algorithm "${algo}". Use: ${valid.join(', ')}`);
 			this._layoutAlgo = algo;
 			if (this._rna) {
+				const wasCovCanon = this._covCanonMode;
 				this.load(this._lastConfig);
+				if (wasCovCanon && this._rna?.pairCanonPct) {
+					this._covCanonMode = true;
+					if (this._chkCovCanon) this._chkCovCanon.classList.add('rv--active');
+					this._applyCovCanonColoring();
+				}
 			}
 		}
-		/* 
-         Returns a discrete SHAPE-reactivity colormap that adapts to the current
-		 theme: the unreactive band is black on light backgrounds, white on dark.
-		 - 0-0.3: unreactive (black / white)
-		 - 0.3-0.7: moderately reactive (yellow)
-		 - 0.7+: reactive (red)
-		*/
+		//
+		// Returns a discrete SHAPE-reactivity colormap that adapts to the current
+		// theme: the unreactive band is black on light backgrounds, white on dark.
+		// - 0-0.3: unreactive (black / white)
+		// - 0.3-0.7: moderately reactive (yellow)
+		// - 0.7+: reactive (red)
+		//
 		_getDefaultShapeColorMap() {
 			const bg = getComputedStyle(this._root).getPropertyValue('--rv-bg').trim() || '#ffffff';
 			const dark = this._colorLuminance(bg) < 0.4;
@@ -4090,12 +4097,52 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		// Render pseudoknots for Stockholm structures using R3D-style arcs + mini helix panels.
 		// Returns an array of stem descriptors for panel layout.
-		// ── Shared Stockholm rendering helpers ──────────────────────────────────
+		// Shared Stockholm rendering helpers
 		// These are used by both _render() (main structure) and _renderPkStockholm() (insets)
 		// so any change to bond length, glow, layer order etc. only needs to happen once.
 
-		/** White eraser circle that sits behind a base letter */
-		/** Returns true if b1/b2 form a canonical Watson-Crick or wobble pair */
+		// White eraser circle that sits behind a base letter
+		// Builds a Set of pairKey strings for all pseudoknot pairs in the current structure,
+		// including both pseudoPairs and ssConsPkPairs (R3D annotations).
+		_buildPkSet(rna) {
+			const pkSet = new Set((rna.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
+			if (rna.ssConsPkPairs)
+				for (const fps of Object.values(rna.ssConsPkPairs))
+					for (const ps of fps) pkSet.add(pairKey(ps.i, ps.j));
+			return pkSet;
+		}
+		// Syncs annotation data from this._rna back onto _base (the unshifted canonical layout),
+		// subtracting the ssEnds trimS offset so _base always holds trimmed-index coords.
+		// Called after loadCov() and loadHelixCov() when ssEnds trimming is active.
+		_syncBaseAnnotations() {
+			const _layout = this._structLayouts[this._currentStructIdx];
+			const _base = _layout?._base;
+			if (!_base || _base === _layout) return;
+			const _shift = _base.ssEnds?.trimS || 0;
+			const _unshift = (arr, keys) => arr?.map(p => {
+				const r = {
+					...p
+				};
+				for (const k of keys)
+					if (r[k] != null) r[k] -= _shift;
+				return r;
+			});
+			_base.pairAnnotations = _unshift(this._rna.pairAnnotations, ['i', 'j']) || _base.pairAnnotations;
+			_base.pairAnnotColorMap = this._rna.pairAnnotColorMap || _base.pairAnnotColorMap;
+			_base.helixAnnotations = this._rna.helixAnnotations?.map(h => ({
+				...h,
+				subHelices: h.subHelices.map(sh => ({
+					pos5p: sh.pos5p.map(p => p - _shift),
+					pos3p: sh.pos3p.map(p => p - _shift),
+				}))
+			})) || _base.helixAnnotations;
+			_base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i', 'j']) || _base.pseudoHelixCovAnnotations;
+			_base.pseudoCovAnnotations = _unshift(this._rna.pseudoCovAnnotations, ['i', 'j']) || _base.pseudoCovAnnotations;
+			_base.isCovAnnot = this._rna.isCovAnnot;
+			_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
+			_base.pairCanonPct = this._rna.pairCanonPct || _base.pairCanonPct;
+		}
+		// Returns true if b1/b2 form a canonical Watson-Crick or wobble pair.
 		_isCanonPair(b1, b2) {
 			const a = b1.toUpperCase(),
 				b = b2.toUpperCase();
@@ -4106,20 +4153,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				(a === 'G' && b === 'T') || (a === 'T' && b === 'G');
 		}
 
-		/**
-		 * Copies all runtime annotation properties from one layout object to another.
-		 * Used when recomputing coordinates (layout switch, reset) to avoid losing
-		 * annotations that were loaded post-layout via loadCov() or drag-drop.
-		 */
+		//
+		// Copies all runtime annotation properties from one layout object to another.
+		// Used when recomputing coordinates (layout switch, reset) to avoid losing
+		// annotations that were loaded post-layout via loadCov() or drag-drop.
+		//
 		_copyLayoutAnnotations(src, dst) {
-			const props = ['helixAnnotations', 'isCovAnnot', 'pseudoCovAnnotations',
-				'pseudoHelixCovAnnotations', 'ssConsFeatures', 'ssConsPkPairs', 'ssEnds'
+			const props = [
+				'helixAnnotations', 'isCovAnnot', 'pseudoCovAnnotations',
+				'pseudoHelixCovAnnotations', 'ssConsFeatures', 'ssConsPkPairs', 'ssEnds',
+				'covRawPairs', 'pairCanonPct', '_canonAnnotations', '_canonPkAnnotations',
+				'_savedPairAnnotColorMap',
 			];
 			for (const p of props)
 				if (src[p]) dst[p] = src[p];
+			// pairAnnotColorMap and pairAnnotations are passed directly to _computeLayout,
+			// but covRawPairs/_savedPairAnnotColorMap are runtime-only — copy them here.
 		}
 
-		/** Creates an SVG line element. cls is optional. Does not append it. */
+		// Creates an SVG line element. cls is optional. Does not append it.
 		_mkSvgLine(x1, y1, x2, y2, cls) {
 			const l = document.createElementNS(NS, 'line');
 			l.setAttribute('x1', x1);
@@ -4139,7 +4191,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return er;
 		}
 
-		/** Base letter (text) or fill circle for a Stockholm base */
+		// Base letter (text) or fill circle for a Stockholm base
 		_mkBaseElement(cx, cy, bd, baseR, bsW) {
 			if (bd.letter !== null && bd.letter !== undefined) {
 				const t = document.createElementNS(NS, 'text');
@@ -4161,13 +4213,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return null;
 		}
 
-		/**
-		 * Stockholm bond between two base centres at (x1,y1) and (x2,y2).
-		 * Returns an array of SVG elements (line and/or dot).
-		 * Shortens the line by `shrinkEach` on each end to avoid overlapping eraser circles.
-		 */
-		_mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR) {
-			const isCanon = this._isCanonPair(b1, b2);
+		//
+		// Stockholm bond between two base centres at (x1,y1) and (x2,y2).
+		// Returns an array of SVG elements (line and/or dot).
+		// Shortens the line by `shrinkEach` on each end to avoid overlapping eraser circles.
+		//
+		_mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR, canonPct = null) {
+			// If canonPct (% canonical pairs across alignment) is provided, use it.
+			// Otherwise fall back to consensus nucleotide comparison.
+			const isCanon = canonPct !== null ? canonPct > 50 : this._isCanonPair(b1, b2);
 			const mkL = (ax, ay, bx, by) => this._mkSvgLine(ax, ay, bx, by, 'rv-basepair');
 			const mkDot = (cx, cy, cls = 'rv-bp-noncanon') => {
 				const c = document.createElementNS(NS, 'circle');
@@ -4192,10 +4246,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return [mkL(sx1, sy1, sx2, sy2)];
 		}
 
-		/**
-		 * Pair-annotation rectangle centred between two base positions.
-		 * Works for any angle — used in both main structure and insets.
-		 */
+		//
+		// Pair-annotation rectangle centred between two base positions.
+		// Works for any angle — used in both main structure and insets.
+		//
 		_mkPairAnnotRect(x1, y1, x2, y2, color, opa, sw, pad, baseR) {
 			const dist = Math.hypot(x2 - x1, y2 - y1);
 			const w = dist + pad * 2;
@@ -4221,7 +4275,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_renderPkStockholm(gLines, gLabels, coords, n, pseudoPairs, pairs, sequence, cs, skipArcs = false, featureName = null, stemIdxOffset = 0) {
 			if (!pseudoPairs?.length || !this._pkPanelsEl) return 0;
 
-			// ── Group pseudoknot pairs into stems ──────────────────────────────
+			// Group pseudoknot pairs into stems
 			const sorted = [...pseudoPairs].sort((a, b) => a.i - b.i);
 			const stems = [];
 			let cur = null;
@@ -4239,7 +4293,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			if (cur) stems.push(cur);
 
-			// ── Build R3D coverage map: pos → feature name ────────────────────
+			// Build R3D coverage map: pos → feature name
 			// Used to: (a) avoid double-labelling PK positions already in R3D,
 			// and (b) adopt the R3D feature name as the inset label for that stem.
 			const r3dPosToName = new Map(); // residue index → R3D feature name
@@ -4262,7 +4316,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				return `PK${si + 1}`;
 			});
 
-			// ── R3D-style arcs on main structure (non-skip path) ──────────────────
+			// R3D-style arcs on main structure (non-skip path)
 			stems.forEach((stem, si) => {
 				const label = stemLabels[si];
 				const label2 = label + "'";
@@ -4279,7 +4333,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			});
 
-			// ── CSS vars ────────────────────────────────────────────────────────
+			// CSS vars 
 			const baseR = 11; // fixed in insets — not affected by the base size settings slider
 			const bpW = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
 			const bbW = parseFloat(cs.getPropertyValue('--rv-backbone-width')) || 2;
@@ -4296,7 +4350,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const pAnnotPad = parseFloat(cs.getPropertyValue('--rv-pair-annot-padding')) || 5;
 			const bsW = parseFloat(cs.getPropertyValue('--rv-base-stroke-width')) || 2;
 
-			// ── Panel geometry ─────────────────────────────────────────────────
+			// Panel geometry
 			const colSep = baseR * 6;
 			const rowStep = baseR * 3.5;
 			const _helixPadCS = baseR * 1.7; // inset helix pad is fixed, not controlled by settings slider
@@ -4311,8 +4365,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// When featureName is set (ssConsPkPairs call), all stems belong to the same
 			// named feature and go into ONE panel with a gap between runs.
 			// When featureName is null (pseudoPairs call), one panel per stem as before.
-			const stemGroups = featureName ?
-				[stems.map((stem, si) => ({
+			const stemGroups = featureName ? [stems.map((stem, si) => ({
 					stem,
 					si
 				}))] // all stems → one group
@@ -4402,7 +4455,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					stem
 				}) => stem);
 
-				// ── 1. Backbone (one line per run, not spanning gaps) ──────────
+				// Backbone (one line per run, not spanning gaps)
 				group.forEach(({
 					stem
 				}) => {
@@ -4420,7 +4473,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					});
 				});
 
-				// ── 2. White eraser circles ───────────────────────────────────
+				// White eraser circles
 				allPairs.forEach(ps => {
 					[ps.i, ps.j].forEach(ri => {
 						const bd = this._rna.baseDisplay?.[ri];
@@ -4432,7 +4485,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					});
 				});
 
-				// ── 4. Helix annotation box ────────────────────────────────────
+				// Helix annotation box
 				if (this._showPairAnnotations && !this._covCanonMode && this._rna.helixAnnotations?.length) {
 					for (const ann of this._rna.helixAnnotations) {
 						const hasPair = (ann.subHelices || []).some(sh =>
@@ -4473,7 +4526,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				}
 
-				// ── 5. Annotation boxes ────────────────────────────────────────
+				// Annotation boxes
 				if (this._showPairAnnotations) {
 					for (const ann of (this._rna.pairAnnotations || [])) {
 						let ai = ann.i,
@@ -4520,8 +4573,26 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
 					}
 				}
-
-				// ── 5. Base letters / fill circles ────────────────────────────
+				// Canon % annotation boxes (gated on pair annotation toggle)
+				if (this._covCanonMode && this._showPairAnnotations) {
+					for (const ann of (this._rna._canonAnnotations || [])) {
+						const ic5 = inCoords[ann.i],
+							ic3 = inCoords[ann.j];
+						if (!ic5 || !ic3) continue;
+						ins_abox.appendChild(this._mkPairAnnotRect(
+							ic5.x, ic5.y, ic3.x, ic3.y,
+							ann.color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
+					}
+					for (const ann of (this._rna._canonPkAnnotations || [])) {
+						const ic5 = inCoords[ann.i],
+							ic3 = inCoords[ann.j];
+						if (!ic5 || !ic3) continue;
+						ins_abox.appendChild(this._mkPairAnnotRect(
+							ic5.x, ic5.y, ic3.x, ic3.y,
+							ann.color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
+					}
+				}
+				// Base letters / fill circles
 				allPairs.forEach(ps => {
 					[
 						[col5x, ps.i],
@@ -4534,18 +4605,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					});
 				});
 
-				// ── 6. Bonds (topmost) ─────────────────────────────────────────
+				// Bonds (topmost)
 				allPairs.forEach(ps => {
 					const ry = inCoords[ps.i].y;
 					const b5 = (sequence?.[ps.i] || '?').toUpperCase();
 					const b3 = (sequence?.[ps.j] || '?').toUpperCase();
-					this._mkStockholmBond(col5x, ry, col3x, ry, b5, b3, baseR, dotR)
+					const canonPct = this._rna.pairCanonPct?.[ps.i] ?? null;
+					this._mkStockholmBond(col5x, ry, col3x, ry, b5, b3, baseR, dotR, canonPct)
 						.forEach(el => ins_bp.appendChild(el));
 				});
 
 				panel.appendChild(svg);
 
-				// ── Hover ──────────────────────────────────────────────────────
+				// Hover
 				const stemPositions = allPairs.flatMap(p => [p.i, p.j]);
 				panel.addEventListener('mouseenter', () => {
 					const glowSize = parseFloat(cs.getPropertyValue('--rv-inset-hover-glow')) || 6;
@@ -4572,7 +4644,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 			this._pkPanelsEl.style.display = 'flex';
 
-			// ── Resize panels + multi-column layout ───────────────────────────
+			// Resize panels + multi-column layout
 			requestAnimationFrame(() => {
 				const container = this._pkPanelsEl;
 				if (!container) return;
@@ -4657,14 +4729,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// loop indices go inward so no conflict; helix indices already outside
 			const pad = baseR + lSz * 1.2;
 
-			// ── Pseudoknot partner map ─────────────────────────────────────────
+			// Pseudoknot partner map
 			const pkPartner = new Map();
 			for (const p of pseudoPairs) {
 				pkPartner.set(p.i, p.j);
 				pkPartner.set(p.j, p.i);
 			}
 
-			// ── Helix position set for arc-vs-line decision ────────────────────
+			// Helix position set for arc-vs-line decision
 			const helixPos = new Set();
 			for (let i = 0; i < n; i++) {
 				if (pairs[i] >= 0) helixPos.add(i);
@@ -4694,7 +4766,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 
-			// ── Canvas occupancy map ───────────────────────────────────────────
+			// Canvas occupancy map
 			const occupied = [];
 			const addOccupied = (cx2, cy2, tw, th) =>
 				occupied.push({
@@ -4789,7 +4861,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 
-			// ── Arc-length helpers ─────────────────────────────────────────────
+			// Arc-length helpers
 			const arcLen = (pts) => {
 				const L = [0];
 				for (let k = 1; k < pts.length; k++)
@@ -4819,7 +4891,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				return pts[pts.length - 1];
 			};
 
-			// ── Merge labels that share a start position ─────────────────────
+			// Merge labels that share a start position
 			const edgeGap = lSz * 3.5;
 			// posDirection: ri → 'open' (5' arm) | 'close' (3' arm)
 			// Built from ssConsPkPairs so arm boundaries are known exactly.
@@ -4870,7 +4942,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				posOwner.set(pos, sorted[0]);
 			}
 
-			// ── Render each feature ───────────────────────────────────────────
+			// Render each feature
 			// Collect placements: render all bg rects first, then all texts on top
 			const labelPlacements = [];
 			// Collect all label tasks first so we can sort by base index before placing
@@ -4929,15 +5001,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const tangs = pts.map((p, k) => {
 							const t1x = p.ny,
 								t1y = -p.nx;
-							const ref = k < pts.length - 1 ?
-								{
-									x: pts[k + 1].x - p.x,
-									y: pts[k + 1].y - p.y
-								} :
-								{
-									x: p.x - pts[k - 1].x,
-									y: p.y - pts[k - 1].y
-								};
+							const ref = k < pts.length - 1 ? {
+								x: pts[k + 1].x - p.x,
+								y: pts[k + 1].y - p.y
+							} : {
+								x: p.x - pts[k - 1].x,
+								y: p.y - pts[k - 1].y
+							};
 							const fwd = ref.x * t1x + ref.y * t1y >= 0;
 							return fwd ? {
 								x: t1x,
@@ -5011,7 +5081,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						});
 					}
 
-					// ── Collect label runs for this group ─────────────────────
+					// Collect label runs for this group
 					const L = arcLen(pts);
 
 					// Collapse consecutive positions with the same label into one label run
@@ -5057,7 +5127,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 
-			// ── Place labels in base-index order (lower index first) ─────────
+			// Place labels in base-index order (lower index first)
 			pendingLabels.sort((a, b) => a.baseIdx - b.baseIdx);
 			for (const {
 					labelText,
@@ -5446,6 +5516,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					ssConsPkPairs: s.ssConsPkPairs,
 					baseDisplay: s.baseDisplay,
 					positionLabels: s.positionLabels,
+					pairCanonPct: s.pairCanonPct,
 					alnSeqs: s.alnSeqs,
 					alnStruct: s.alnStruct,
 					alnLen: s.alnLen,
@@ -5593,14 +5664,29 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const paColorDiv = this._settingsPanel.querySelector('.rv-pa-colors');
 				if (paColorDiv) {
 					paColorDiv.innerHTML = '';
-					// ── canonical pairs gradient pickers ─────────────────────
+					// Canonical pairs gradient pickers
 					if (this._covCanonMode) {
-						const gradStops = [
-							{ key: 'Low (0%)',  prop: '_covCanonLow',  def: '#d73027' },
-							{ key: 'Mid (50%)', prop: '_covCanonMid',  def: '#fee090' },
-							{ key: 'High (100%)', prop: '_covCanonHigh', def: '#1a9850' },
+						const gradStops = [{
+								key: 'Low (0%)',
+								prop: '_covCanonLow',
+								def: '#d73027'
+							},
+							{
+								key: 'Mid (50%)',
+								prop: '_covCanonMid',
+								def: '#fee090'
+							},
+							{
+								key: 'High (100%)',
+								prop: '_covCanonHigh',
+								def: '#1a9850'
+							},
 						];
-						gradStops.forEach(({ key, prop, def }) => {
+						gradStops.forEach(({
+							key,
+							prop,
+							def
+						}) => {
 							const row = document.createElement('div');
 							row.className = 'rv-setting-row';
 							row.innerHTML = `<span class="rv-setting-label">${key}</span>` +
@@ -5615,59 +5701,59 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							paColorDiv.appendChild(row);
 						});
 					} else {
-					const cm = this._rna.pairAnnotColorMap;
-					if (cm?.length) {
-						cm.forEach(({
-							key,
-							color
-						}) => {
+						const cm = this._rna.pairAnnotColorMap;
+						if (cm?.length) {
+							cm.forEach(({
+								key,
+								color
+							}) => {
+								const row = document.createElement('div');
+								row.className = 'rv-setting-row';
+								row.innerHTML = `<span class="rv-setting-label">${key || ANNOT_MISSING_KEY}</span>` + `<input type="color" value="${color}" ` + `style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
+								const picker = row.querySelector('input[type=color]');
+								picker.addEventListener('input', () => {
+									const newColor = picker.value;
+									// Update all annotation objects with this key on current + layout
+									const updateAnns = anns => {
+										if (anns)
+											for (const a of anns)
+												if (a.key === key) a.color = newColor;
+									};
+									updateAnns(this._rna?.pairAnnotations);
+									updateAnns(this._structLayouts?.[this._currentStructIdx]?.pairAnnotations);
+									// Update colorMap entries
+									const updateCM = cm2 => {
+										if (cm2) {
+											const e = cm2.find(x => x.key === key);
+											if (e) e.color = newColor;
+										}
+									};
+									updateCM(this._rna?.pairAnnotColorMap);
+									updateCM(this._structLayouts?.[this._currentStructIdx]?.pairAnnotColorMap);
+									this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, this._rna?.isCovAnnot);
+									this._render();
+								});
+								paColorDiv.appendChild(row);
+							});
+						} else {
+							// No  color map (single  color), so show one picker using first annotation's  color
+							const defaultColor = pAnnots[0]?.color || ANNOT_DEFAULT_COLOR;
 							const row = document.createElement('div');
 							row.className = 'rv-setting-row';
-							row.innerHTML = `<span class="rv-setting-label">${key || ANNOT_MISSING_KEY}</span>` + `<input type="color" value="${color}" ` + `style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
+							row.innerHTML = `<span class="rv-setting-label">Annotation color</span>` + `<input type="color" value="${defaultColor}" ` + `style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
 							const picker = row.querySelector('input[type=color]');
 							picker.addEventListener('input', () => {
-								const newColor = picker.value;
-								// Update all annotation objects with this key on current + layout
+								const c = picker.value;
 								const updateAnns = anns => {
 									if (anns)
-										for (const a of anns)
-											if (a.key === key) a.color = newColor;
+										for (const a of anns) a.color = c;
 								};
 								updateAnns(this._rna?.pairAnnotations);
 								updateAnns(this._structLayouts?.[this._currentStructIdx]?.pairAnnotations);
-								// Update colorMap entries
-								const updateCM = cm2 => {
-									if (cm2) {
-										const e = cm2.find(x => x.key === key);
-										if (e) e.color = newColor;
-									}
-								};
-								updateCM(this._rna?.pairAnnotColorMap);
-								updateCM(this._structLayouts?.[this._currentStructIdx]?.pairAnnotColorMap);
-								this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, this._rna?.isCovAnnot);
 								this._render();
 							});
 							paColorDiv.appendChild(row);
-						});
-					} else {
-						// No  color map (single  color), so show one picker using first annotation's  color
-						const defaultColor = pAnnots[0]?.color || ANNOT_DEFAULT_COLOR;
-						const row = document.createElement('div');
-						row.className = 'rv-setting-row';
-						row.innerHTML = `<span class="rv-setting-label">Annotation color</span>` + `<input type="color" value="${defaultColor}" ` + `style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
-						const picker = row.querySelector('input[type=color]');
-						picker.addEventListener('input', () => {
-							const c = picker.value;
-							const updateAnns = anns => {
-								if (anns)
-									for (const a of anns) a.color = c;
-							};
-							updateAnns(this._rna?.pairAnnotations);
-							updateAnns(this._structLayouts?.[this._currentStructIdx]?.pairAnnotations);
-							this._render();
-						});
-						paColorDiv.appendChild(row);
-					}
+						}
 					} // end else (non-canon mode)
 				}
 			}
@@ -6174,7 +6260,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						_src: file.name
 					})));
 				} catch (_) {
-					/* skip */
+					// skip
 				}
 			}
 			this._renderXmlOrder();
@@ -6364,7 +6450,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const layout = layouts[targetIdx];
 						if (!layout) throw new Error('Selected structure not found.');
 						_lastAnnotLabel = layout.label || 'structure';
-						// ── .cov and .helixcov: route through the canonical load methods ──────
+						// .cov and .helixcov: route through the canonical load methods
 						if (isCov || isHelixCov) {
 							this._currentStructIdx = targetIdx;
 							this._rna = layout;
@@ -6373,17 +6459,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							this.fit();
 							continue;
 						}
-						// ── generic pair annotation file (inline path) ───────────────────────
+						// Generic pair annotation file (inline path)
 						const structPairs = getStructurePairSet(layout.structure || '');
 						// Generic pair annotation file
 						const remappedPairs = remapAnnotPairs(pairs, layout.positionLabels);
-						const pkSetAnnot = new Set((layout.pseudoPairs || []).map(ps => pairKey(ps.i, ps.j)));
-						if (layout.ssConsPkPairs)
-							for (const fps of Object.values(layout.ssConsPkPairs))
-								for (const ps of fps) pkSetAnnot.add(pairKey(ps.i, ps.j));
+						const pkSetAnnot = this._buildPkSet(layout);
 						const nestedStructPairs = new Set([...structPairs].filter(k => !pkSetAnnot.has(k)));
-						const nestedAnnotPairs = remappedPairs.filter(({ i, j }) => nestedStructPairs.has(pairKey(i, j)));
-						const pkAnnotPairs = remappedPairs.filter(({ i, j }) => pkSetAnnot.has(pairKey(i, j)));
+						const nestedAnnotPairs = remappedPairs.filter(({
+							i,
+							j
+						}) => nestedStructPairs.has(pairKey(i, j)));
+						const pkAnnotPairs = remappedPairs.filter(({
+							i,
+							j
+						}) => pkSetAnnot.has(pairKey(i, j)));
 						if (!nestedAnnotPairs.length && !pkAnnotPairs.length)
 							buildAnnotationArrays(remappedPairs, structPairs, filename, layout.label); // throws
 						let pairAnnotColorMap = null;
@@ -6394,8 +6483,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						}
 						if (pkAnnotPairs.length) {
 							const pkColorMap = buildAnnotColorMapAuto(pkAnnotPairs);
-							layout.pseudoCovAnnotations = pkAnnotPairs.map(({ i, j, category }) => ({
-								i, j,
+							layout.pseudoCovAnnotations = pkAnnotPairs.map(({
+								i,
+								j,
+								category
+							}) => ({
+								i,
+								j,
 								color: pkColorMap ? (pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
 							}));
 						}
@@ -6624,91 +6718,92 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		_canonPctToColor(pct) {
 			// User-adjustable stops: low (0%) → mid (50%) → high (100%)
-			const lo = this._covCanonLow  || '#d73027';
-			const mi = this._covCanonMid  || '#fee090';
+			const lo = this._covCanonLow || '#d73027';
+			const mi = this._covCanonMid || '#fee090';
 			const hi = this._covCanonHigh || '#1a9850';
-			const hexToRgb = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
-			const lerp = (a,b,t) => Math.round(a + (b-a)*t);
-			const lerpRgb = (c1,c2,t) => c1.map((v,i) => lerp(v,c2[i],t));
+			const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+			const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+			const lerpRgb = (c1, c2, t) => c1.map((v, i) => lerp(v, c2[i], t));
 			const t = Math.max(0, Math.min(100, pct)) / 100;
-			const [rLo,gLo,bLo] = hexToRgb(lo);
-			const [rMi,gMi,bMi] = hexToRgb(mi);
-			const [rHi,gHi,bHi] = hexToRgb(hi);
-			let r,g,b;
+			const [rLo, gLo, bLo] = hexToRgb(lo);
+			const [rMi, gMi, bMi] = hexToRgb(mi);
+			const [rHi, gHi, bHi] = hexToRgb(hi);
+			let r, g, b;
 			if (t < 0.5) {
-				[r,g,b] = lerpRgb([rLo,gLo,bLo],[rMi,gMi,bMi], t*2);
+				[r, g, b] = lerpRgb([rLo, gLo, bLo], [rMi, gMi, bMi], t * 2);
 			} else {
-				[r,g,b] = lerpRgb([rMi,gMi,bMi],[rHi,gHi,bHi], (t-0.5)*2);
+				[r, g, b] = lerpRgb([rMi, gMi, bMi], [rHi, gHi, bHi], (t - 0.5) * 2);
 			}
 			return `rgb(${r},${g},${b})`;
 		}
 		_applyCovCanonColoring() {
-			if (!this._rna?.covRawPairs) return;
-			const pairs = this._rna.covRawPairs;
-			// Remap to rendered coords so keys match pairAnnotations entries
-			const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
+			const isStockholm = !!this._rna?.baseDisplay;
 			if (this._covCanonMode) {
-				// Build lookup from rendered pairKey → canonPct
-				const canonMap = new Map();
-				for (let k = 0; k < remapped.length; k++) {
-					const rp = remapped[k];
-					const pct = pairs[k]?.canonPct;
-					if (pct != null) {
-						canonMap.set(pairKey(rp.i, rp.j), pct);
-						canonMap.set(pairKey(rp.j, rp.i), pct); // both orientations
+				if (isStockholm) {
+					const pairCanonPct = this._rna.pairCanonPct;
+					if (!pairCanonPct) return;
+					const pkSet = this._buildPkSet(this._rna);
+					const allStructPairs = getStructurePairSet(this._rna.structure || '');
+					const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
+					const nestedPairs = [],
+						pkPairs = [];
+					for (let ri = 0; ri < pairCanonPct.length; ri++) {
+						const pct = pairCanonPct[ri];
+						if (pct == null) continue;
+						const rj = this._rna.pairs[ri];
+						if (rj == null || rj <= ri) continue;
+						const pk = pairKey(ri, rj);
+						const entry = {
+							i: ri,
+							j: rj,
+							category: 'canon',
+							canonPct: pct
+						};
+						if (pkSet.has(pk)) pkPairs.push(entry);
+						else if (nestedStructPairs.has(pk)) nestedPairs.push(entry);
 					}
-				}
-				if (this._rna.pairAnnotations) {
-					for (const ann of this._rna.pairAnnotations) {
-						const pct = canonMap.get(pairKey(ann.i, ann.j));
-						if (pct != null) ann.color = this._canonPctToColor(pct);
+					for (const ps of (this._rna.pseudoPairs || [])) {
+						if (ps.i < ps.j && pairCanonPct[ps.i] != null)
+							pkPairs.push({
+								i: ps.i,
+								j: ps.j,
+								category: 'canon',
+								canonPct: pairCanonPct[ps.i]
+							});
 					}
-				}
-				if (this._rna.pseudoCovAnnotations) {
-					for (const ann of this._rna.pseudoCovAnnotations) {
-						const pct = canonMap.get(pairKey(ann.i, ann.j));
-						if (pct != null) ann.color = this._canonPctToColor(pct);
+					// Store in dedicated canon fields — never touch pairAnnotations
+					if (nestedPairs.length) {
+						const res = buildAnnotationArrays(nestedPairs, nestedStructPairs, 'canon', this._rna.label);
+						for (const ann of res.annotArr)
+							ann.color = this._canonPctToColor(pairCanonPct[ann.i] ?? 0);
+						this._rna._canonAnnotations = res.annotArr;
 					}
+					this._rna._canonPkAnnotations = pkPairs.map(p => ({
+						i: p.i,
+						j: p.j,
+						color: this._canonPctToColor(p.canonPct)
+					}));
 				}
+				this._rna._savedPairAnnotColorMap = this._rna.pairAnnotColorMap;
 				this._rna.pairAnnotColorMap = null;
 				this._buildPairAnnotLegend(null, true);
 			} else {
-				// Restore original E-value colours
-				const evalColorMap = new Map();
-				for (let k = 0; k < remapped.length; k++) {
-					const rp = remapped[k];
-					const col = pairs[k]?._color;
-					evalColorMap.set(pairKey(rp.i, rp.j), col);
-					evalColorMap.set(pairKey(rp.j, rp.i), col);
-				}
-				if (this._rna.pairAnnotations) {
-					for (const ann of this._rna.pairAnnotations) {
-						const col = evalColorMap.get(pairKey(ann.i, ann.j));
-						if (col) ann.color = col;
-					}
-				}
-				if (this._rna.pseudoCovAnnotations) {
-					for (const ann of this._rna.pseudoCovAnnotations) {
-						const col = evalColorMap.get(pairKey(ann.i, ann.j));
-						if (col) ann.color = col;
-					}
-				}
-				const colorMap = buildAnnotColorMapAuto(pairs);
-				const pairAnnotColorMap = colorMap
-					? Object.entries(colorMap).map(([key, color]) => ({ key, color }))
-					: null;
-				this._rna.pairAnnotColorMap = pairAnnotColorMap;
-				this._buildPairAnnotLegend(pairAnnotColorMap, true);
+				this._rna._canonAnnotations = null;
+				this._rna._canonPkAnnotations = null;
+				const restored = this._rna._savedPairAnnotColorMap ?? null;
+				this._rna.pairAnnotColorMap = restored;
+				this._rna._savedPairAnnotColorMap = null;
+				this._buildPairAnnotLegend(restored, !!restored);
 			}
 			this._render();
 		}
 		_buildPairAnnotLegend(colorMap, isCov = false) {
 			if (!this._palLegend) return;
 			const hasHelix = !!this._rna?.helixAnnotations?.length && !this._covCanonMode;
-			// ── canonical pairs gradient legend ──────────────────────────────
+			// canonical pairs gradient legend
 			if (this._covCanonMode && isCov && !colorMap) {
-				const lo = this._covCanonLow  || '#d73027';
-				const mi = this._covCanonMid  || '#fee090';
+				const lo = this._covCanonLow || '#d73027';
+				const mi = this._covCanonMid || '#fee090';
 				const hi = this._covCanonHigh || '#1a9850';
 				this._palLegend.innerHTML =
 					`<h4>% canonical pairs</h4>` +
@@ -6732,11 +6827,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._palLegend.innerHTML = `<h4>${legendTitle}</h4>${rows}${helixRow}`;
 			this._palLegend.style.display = this._showPairAnnotations ? 'block' : 'none';
 		}
-		/*
-		 Cycle through layout algorithms.
-		 In Auto mode each structure is independently scored and the algorithm
-		 with fewer overlapping base circles is used.
-		 */
+		//
+		// Cycle through layout algorithms.
+		// In Auto mode each structure is independently scored and the algorithm
+		// with fewer overlapping base circles is used.
+		//
 		toggleLayout() {
 			const _curAlgo = this._structLayouts?.[this._currentStructIdx]?._algo ?? this._rna?._algo ?? this._lastPickedAlgo ?? 'radiate';
 			const current = this._layoutAlgo === 'auto' ? _curAlgo : this._layoutAlgo;
@@ -6761,7 +6856,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._copyLayoutAnnotations(existing, this._structLayouts[savedIdx]);
 					this._currentStructIdx = savedIdx;
 					this._rna = this._structLayouts[savedIdx];
-					this._render();
+					if (this._covCanonMode && this._rna.pairCanonPct) this._applyCovCanonColoring();
+					else this._render();
 					if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
 					this.fit();
 				} else {
@@ -6770,17 +6866,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const rna = this._computeLayout(prev.sequence, prev.structure, prev.values, prev.colorMap, prev.pairAnnotations, prev.pairAnnotColorMap, prev.baseDisplay, prev.positionLabels);
 					this._copyLayoutAnnotations(prev, rna);
 					this._rna = rna;
-					this._render();
+					if (this._covCanonMode && this._rna.pairCanonPct) this._applyCovCanonColoring();
+					else this._render();
 					if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
 					this.fit();
 				}
 			}
 		}
-		/*
-		 Sync the layout button label and  color to `algo` ('radiate' or 'naview').
-		 Always reflects the algorithm actually being rendered, regardless of whether
-		 the internal _layoutAlgo is 'auto', 'naview', or 'radiate'.
-		*/
+		//
+		// Sync the layout button label and  color to `algo` ('radiate' or 'naview').
+		// Always reflects the algorithm actually being rendered, regardless of whether
+		// the internal _layoutAlgo is 'auto', 'naview', or 'radiate'.
+		//
 		_syncLayoutBtn(algo) {
 			if (!this._layoutBtn) return;
 			// The button always shows the TARGET (where clicking takes you),
@@ -6794,12 +6891,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._layoutBtn.classList.remove('rv--naview', 'rv--auto');
 			if (algo === 'naview') this._layoutBtn.classList.add('rv--naview');
 		}
-		/*
-		 Choose the layout with fewer overlapping base circles.
-		 Both radiate and NAView are computed; the one with the lower
-		 overlap score (fast spatial-grid count) is returned.
-		 Records the choice in _lastPickedAlgo and immediately syncs the button.
-		*/
+		//
+		// Choose the layout with fewer overlapping base circles.
+		// Both radiate and NAView are computed; the one with the lower
+		// overlap score (fast spatial-grid count) is returned.
+		// Records the choice in _lastPickedAlgo and immediately syncs the button.
+		//
 		_pickLayout(pairs, n) {
 			const rad = drawRNARadiate(pairs, n);
 			const nav = drawRNANAView(pairs, n);
@@ -6814,18 +6911,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._syncLayoutBtn(this._lastPickedAlgo);
 			return useNav ? this._autoRotateLayout(nav) : rad;
 		}
-		/*
-		 Rotate a NAView layout result so the structure fills the canvas as
-		 large as possible after fit().
-		 
-		 Tries 180 candidate angles (every 2°; the bounding-box has period π
-		 so this covers all distinct orientations) and keeps the angle that
-		 maximises min(canvasW/W, canvasH/H).  Falls back to minimising
-		 max(W,H) when the canvas is not yet rendered.
-		 
-		 Both coords and loop-centre arrays are rotated so helix-rotation
-		 interaction remains correct after the transform.
-		*/
+		//
+		// Rotate a NAView layout result so the structure fills the canvas as
+		// large as possible after fit().
+		//
+		// Tries 180 candidate angles (every 2°; the bounding-box has period π
+		// so this covers all distinct orientations) and keeps the angle that
+		// maximises min(canvasW/W, canvasH/H).  Falls back to minimising
+		// max(W,H) when the canvas is not yet rendered.
+		//
+		// Both coords and loop-centre arrays are rotated so helix-rotation
+		// interaction remains correct after the transform.
+		//
 		_autoRotateLayout(result) {
 			const n = result.coords.length;
 			if (n < 2) return result;
@@ -6927,18 +7024,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 		}
-		/*
-		 Draw  colored boxes behind each annotated base pair.
-		 
-		 Each annotation is an object with:
-		 - i           {number}  0-indexed base position (lower of the pair)
-		 - j           {number}  optional partner (defaults to pairs[i])
-		 - color       {string}  hex  color, use this OR value
-		 - value       {number}  mapped through pairAnnotColorMap
-		 - opacity     {number}  fill opacity (default: 0.3)
-		 - strokeWidth {number}  border thickness (default: 1.5)
-		 - padding     {number}  extra space around pair (default: 5 scene units)
-		*/
+		//
+		// Draw  colored boxes behind each annotated base pair.
+		//
+		// Each annotation is an object with:
+		// - i           {number}  0-indexed base position (lower of the pair)
+		// - j           {number}  optional partner (defaults to pairs[i])
+		// - color       {string}  hex  color, use this OR value
+		// - value       {number}  mapped through pairAnnotColorMap
+		// - opacity     {number}  fill opacity (default: 0.3)
+		// - strokeWidth {number}  border thickness (default: 1.5)
+		// - padding     {number}  extra space around pair (default: 5 scene units)
+		//
 		_renderPairAnnotations(g, coords, pairs, annotations, colorMap, baseR, masterOpacity = 1) {
 			// Read CSS variable defaults (per-annotation fields override these)
 			const cs = getComputedStyle(this._root);
@@ -6976,11 +7073,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				g.appendChild(this._mkPairAnnotRect(x1, y1, x2, y2, color, fopacity, sw, pad, baseR));
 			}
 		}
-		/*
-		 Validate a pairAnnotations array against the actual pairs of a structure.
-		 Returns the first error string found, or null if everything is valid.
-		 Called during load, before _render(), so _showError can be used safely.
-		*/
+		//
+		// Validate a pairAnnotations array against the actual pairs of a structure.
+		// Returns the first error string found, or null if everything is valid.
+		// Called during load, before _render(), so _showError can be used safely.
+		//
 		_validatePairAnnotations(annotations, pairs, n) {
 			for (const ann of annotations) {
 				const i = ann.i,
@@ -7167,8 +7264,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Helix cov bounding boxes (behind everything)
 			this._renderHelixAnnotations(g_helix, coords, n, baseR);
 			// Pair annotation boxes
-			if (this._showPairAnnotations && this._rna.pairAnnotations?.length) {
-				this._renderPairAnnotations(g_annot, coords, pairs, this._rna.pairAnnotations, this._rna.pairAnnotColorMap, baseR);
+			if (this._showPairAnnotations) {
+				if (this._rna.pairAnnotations?.length)
+					this._renderPairAnnotations(g_annot, coords, pairs, this._rna.pairAnnotations, this._rna.pairAnnotColorMap, baseR);
+				if (this._covCanonMode && this._rna._canonAnnotations?.length)
+					this._renderPairAnnotations(g_annot, coords, pairs, this._rna._canonAnnotations, null, baseR);
 			}
 			// Precompute centroid + bounding radius
 			// Used by both pseudoknot routing and index-label placement
@@ -7224,9 +7324,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
 				const isCanon = this._isCanonPair(b1, b2);
 				if (isStockholm) {
-					// Stockholm: simplified — all canonical as single line, non-canonical as dot
-					// Shortened by 1.44×baseR on each side via _mkStockholmBond
-					this._mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR)
+					// Stockholm: canonical majority (by alignment) draws a line, non-canonical a dot
+					const canonPct = this._rna.pairCanonPct?.[i] ?? null;
+					this._mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR, canonPct)
 						.forEach(el => g_bp.appendChild(el));
 				} else if (!isCanon) {
 					if (this._relaxedSequence) {
@@ -7593,6 +7693,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const hasColorLegend = !this._noLegend && this._showColors && values && colorMap?.stops?.length;
 			const hasHelixAnnot = !this._noLegend && this._showPairAnnotations && !this._covCanonMode && !!this._rna?.helixAnnotations?.length;
 			const hasPAnnotLegend = !this._noLegend && this._showPairAnnotations && ((pairAnnotColorMap?.length && this._rna.isCovAnnot) || hasHelixAnnot);
+			const hasCanonLegend = !this._noLegend && this._covCanonMode && !!this._rna?.pairCanonPct;
 			const hasAlnLegend = !this._noLegend && !!this._rna?.baseDisplay;
 			// Legend scale, proportional to the shorter viewBox dimension
 			// This keeps legends readable on both tiny and huge structures.
@@ -7653,9 +7754,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const alCol1W = alCR * 2 + LX + alLblW;
 			const alCol2W = LFONT * 1.4 + LX + alLblW;
 			const alW = alCol1W + 2 * LX + alCol2W;
-			const alH = LY + ALN_CIRC.length * LROW + LROW * 0.6 + 2 * LROW + LY;
+			const alH = LY + ALN_CIRC.length * LROW + LROW * 0.6 + 2 * LROW + LY +
+				(hasCanonLegend ? LROW * 0.5 + LFONT_SM + LROW * 0.8 + LROW + LY : 0);
 			// Extra vertical space for legends row
-			const lgndH2 = (hasColorLegend || hasPAnnotLegend || hasAlnLegend) ? Math.max(hasColorLegend ? clH : 0, hasPAnnotLegend ? paH : 0, hasAlnLegend ? alH : 0) + LSEP : 0;
+			const lgndH2 = (hasColorLegend || hasPAnnotLegend || hasAlnLegend || hasCanonLegend) ? Math.max(hasColorLegend ? clH : 0, hasPAnnotLegend ? paH : 0, hasAlnLegend ? alH : 0) + LSEP : 0;
 			vbH += lgndH2;
 			// Extend viewBox width if legend would overflow the structure bounds
 			if (hasColorLegend && vbW < clW + 2 * pad) vbW = clW + 2 * pad;
@@ -7989,17 +8091,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					ll.textContent = label;
 					exp.appendChild(ll);
 				});
-				// ── base-pair type rows (under circles column) ────────────
+				// Base-pair type rows (under circles column)
 				const bpRow0Y = rowY0 + ALN_CIRC.length * LROW + LROW * 0.6;
-				const bpNW   = LFONT * 1.4;
+				const bpNW = LFONT * 1.4;
 				const bpBond = LFONT * 0.8;
 				// Place the two Ns at fixed centres so the bond sits exactly between them
-				const bpNcL = lx + alCR;                  // centre-x of left N (aligns with circle column)
-				const bpNcR = bpNcL + bpNW + bpBond;      // centre-x of right N
-				[
-					{ bond: 'wc', label: 'Watson-Crick'  },
-					{ bond: 'nc', label: 'Non-canonical' },
-				].forEach(({ bond, label }, idx) => {
+				const bpNcL = lx + alCR; // centre-x of left N (aligns with circle column)
+				const bpNcR = bpNcL + bpNW + bpBond; // centre-x of right N
+				[{
+						bond: 'wc',
+						label: 'Canonical'
+					},
+					{
+						bond: 'nc',
+						label: 'Non-canonical'
+					},
+				].forEach(({
+					bond,
+					label
+				}, idx) => {
 					const ry = bpRow0Y + idx * LROW + alCR;
 					// left N — matches inset base letter pattern: y=ry, dy=0.35em
 					const nL = document.createElementNS(NS, 'text');
@@ -8018,8 +8128,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const bx2 = bpNcR - bpNW * 0.5 - LX * 0.2;
 					if (bond === 'wc') {
 						const ln = document.createElementNS(NS, 'line');
-						ln.setAttribute('x1', bx1); ln.setAttribute('y1', ry);
-						ln.setAttribute('x2', bx2); ln.setAttribute('y2', ry);
+						ln.setAttribute('x1', bx1);
+						ln.setAttribute('y1', ry);
+						ln.setAttribute('x2', bx2);
+						ln.setAttribute('y2', ry);
 						ln.setAttribute('stroke', C.basepair || '#1f2328');
 						ln.setAttribute('stroke-width', Math.max(0.5, LS * 1.2));
 						exp.appendChild(ln);
@@ -8054,17 +8166,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					bpLbl.textContent = label;
 					exp.appendChild(bpLbl);
 				});
-				// ── % canonical pairs gradient (beside base-pair type column) ──
-				if (this._covCanonMode && this._rna?.covRawPairs) {
-					const lo = this._covCanonLow  || '#d73027';
-					const mi = this._covCanonMid  || '#fee090';
+				// % canonical pairs gradient (beside base-pair type column)
+				if (this._covCanonMode && this._rna?.pairCanonPct) {
+					const lo = this._covCanonLow || '#d73027';
+					const mi = this._covCanonMid || '#fee090';
 					const hi = this._covCanonHigh || '#1a9850';
-					// x: right of the bp label column ("Watson-Crick" ~ 11 chars at LFONT)
+					// x: right of the bp label column ("Non-canonical" ~ 13 chars at LFONT)
 					const canonX = bpNcR + bpNW * 0.5 + LX + LFONT * 7.5 + LX * 4;
 					const gradW = LROW * 5;
 					const gradH = LSWH;
-					const hdrY  = rowY0 + ALN_LETT.length * LROW + LROW * 1.7;
-					const barY  = hdrY + LROW * 0.85;
+					const hdrY = rowY0 + ALN_LETT.length * LROW + LROW * 1.7;
+					const barY = hdrY + LROW * 0.85;
 					// sub-header
 					const canonHdr = document.createElementNS(NS, 'text');
 					canonHdr.setAttribute('x', canonX + gradW * 0.5);
@@ -8082,7 +8194,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const grad = document.createElementNS(NS, 'linearGradient');
 					const gradId = 'rv-canon-grad';
 					grad.setAttribute('id', gradId);
-					[{ offset: '0%', color: lo }, { offset: '50%', color: mi }, { offset: '100%', color: hi }].forEach(({ offset, color }) => {
+					[{
+						offset: '0%',
+						color: lo
+					}, {
+						offset: '50%',
+						color: mi
+					}, {
+						offset: '100%',
+						color: hi
+					}].forEach(({
+						offset,
+						color
+					}) => {
 						const stop = document.createElementNS(NS, 'stop');
 						stop.setAttribute('offset', offset);
 						stop.setAttribute('stop-color', color);
@@ -8099,7 +8223,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					bar.setAttribute('fill', `url(#${gradId})`);
 					exp.appendChild(bar);
 					// 0% / 50% / 100% labels
-					[{ pct: '0%', anchor: 'middle', x: canonX }, { pct: '50%', anchor: 'middle', x: canonX + gradW * 0.5 }, { pct: '100%', anchor: 'middle', x: canonX + gradW }].forEach(({ pct, anchor, x }) => {
+					[{
+						pct: '0%',
+						anchor: 'middle',
+						x: canonX
+					}, {
+						pct: '50%',
+						anchor: 'middle',
+						x: canonX + gradW * 0.5
+					}, {
+						pct: '100%',
+						anchor: 'middle',
+						x: canonX + gradW
+					}].forEach(({
+						pct,
+						anchor,
+						x
+					}) => {
 						const lbl = document.createElementNS(NS, 'text');
 						lbl.setAttribute('x', x);
 						lbl.setAttribute('y', barY + gradH + LFONT * 1.1);
@@ -8112,7 +8252,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					});
 				}
 			}
-			// ── PK inset panels in SVG export ─────────────────────────────────
+			// PK inset panels in SVG export
 			// Mirrors _render() which handles both pseudoPairs and ssConsPkPairs
 			const expIsStockholm = !!this._rna?.baseDisplay;
 			if (expIsStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
@@ -8421,7 +8561,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								cx3 = panelX + pk_col3x;
 							const b5 = (this._rna.sequence?.[ps.i] || '?').toUpperCase();
 							const b3 = (this._rna.sequence?.[ps.j] || '?').toUpperCase();
-							this._mkStockholmBond(cx5, ry, cx3, ry, b5, b3, pk_baseR, dotR2)
+							const canonPct = this._rna.pairCanonPct?.[ps.i] ?? null;
+							this._mkStockholmBond(cx5, ry, cx3, ry, b5, b3, pk_baseR, dotR2, canonPct)
 								.forEach(el => panelG.appendChild(el));
 						});
 					});
@@ -8987,7 +9128,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						break;
 					}
 				}
-				if (outside) this.fit();
+				if (outside && this._autoRefit) this.fit();
 			}
 		}
 		// Multi-structure support
@@ -9114,6 +9255,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (s.ssConsFeatures) _sl.ssConsFeatures = s.ssConsFeatures;
 				if (s.ssConsPkPairs) _sl.ssConsPkPairs = s.ssConsPkPairs;
 				if (s.ssEnds) _sl.ssEnds = s.ssEnds;
+				if (s.pairCanonPct) _sl.pairCanonPct = s.pairCanonPct;
 				if (s.pseudoCovAnnotations) _sl.pseudoCovAnnotations = s.pseudoCovAnnotations;
 				if (s.pseudoHelixCovAnnotations) _sl.pseudoHelixCovAnnotations = s.pseudoHelixCovAnnotations;
 				if (s.isCovAnnot) _sl.isCovAnnot = s.isCovAnnot;
@@ -9137,11 +9279,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					isCovAnnot: s.isCovAnnot || sl?.isCovAnnot || undefined,
 					ssConsFeatures: s.ssConsFeatures || sl?.ssConsFeatures || undefined,
 					ssConsPkPairs: s.ssConsPkPairs || sl?.ssConsPkPairs || undefined,
+					pairCanonPct: s.pairCanonPct || sl?.pairCanonPct || undefined,
 				};
 			});
 			this._lastConfig = config;
 			this._buildStructSwitcher();
 			this._rna = this._structLayouts[this._currentStructIdx];
+			// Show % canonical toggle for Stockholm structures; always reset mode on new load
+			this._covCanonMode = false;
+			if (this._chkCovCanon) {
+				this._chkCovCanon.classList.toggle('rv--active', this._covCanonMode);
+				this._chkCovCanon.style.display = this._rna.pairCanonPct ? '' : 'none';
+			}
+			if (this._covCanonMode && this._rna?.pairCanonPct) this._applyCovCanonColoring();
 			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, this._rna?.isCovAnnot);
 			this._updateStatusBar();
 			if (this._rna.values) this._updateLegend(this._rna.colorMap);
@@ -9190,6 +9340,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const structure = this._showSsEnds && ends ? ends.fullStruct.join('') : s.structure;
 			const baseDisplay = this._showSsEnds && ends ? ends.fullBaseDisplay : s.baseDisplay || null;
 			const positionLabels = this._showSsEnds && ends ? ends.fullPositionLabels : s.positionLabels || null;
+			const pairCanonPct = this._showSsEnds && ends?.fullCanonPct ? ends.fullCanonPct : s.pairCanonPct || src.pairCanonPct || null;
 
 			const shiftPairs = (arr) => !arr || shift === 0 ? arr :
 				arr.map(p => ({
@@ -9263,6 +9414,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			_sl.isCovAnnot = src.isCovAnnot;
 			_sl.pseudoCovAnnotations = src.pseudoCovAnnotations || undefined;
 			_sl.covRawPairs = src.covRawPairs || layout.covRawPairs || undefined;
+			_sl.pairCanonPct = pairCanonPct || undefined;
+			_sl._canonAnnotations = null;
+			_sl._canonPkAnnotations = null;
+			_sl._savedPairAnnotColorMap = null;
 
 			// Store the trimmed-index base on the new layout so future rebuilds
 			// always have a stable unshifted source, even after loadCov writes onto _rna.
@@ -9270,7 +9425,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._structLayouts[idx] = _sl;
 			this._rna = _sl;
 			// Re-apply canonical pairs colouring if the toggle is active
-			if (this._covCanonMode && _sl.covRawPairs) this._applyCovCanonColoring();
+			if (this._covCanonMode && (_sl.pairCanonPct || _sl.covRawPairs)) this._applyCovCanonColoring();
 			this._render();
 			this.fit();
 		}
@@ -9416,7 +9571,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				showR3dInsets: this._showR3dInsets,
 				showR3dLabels: this._showR3dLabels,
 				showSsEnds: this._showSsEnds,
+				covCanonMode: this._covCanonMode,
 			};
+			// Clear transient canon state from the source — it will be rebuilt on switch-back
+			srcRna._canonAnnotations = null;
+			srcRna._canonPkAnnotations = null;
+			srcRna._savedPairAnnotColorMap = null;
 			// Restore toggle state from the target layout (if previously saved)
 			if (tgtRna._toggleState) {
 				const s = tgtRna._toggleState;
@@ -9427,6 +9587,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._showR3dInsets = s.showR3dInsets;
 				this._showR3dLabels = s.showR3dLabels;
 				this._showSsEnds = s.showSsEnds;
+				this._covCanonMode = s.covCanonMode ?? false;
 				// Sync button visual states
 				if (this._chkPAnnot) this._chkPAnnot.classList.toggle('rv--active', this._showPairAnnotations);
 				if (this._chkColors) this._chkColors.classList.toggle('rv--active', this._showColors);
@@ -9435,6 +9596,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (this._chkR3dInsets) this._chkR3dInsets.classList.toggle('rv--active', this._showR3dInsets);
 				if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
 				if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
+			} else {
+				// No saved state — reset covCanonMode for the new structure
+				this._covCanonMode = false;
+			}
+			// Update canon toggle button visibility and state
+			if (this._chkCovCanon) {
+				this._chkCovCanon.style.display = tgtRna.pairCanonPct ? '' : 'none';
+				this._chkCovCanon.classList.toggle('rv--active', this._covCanonMode);
 			}
 
 			this._currentStructIdx = idx;
@@ -9446,13 +9615,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			} else {
 				this._rna = tgtRna;
 				this._applyStructIndices(tgtRna, this._lastConfig);
-				this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
 				this._updateStatusBar();
 				if (tgtRna.values) this._updateLegend(tgtRna.colorMap);
 				this._updateLegendVisibility();
 				if (this._showSsEnds && tgtRna?.ssEnds) {
 					this._rebuildCurrentLayout();
+				} else if (this._covCanonMode && tgtRna.pairCanonPct) {
+					this._applyCovCanonColoring();
+					this.fit();
 				} else {
+					this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
 					this._render();
 					this.fit();
 				}
@@ -9508,6 +9680,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._updateLegendVisibility();
 					if (this._showSsEnds && tgtRna?.ssEnds) {
 						this._rebuildCurrentLayout();
+					} else if (this._covCanonMode && tgtRna.pairCanonPct) {
+						this._applyCovCanonColoring();
+						this.fit();
 					} else {
 						this._render();
 						this.fit();

@@ -74,8 +74,8 @@ if (cliArgs.help || cliArgs.h) {
                                 Note: --rfam and --structureFile are mutually exclusive
  --xml              <string>    Reactivity file (in RNA Framework's XML format)
  --basePairAnno     <string>    Pair-annotation file (.tsv, .txt) or R-scape's .cov file
- --percCanonical                If an R-scape's .cov file containing the "% canonical_pairs" field is
-                                provided, base-pairs will be colored according to its value
+ --percCanonical                For Stockholm alignments, colors every base-pair by % canonical pairs 
+                                computed from the alignment
  --helixCovAnno     <string>    R-scape's .helixcov helix-level covariation file
  --layout           <string>    Layout for RNA secondary structure rendering:
                                   - auto (automatically determines the best layout 
@@ -478,14 +478,14 @@ async function runHeadless(args) {
     if (d.annotText) {
       try {
         viewer.loadCov(d.annotText);
-        if (d.percCanonical && viewer._rna?.covRawPairs?.hasCovCanon) {
-            viewer._covCanonMode = true;
-            viewer._applyCovCanonColoring();
-        }
       } catch (e) {
         window.electronAPI.headlessError('Cannot load annotations: ' + e.message);
         return;
       }
+    }
+    if (d.percCanonical && viewer._rna?.pairCanonPct) {
+        viewer._covCanonMode = true;
+        viewer._applyCovCanonColoring();
     }
 
     /* Apply helix-level covariation post-load */
