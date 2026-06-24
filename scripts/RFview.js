@@ -4984,7 +4984,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					// Use curve for pure-loop groups, straight lines for helix-arm groups
 					let d;
 					const bezSegs = []; // { p0,c1,c2,p1 } per segment
-					if (pts.length < 3 || !allLoop) {
+					if (pts.length < 2) {
+						// Single-point annotation — no line to draw
+					} else if (pts.length < 3 || !allLoop) {
 						d = `M ${pts[0].x} ${pts[0].y}`;
 						for (let k = 1; k < pts.length; k++) {
 							d += ` L ${pts[k].x} ${pts[k].y}`;
@@ -5063,11 +5065,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						return cubicPt(bezSegs[si], u);
 					};
 					const path = document.createElementNS(NS, 'path');
-					path.setAttribute('d', d);
-					path.setAttribute('class', 'rv-ss-cons-line');
-					path.setAttribute('data-feat', name);
-					path.style.cssText = `stroke:${lineCol};stroke-width:${bbW};fill:none;stroke-linecap:round;stroke-linejoin:round`;
-					gLines.appendChild(path);
+					if (!d) {
+						// pts.length < 2 — no path to draw, skip
+					} else {
+						path.setAttribute('d', d);
+						path.setAttribute('class', 'rv-ss-cons-line');
+						path.setAttribute('data-feat', name);
+						path.style.cssText = `stroke:${lineCol};stroke-width:${bbW};fill:none;stroke-linecap:round;stroke-linejoin:round`;
+						gLines.appendChild(path);
+					}
 
 					// Pre-compute segment bounding boxes — added AFTER label placement
 					const segM = bbW / 2 + lSz * 0.5;
@@ -7796,8 +7802,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const exp = document.createElementNS(NS, 'svg');
 			exp.setAttribute('xmlns', NS);
 			exp.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
-			exp.setAttribute('width', vbW * 2);
-			exp.setAttribute('height', vbH * 2);
+			const maxPx = 4000;
+			const scale = Math.min(1, maxPx / Math.max(vbW, vbH));
+			exp.setAttribute('width', Math.round(vbW * scale));
+			exp.setAttribute('height', Math.round(vbH * scale));
 			// Stylesheet (user units, scales with circles)
 			const st = document.createElementNS(NS, 'style');
 			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
@@ -8347,7 +8355,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const newVbY = oldVbY - pk_blockH;
 					const oldVbH = parseFloat(exp.getAttribute('viewBox').split(' ')[3]);
 					exp.setAttribute('viewBox', `${vbX} ${newVbY} ${vbW} ${oldVbH + pk_blockH}`);
-					exp.setAttribute('height', (oldVbH + pk_blockH) * 2);
+					exp.setAttribute('height', Math.round((oldVbH + pk_blockH) * scale));
 
 					const pk_startX = vbX + (vbW - pk_totalW) / 2;
 					const pk_startY = newVbY + pk_gap * 0.4;
@@ -8591,6 +8599,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					lMaxY = Math.max(lMaxY, y + h);
 					expanded = true;
 				});
+				exp.querySelectorAll('.rv-ss-cons-line').forEach(el => {
+					const d = el.getAttribute('d') || '';
+					const nums = d.match(/-?[\d.e+]+/g);
+					if (!nums || nums.length < 2) return;
+					for (let k = 0; k < nums.length - 1; k += 2) {
+						const x = parseFloat(nums[k]);
+						const y = parseFloat(nums[k + 1]);
+						if (isNaN(x) || isNaN(y)) continue;
+						lMinX = Math.min(lMinX, x);
+						lMinY = Math.min(lMinY, y);
+						lMaxX = Math.max(lMaxX, x);
+						lMaxY = Math.max(lMaxY, y);
+					}
+					expanded = true;
+				});
 				exp.querySelectorAll('.rv-ss-cons-leader').forEach(el => {
 					[1, 2].forEach(n => {
 						const x = parseFloat(el.getAttribute(`x${n}`) || 0);
@@ -8608,8 +8631,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const newW = Math.max(cvX + cvW, lMaxX + pad) - newX;
 					const newH = Math.max(cvY + cvH, lMaxY + pad) - newY;
 					exp.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
-					exp.setAttribute('width', newW * 2);
-					exp.setAttribute('height', newH * 2);
+					const newScale = Math.min(1, maxPx / Math.max(newW, newH));
+					exp.setAttribute('width', Math.round(newW * newScale));
+					exp.setAttribute('height', Math.round(newH * newScale));
 				}
 			}
 			const exportId = this._id || this._structures?.[this._currentStructIdx]?.label || this._rna?._label || 'RF_structure';
