@@ -905,13 +905,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		];
 		// Detect format from header: presence of 'in_CaCoFold' or 'in_fold' means two leading * columns.
 		const isCaCoFold = /^#.*\bin_(?:CaCoFold|fold)\b/m.test(text);
-		const off = isCaCoFold ? 1 : 0;
 		const pairs = [];
 		for (const raw of text.replace(/\r/g, '').split('\n')) {
 			const line = raw.trim();
 			if (!line.startsWith('*')) continue;
 			if (line.startsWith('#')) continue;
 			const cols = line.split(/\s+/);
+			const off = (isCaCoFold && cols[1] === '*') ? 1 : 0;
 			if (cols.length < 5 + off) continue;
 			const left = parseInt(cols[1 + off]);
 			const right = parseInt(cols[2 + off]);
@@ -8331,7 +8331,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 				if (expAllStems.length && this._showR3dInsets !== false) {
 					// Panel geometry (same proportions as interactive panels)
-					const pk_baseR = BASE_R * Math.min(LS, 1.2) * 0.57 * 1.2;
+					const pk_baseR = BASE_R; // * Math.min(LS, 1.2) * 0.57 * 1.2;
 					const pk_colSep = pk_baseR * 6;
 					const pk_rowStep = pk_baseR * 3.2;
 					const pk_svgW = pk_colSep + pk_baseR * 4;
@@ -8341,7 +8341,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const pk_vPad = Math.max(pk_baseR * 1.5, _pkHelixPad / 2 + pk_baseR * 0.5);
 					const pk_hPad = pk_baseR * 2;
 					const pk_gap = pk_baseR * 4;
-					const pk_titleH = indexFSz * 1.0 + pk_baseR * 2.5;
+					const pk_titleH = indexFSz * 1.8 + pk_baseR * 2.5;
 
 					const pk_totalW = expAllStems.length * (pk_svgW + pk_hPad) - pk_hPad;
 					const pk_maxH = Math.max(...expAllStems.map(({
@@ -8419,7 +8419,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						titleT.setAttribute('y', pk_startY + pk_titleH * 0.65);
 						titleT.setAttribute('text-anchor', 'middle');
 						titleT.setAttribute('font-family', C.indexFont);
-						titleT.setAttribute('font-size', indexFSz);
+						titleT.setAttribute('font-size', indexFSz * 1.8);
 						titleT.setAttribute('font-weight', '700');
 						titleT.setAttribute('fill', C.muted);
 						titleT.textContent = lbl.toUpperCase();
