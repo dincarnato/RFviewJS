@@ -1,5 +1,5 @@
 {
-  "name": "RFview",
+  "name": "RFview-cli",
   "version": "1.1.2",
   "description": "RFview \u2014 headless CLI build (display-free, jsdom-based)",
   "main": "main.js",
