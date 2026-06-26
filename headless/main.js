@@ -38,14 +38,16 @@ function parseCliArgs(argv) {
 }
 
 const cliArgs = parseCliArgs(process.argv);
+
+// Resolve the app root reliably in both dev and packaged modes
+const APP_ROOT = app.isPackaged
+    ? path.join(process.resourcesPath, 'app')
+    : path.join(__dirname, '..');
 const isCLI = Boolean(cliArgs.structureFile || cliArgs.rfam);
 
 // These must be called immediately in CLI mode
 if (isCLI) {
 
-    app.disableHardwareAcceleration();
-    app.commandLine.appendSwitch('disable-gpu');
-    app.commandLine.appendSwitch('disable-software-rasterizer');
     app.dock?.hide();
 
 }
@@ -177,20 +179,20 @@ function createWindow() {
         height:    s.h || 800,
         minWidth:  900, minHeight: 600,
         webPreferences: {
-            preload:          path.join(__dirname, 'preload.js'),
+            preload:          path.join(APP_ROOT, 'preload.js'),
             contextIsolation: true,
             nodeIntegration:  false,
         },
         backgroundColor: '#ffffff',
         show: false,
-        icon: path.join(__dirname, 'assets', 'icon.png'),
+        icon: path.join(APP_ROOT, 'assets', 'icon.png'),
 
     });
 
     if (s.maximized) win.maximize();
 
     win.once('ready-to-show', () => win.show());
-    win.loadFile(path.join(__dirname, 'scripts', 'index.html'));
+    win.loadFile(path.join(APP_ROOT, 'scripts', 'index.html'));
     win.on('close', () => saveState(win));
 
     // Enable Cmd-A (macOS) / Ctrl-A (other) select-all in text inputs
@@ -294,33 +296,33 @@ ipcMain.handle('fetch-rfam', async (_, rfamId) => {
 async function runHeadless(args) {
 
     if (!args.structureFile && !args.rfam) {
-        console.error('[!] Error: either --structureFile or --rfam is required'); app.exit(1); return;
+        console.error('[!] Error: either --structureFile or --rfam is required'); process.exit(1);
     }
 
     if (args.rfam && !/^RF\d+$/i.test(args.rfam)) {
-        console.error(`[!] Error: invalid Rfam ID "${args.rfam}" — must be RF followed by digits`); app.exit(1); return;
+        console.error(`[!] Error: invalid Rfam ID "${args.rfam}" — must be RF followed by digits`); process.exit(1);
     }
 
     if (args.structureFile && !fs.existsSync(args.structureFile)) {
-        console.error(`[!] Error: Structure file ${args.structureFile} not found`); app.exit(1); return;
+        console.error(`[!] Error: Structure file ${args.structureFile} not found`); process.exit(1);
     }
 
     if (args.xml && !fs.existsSync(args.xml)) {
-        console.error(`[!] Error: Reactivity file ${args.xml} not found`); app.exit(1); return;
+        console.error(`[!] Error: Reactivity file ${args.xml} not found`); process.exit(1);
     }
 
     if (args.basePairAnno && !fs.existsSync(args.basePairAnno)) {
-        console.error(`[!] Error: Base-pair annotation/covariation file ${args.basePairAnno} not found`); app.exit(1); return;
+        console.error(`[!] Error: Base-pair annotation/covariation file ${args.basePairAnno} not found`); process.exit(1);
     }
 
     if (args.helixCovAnno && !fs.existsSync(args.helixCovAnno)) {
-        console.error(`[!] Error: Helix covariation file ${args.helixCovAnno} not found`); app.exit(1); return;
+        console.error(`[!] Error: Helix covariation file ${args.helixCovAnno} not found`); process.exit(1);
     }
 
     const validLayouts = ['auto', 'naview', 'radiate'];
     const layout = (args.layout || 'auto').toLowerCase();
     if (!validLayouts.includes(layout)) {
-        console.error(`[!] Error: unknown layout "${layout}" (available: ${validLayouts.join(', ')})`); app.exit(1); return;
+        console.error(`[!] Error: unknown layout "${layout}" (available: ${validLayouts.join(', ')})`); process.exit(1);
     }
 
     let structureText, structureName;
@@ -349,7 +351,7 @@ async function runHeadless(args) {
         }
     if (!structureText.trimStart().startsWith('# STOCKHOLM')) {
         console.error(`[!] Error: Rfam returned no valid alignment for "${rfamId}". Please verify ID.`);
-        app.exit(1);
+        process.exit(1);
         return;
     }
     structureName = rfamId + '.sto';
@@ -383,165 +385,148 @@ async function runHeadless(args) {
 
     console.log(`Layout: ${layout}`);
 
-    const headlessWin = new BrowserWindow({
+    // Run entirely in the main process using jsdom — no display needed on any platform
+    const { JSDOM } = require('jsdom');
+    const rfviewSrc = fs.readFileSync(path.join(APP_ROOT, 'scripts', 'RFview.js'), 'utf8');
 
-        width: 1200, height: 900, show: false,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="viewer"></div></body></html>', {
+        pretendToBeVisual: true,
+        resources: 'usable',
+        runScripts: 'dangerously',
+    });
+
+    const { window } = dom;
+    const { document } = window;
+
+    // Stub out browser APIs that RFview uses but jsdom doesn't provide
+    window.requestAnimationFrame = cb => setTimeout(cb, 0);
+    window.cancelAnimationFrame  = id => clearTimeout(id);
+    window.getComputedStyle = (el) => ({
+        getPropertyValue: (prop) => {
+            const map = {
+                '--rv-base-radius': '12', '--rv-basepair-width': '2',
+                '--rv-backbone-width': '2', '--rv-base-stroke-width': '2',
+                '--rv-pair-annot-opacity': '0.5', '--rv-pair-annot-stroke-width': '1.5',
+                '--rv-pair-annot-padding': '5', '--rv-helix-annot-padding': '20',
+                '--rv-helix-annot-opacity': '0.5', '--rv-noncanon-dot-r': '4.5',
+                '--rv-base-index-font-size': '11', '--rv-base-label-font-size': '13',
+                '--rv-base-index-offset': '3',
+                '--rv-backbone': '#1f2328', '--rv-basepair': '#1f2328',
+                '--rv-pseudopair': '#1f2328', '--rv-text': '#1f2328',
+                '--rv-base-fill': '#ffffff', '--rv-base-stroke': '#1f2328',
+                '--rv-bg': '#ffffff', '--rv-surface': '#f6f8fa',
+                '--rv-muted': '#656d76', '--rv-accent': '#0969da',
+            };
+            return map[prop] ?? '';
         },
-
+        cssText: '',
     });
 
-    // Forward renderer console output so errors are visible in the terminal
-    headlessWin.webContents.on('console-message', (event) => {
+    // Execute RFview.js directly in the jsdom window context via vm
+    const vm = require('vm');
+    vm.runInContext(rfviewSrc, dom.getInternalVMContext());
 
-        const level = event.level ?? 0;
-        const message = event.message ?? '';
+    const RFviewJS = window.RFviewJS;
+    if (!RFviewJS) throw new Error('RFviewJS failed to initialise in jsdom');
 
-        if (level >= 1) console.log(['[dbg]', '[inf]', '[warn]', '[err]'][level] ?? '[log]', message);
-
-    });
-
-    headlessWin.webContents.on('did-fail-load', (_, code, desc) => {
-
-        console.error(`[!] Error: renderer failed to load (${code} ${desc})`);
-        app.exit(1);
-
-    });
-
-    // Loads the existing index.html and loads RFview.js.
-    // app.js also runs, creating a GUI viewer, but we create a second one below
-    headlessWin.loadFile(path.join(__dirname, 'scripts', 'index.html'));
-
-    headlessWin.webContents.once('did-finish-load', () => {
-
-        // Embeds all data as JSON so no IPC hand-off is needed.
-        // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-        const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, pdfPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds, percCanonical: !!args.percCanonical });
-
-        const code = `
-(function () {
-  try {
-    const d = ${payload};
-
-    /* Creates a fresh viewer. app.js already added a .rv div; RFviewJS adds
-       another and works entirely within its own root — no conflict.        */
+    // Run the same logic as the renderer payload
     const viewer = new RFviewJS(document.getElementById('viewer'), { statusBar: false });
-    if (d.layout && d.layout !== 'auto') viewer.setLayoutAlgorithm(d.layout);
-    if (d.noLegend) viewer._noLegend = true;
+    if (layout && layout !== 'auto') viewer.setLayoutAlgorithm(layout);
+    if (args.noLegend) viewer._noLegend = true;
 
-    /* Parse structure */
     let structs;
-    try { structs = RFviewJS.parseDbFile(d.structureText, d.structureName); }
-    catch (e) { window.electronAPI.headlessError('Cannot parse "' + d.structureName + '": ' + e.message); return; }
-    if (!structs || !structs.length) {
-      window.electronAPI.headlessError('No structure records found in "' + d.structureName + '".');
-      return;
+    try { structs = RFviewJS.parseDbFile(structureText, structureName); }
+    catch (e) { console.error(`[!] Cannot parse "${structureName}": ${e.message}`); process.exit(1); }
+    if (!structs?.length) { console.error(`[!] No structure records found in "${structureName}".`); process.exit(1); }
+
+    if (xmlText) {
+        let recs;
+        try { recs = RFviewJS.parseXmlReactivity(xmlText); }
+        catch (e) { console.error(`[!] Cannot parse reactivity XML: ${e.message}`); process.exit(1); }
+        const norm = s => (s || '').replace(/[Tt]/g, 'U').toUpperCase();
+        for (const s of structs) {
+            const rec = recs.find(r => norm(r.sequence) === norm(s.sequence));
+            if (rec?.values?.length === s.sequence.length) s.values = rec.values;
+        }
     }
 
-    /* Parse reactivity XML */
-    if (d.xmlText) {
-      let recs;
-      try { recs = RFviewJS.parseXmlReactivity(d.xmlText); }
-      catch (e) { window.electronAPI.headlessError('Cannot parse reactivity XML: ' + e.message); return; }
-      const norm = function(s) { return (s || '').replace(/[Tt]/g, 'U').toUpperCase(); };
-      for (const s of structs) {
-        const rec = recs.find(function(r) { return norm(r.sequence) === norm(s.sequence); });
-        if (rec && rec.values && rec.values.length === s.sequence.length) s.values = rec.values;
-      }
-    }
-
-    /* Load structure first (no annotations yet) */
-    const hasReact = structs.some(function(s) { return s.values; });
+    const hasReact = structs.some(s => s.values);
     const defaultCM = hasReact ? {
-      type: 'discrete', min: 0, nanColor: '#999999',
-      stops: [
-        { value: 0.3, color: '#111111' },
-        { value: 0.7, color: '#f5c518' },
-        { value: 1.0, color: '#cc0000' }
-      ]
+        type: 'discrete', min: 0, nanColor: '#999999',
+        stops: [{ value: 0.3, color: '#111111' }, { value: 0.7, color: '#f5c518' }, { value: 1.0, color: '#cc0000' }]
     } : undefined;
+
     viewer.load({ sequence: structs[0].sequence, structures: structs, colorMap: defaultCM });
     if (hasReact) viewer._showColors = true;
-    if (d.noPk) viewer._showPseudoknots = false;   
-    if (d.noLabels) viewer._showR3dLabels = false;     
-    if (d.noInsets) viewer._showR3dInsets = false;
-    if (d.incSsEnds) viewer.setShowSsEnds(true);
-    if (!viewer._rna) { window.electronAPI.headlessError('Structure failed to render.'); return; }
+    if (args.noPk)      viewer._showPseudoknots = false;
+    if (args.noLabels)  viewer._showR3dLabels   = false;
+    if (args.noInsets)  viewer._showR3dInsets   = false;
+    if (args.incSsEnds) viewer.setShowSsEnds(true);
+    if (!viewer._rna) { console.error('[!] Structure failed to render.'); process.exit(1); }
 
-    /* Apply pair annotations post-load
-       Doing this after load() means we can use viewer._rna.pairs (the real
-       pair table) to remap Stockholm alignment coordinates and filter out
-       any pairs that are not present in the consensus structure.            */
-    if (d.annotText) {
-      try {
-        viewer.loadCov(d.annotText);
-      } catch (e) {
-        window.electronAPI.headlessError('Cannot load annotations: ' + e.message);
-        return;
-      }
+    if (annotText) {
+        try { viewer.loadCov(annotText); }
+        catch (e) { console.error(`[!] Cannot load annotations: ${e.message}`); process.exit(1); }
     }
-    if (d.percCanonical && viewer._rna?.pairCanonPct) {
+    if (args.percCanonical && viewer._rna?.pairCanonPct) {
         viewer._covCanonMode = true;
         viewer._applyCovCanonColoring();
     }
-
-    /* Apply helix-level covariation post-load */
-    if (d.helixCovText) {
-      try {
-        viewer.loadCov(d.helixCovText); // auto-detects helixcov format
-      } catch (e) {
-        window.electronAPI.headlessError('Cannot load helix annotations: ' + e.message);
-        return;
-      }
+    if (helixCovText) {
+        try { viewer.loadCov(helixCovText); }
+        catch (e) { console.error(`[!] Cannot load helix annotations: ${e.message}`); process.exit(1); }
     }
 
-    /* Export SVG (synchronous, no download dialog) */
-    viewer._render();  // re-render to apply any visibility flags (noPk, noLabels, noInsets)
+    viewer._render();
     const svgText = viewer.exportSVGString();
-    if (!svgText) { window.electronAPI.headlessError('exportSVGString() returned empty.'); return; }
+    if (!svgText) { console.error('[!] exportSVGString() returned empty.'); process.exit(1); }
 
-    window.electronAPI.headlessDone(svgText, d.outPath, d.pdfPath);
+    fs.writeFileSync(outPath, svgText, 'utf8');
+    console.log(`SVG written to: ${outPath}`);
 
-  } catch (err) {
-    window.electronAPI.headlessError(err && err.message ? err.message : String(err));
-  }
-})();
-`;
-        headlessWin.webContents.executeJavaScript(code).catch(err => {
+    if (pdfPath) {
+        // PDF still needs a BrowserWindow — use a minimal one just for printToPDF
+        const pdfWin = new BrowserWindow({ width: 800, height: 600, show: false,
+            webPreferences: { contextIsolation: true, nodeIntegration: false, offscreen: true } });
+        const vbMatch = svgText.match(/viewBox="[\d.\s-]+[\s-]+([\d.]+)\s+([\d.]+)"/);
+        const wMatch  = svgText.match(/\bwidth="([\d.]+)"/);
+        const hMatch  = svgText.match(/\bheight="([\d.]+)"/);
+        const svgW = vbMatch ? parseFloat(vbMatch[1]) : wMatch ? parseFloat(wMatch[1]) : 800;
+        const svgH = vbMatch ? parseFloat(vbMatch[2]) : hMatch ? parseFloat(hMatch[1]) : 600;
+        const html = `<!DOCTYPE html><html><head><style>@page{margin:0;size:${svgW}px ${svgH}px}` +
+            `html,body{margin:0;padding:0;width:${svgW}px;height:${svgH}px;overflow:hidden}` +
+            `svg{display:block;width:${svgW}px!important;height:${svgH}px!important}</style></head><body>${svgText}</body></html>`;
+        await pdfWin.webContents.loadURL('about:blank');
+        await pdfWin.webContents.executeJavaScript(`document.open();document.write(${JSON.stringify(html)});document.close();`);
+        await new Promise(r => setTimeout(r, 200));
+        const pdfData = await pdfWin.webContents.printToPDF({ printBackground: true, margins: { marginType: 'none' } });
+        fs.writeFileSync(pdfPath, pdfData);
+        console.log(`PDF written to: ${pdfPath}`);
+        pdfWin.close();
+    }
 
-            console.error('executeJavaScript failed:', err.message);
-            app.exit(1);
-
-        });
-
-    });
-
-    setTimeout(() => {
-
-        console.error('[!] Error: timed out — renderer did not respond within 30 s.');
-        app.exit(1);
-
-    }, 30_000);
-
+    process.exit(0);
 }
 
-// App lifecycle
+// App lifecycle — in CLI mode run jsdom logic immediately without waiting for
+// app.whenReady(), which would trigger display/GTK initialization on Linux.
+if (isCLI) {
 
-app.whenReady().then(() => {
-    if (isCLI) runHeadless(cliArgs).catch(err => {
+    runHeadless(cliArgs).catch(err => {
         console.error(`[!] Error: ${err.message}`);
-        app.exit(1);
+        process.exit(1);
     });
-    else createWindow();
-});
 
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin' || isCLI) app.quit();
-});
+} else {
 
-app.on('activate', () => {
-    if (!isCLI && BrowserWindow.getAllWindows().length === 0) createWindow();
-});
+    app.whenReady().then(() => createWindow());
+
+    app.on('window-all-closed', () => {
+        if (process.platform !== 'darwin') app.quit();
+    });
+
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+
+}

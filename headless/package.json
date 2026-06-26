@@ -1,0 +1,66 @@
+{
+  "name": "RFview",
+  "version": "1.1.2",
+  "description": "RFview \u2014 headless CLI build (display-free, jsdom-based)",
+  "main": "main.js",
+  "author": {
+    "name": "Danny Incarnato",
+    "email": "dincarnato@rnaframework.com"
+  },
+  "homepage": "https://github.com/dincarnato/RFviewJS",
+  "license": "GPLv3",
+  "scripts": {
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^42.3.0",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "jsdom": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.rfviewjs.headless",
+    "productName": "RFview",
+    "copyright": "IncaRNAto lab 2026",
+    "artifactName": "RFview_${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "node_modules/**/*"
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Science",
+      "icon": "../assets/icon.png"
+    },
+    "publish": null,
+    "extraResources": [
+      {
+        "from": "../preload.js",
+        "to": "app/preload.js"
+      },
+      {
+        "from": "../scripts",
+        "to": "app/scripts",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      }
+    ]
+  }
+}

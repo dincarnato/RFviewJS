@@ -1,6 +1,6 @@
 {
   "name": "RFview",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "RFview — RNA Framework Structure Viewer",
   "main": "main.js",
   "author": {
@@ -35,7 +35,7 @@
   "build": {
     "appId": "com.rfviewjs.desktop",
     "productName": "RFview",
-    "artifactName": "RFview-${version}-${arch}.${ext}",
+    "artifactName": "RFview_${arch}.${ext}",
     "copyright": "IncaRNAto lab 2026",
     "directories": {
       "output": "dist"
