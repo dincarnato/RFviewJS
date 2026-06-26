@@ -1,5 +1,5 @@
 {
-  "name": "RFview-cli",
+  "name": "RFview",
   "version": "1.1.2",
   "description": "RFview \u2014 headless CLI build (display-free, jsdom-based)",
   "main": "main.js",
@@ -16,7 +16,7 @@
     "build:linux": "electron-builder --linux"
   },
   "devDependencies": {
-    "electron": "^42.3.0",
+    "electron": "42.3.0",
     "electron-builder": "^25.0.0"
   },
   "dependencies": {
@@ -26,7 +26,7 @@
     "appId": "com.rfviewjs.headless",
     "productName": "RFview",
     "copyright": "IncaRNAto lab 2026",
-    "artifactName": "RFview_${arch}.${ext}",
+    "artifactName": "RFview-cli_${arch}.${ext}",
     "directories": {
       "output": "dist"
     },
