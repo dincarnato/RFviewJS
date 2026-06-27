@@ -466,7 +466,7 @@ async function runHeadless(args) {
 
     if (annotText) {
         try { viewer.loadCov(annotText); }
-        catch (e) { console.error(`[!] Cannot load annotations: ${e.message}`); process.exit(1); }
+        catch (e) { console.warn('[!] Warning: Cannot load annotations: ' + e.message); }
     }
     if (args.percCanonical && viewer._rna?.pairCanonPct) {
         viewer._covCanonMode = true;
@@ -474,7 +474,7 @@ async function runHeadless(args) {
     }
     if (helixCovText) {
         try { viewer.loadCov(helixCovText); }
-        catch (e) { console.error(`[!] Cannot load helix annotations: ${e.message}`); process.exit(1); }
+        catch (e) { console.warn('[!] Warning: Cannot load helix annotations: ' + e.message); }
     }
 
     viewer._render();

@@ -6860,10 +6860,22 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const ha = existing?.helixAnnotations || s.helixAnnotations || null;
 					this._structLayouts[savedIdx] = this._computeLayout(s.sequence, s.structure, vals, cm, pa, pacm, ha, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
 					this._copyLayoutAnnotations(existing, this._structLayouts[savedIdx]);
+					// Clear stale position-dependent annotations so _render rebuilds them
+					this._structLayouts[savedIdx]._canonAnnotations = null;
+					this._structLayouts[savedIdx]._canonPkAnnotations = null;
+					this._structLayouts[savedIdx]._savedPairAnnotColorMap = null;
 					this._currentStructIdx = savedIdx;
 					this._rna = this._structLayouts[savedIdx];
-					if (this._covCanonMode && this._rna.pairCanonPct) this._applyCovCanonColoring();
-					else this._render();
+					if (this._showSsEnds && this._rna.ssEnds) {
+						// _rebuildCurrentLayout reads from _base for stable source;
+						// set _base now so it uses the pre-ssEnds trimmed layout as source
+						if (!this._rna._base) this._rna._base = existing._base || existing;
+						this._rebuildCurrentLayout();
+					} else if (this._covCanonMode && this._rna.pairCanonPct) {
+						this._applyCovCanonColoring();
+					} else {
+						this._render();
+					}
 					if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
 					this.fit();
 				} else {
@@ -6871,9 +6883,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const prev = this._rna;
 					const rna = this._computeLayout(prev.sequence, prev.structure, prev.values, prev.colorMap, prev.pairAnnotations, prev.pairAnnotColorMap, prev.baseDisplay, prev.positionLabels);
 					this._copyLayoutAnnotations(prev, rna);
+					rna._canonAnnotations = null;
+					rna._canonPkAnnotations = null;
+					rna._savedPairAnnotColorMap = null;
 					this._rna = rna;
-					if (this._covCanonMode && this._rna.pairCanonPct) this._applyCovCanonColoring();
-					else this._render();
+					if (this._showSsEnds && this._rna.ssEnds) {
+						if (!this._rna._base) this._rna._base = prev._base || prev;
+						this._rebuildCurrentLayout();
+					} else if (this._covCanonMode && this._rna.pairCanonPct) {
+						this._applyCovCanonColoring();
+					} else {
+						this._render();
+					}
 					if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
 					this.fit();
 				}
@@ -7647,14 +7668,24 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			// 5' and 3' end labels for Stockholm structures
 			if (isStockholm && n > 0) {
-				const endFSz = baseR * 2;  // 2/3 of baseR*3
-				const endOff = baseR + endFSz;  // circle edge + 1 font-size gap
+				const endFSz = baseR * 2.5;
+				const endOff = baseR + endFSz;
 				const endFSzPx = endFSz + 'px';
+				const isNaview = this._layoutAlgo === 'naview';
 				const cxMid = (coords[0].x + coords[n - 1].x) / 2;
 				const cyMid = (coords[0].y + coords[n - 1].y) / 2;
-				[[0, "5′", 1.2], [n - 1, "3′", 1.3]].forEach(([idx, lbl, offMult]) => {
+				[[0, "5′", 1, 1.0], [n - 1, "3′", n - 2, 1.2]].forEach(([idx, lbl, neighborIdx, offMult]) => {
 					const cx = coords[idx].x, cy = coords[idx].y;
-					const dx = cx - cxMid, dy = cy - cyMid;
+					let dx, dy;
+					if (isNaview) {
+						// NAView: offset away from adjacent base — reliable in radial layouts
+						const nx = coords[neighborIdx]?.x ?? cx;
+						const ny = coords[neighborIdx]?.y ?? cy;
+						dx = cx - nx; dy = cy - ny;
+					} else {
+						// Radiate: offset away from midpoint between the two ends
+						dx = cx - cxMid; dy = cy - cyMid;
+					}
 					const dist = Math.hypot(dx, dy) || 1;
 					const t = document.createElementNS(NS, 'text');
 					t.setAttribute('class', 'rv-base-label');
@@ -7669,6 +7700,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					g_ss_labels.appendChild(t);
 				});
 			}
+			if (this._alnBtn) this._alnBtn.style.display = this._rna?.baseDisplay ? '' : 'none';
 			if (this._chkPk) this._chkPk.style.display =
 				(!isStockholm && this._rna?.pseudoPairs?.length) ? '' : 'none';
 			// I button: show only when ssConsFeatures has entries (Stockholm with insets)

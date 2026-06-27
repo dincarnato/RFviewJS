@@ -479,8 +479,7 @@ async function runHeadless(args) {
       try {
         viewer.loadCov(d.annotText);
       } catch (e) {
-        window.electronAPI.headlessError('Cannot load annotations: ' + e.message);
-        return;
+        console.warn('[!] Warning: Cannot load annotations: ' + e.message);
       }
     }
     if (d.percCanonical && viewer._rna?.pairCanonPct) {
@@ -493,8 +492,7 @@ async function runHeadless(args) {
       try {
         viewer.loadCov(d.helixCovText); // auto-detects helixcov format
       } catch (e) {
-        window.electronAPI.headlessError('Cannot load helix annotations: ' + e.message);
-        return;
+        console.warn('[!] Warning: Cannot load helix annotations: ' + e.message);
       }
     }
 
