@@ -407,7 +407,7 @@ async function runHeadless(args) {
                 '--rv-base-radius': '12', '--rv-basepair-width': '2',
                 '--rv-backbone-width': '2', '--rv-base-stroke-width': '2',
                 '--rv-pair-annot-opacity': '0.5', '--rv-pair-annot-stroke-width': '1.5',
-                '--rv-pair-annot-padding': '5', '--rv-helix-annot-padding': '20',
+                '--rv-pair-annot-padding': '16', '--rv-helix-annot-padding': '25',
                 '--rv-helix-annot-opacity': '0.5', '--rv-noncanon-dot-r': '4.5',
                 '--rv-base-index-font-size': '11', '--rv-base-label-font-size': '13',
                 '--rv-base-index-offset': '3',
@@ -485,24 +485,63 @@ async function runHeadless(args) {
     console.log(`SVG written to: ${outPath}`);
 
     if (pdfPath) {
-        // PDF still needs a BrowserWindow — use a minimal one just for printToPDF
-        const pdfWin = new BrowserWindow({ width: 800, height: 600, show: false,
-            webPreferences: { contextIsolation: true, nodeIntegration: false, offscreen: true } });
-        const vbMatch = svgText.match(/viewBox="[\d.\s-]+[\s-]+([\d.]+)\s+([\d.]+)"/);
+        const PDFDocument = require('pdfkit');
+        const SVGtoPDF   = require('svg-to-pdfkit');
+
+        // Prepare SVG for pdf rendering:
+        // 1. Inline CSS class rules as element attributes (svg-to-pdfkit classList.indexOf bug)
+        // 2. Strip <style> block and duplicate xmlns (breaks XML parser)
+        // 3. Shift negative viewBox origin to 0,0 (negative coords get clipped by pdf page boundary)
+        const prepareSvgForPdf = (svgStr) => {
+            const styleMatch = svgStr.match(/<style[\s\S]*?<\/style>/);
+            const classProps = {};
+            if (styleMatch)
+                for (const m of styleMatch[0].matchAll(/\.([\w-]+)\s*\{([^}]+)\}/g))
+                    classProps[m[1]] = m[2].trim();
+            let result = svgStr
+                .replace(/<([\w]+)((?:\s[^>]*?)?)(\/?)>/g, (tag, name, attrs, selfClose) => {
+                    if (!attrs) return tag;
+                    const cm = attrs.match(/\bclass="([^"]+)"/);
+                    if (!cm) return tag;
+                    const props = cm[1].split(/\s+/).map(c => classProps[c]).filter(Boolean).join(';');
+                    if (!props) return tag;
+                    const sm = attrs.match(/\bstyle="([^"]*)"/);
+                    const newStyle = sm ? `style="${props};${sm[1]}"` : `style="${props}"`;
+                    const newAttrs = sm ? attrs.replace(/\bstyle="[^"]*"/, newStyle) : attrs + ` ${newStyle}`;
+                    return `<${name}${newAttrs}${selfClose}>`;
+                })
+                .replace(/<style[\s\S]*?<\/style>/g, '')
+                .replace(/(<svg\b[^>]*?)\s+xmlns="[^"]*"(\s[^>]*xmlns="[^"]*")/, '$1$2');
+            const vbM = result.match(/viewBox="([\d.\s-]+)"/);
+            if (vbM) {
+                const [vbX, vbY, vbW, vbH] = vbM[1].trim().split(/\s+/).map(Number);
+                if (vbX !== 0 || vbY !== 0) {
+                    result = result
+                        .replace(/viewBox="[\d.\s-]+"/, `viewBox="0 0 ${vbW} ${vbH}"`)
+                        .replace(/(<svg\b[^>]*>)/, `$1<g transform="translate(${-vbX},${-vbY})">`)
+                        .replace(/<\/svg>/, '</g></svg>');
+                }
+            }
+            return result.replace(/′/g, "'");
+        };
+
+        const strippedSvg = prepareSvgForPdf(svgText);
+        const vbParts = svgText.match(/viewBox="([\d.\s-]+)"/)?.[1].trim().split(/\s+/).map(Number);
         const wMatch  = svgText.match(/\bwidth="([\d.]+)"/);
         const hMatch  = svgText.match(/\bheight="([\d.]+)"/);
-        const svgW = vbMatch ? parseFloat(vbMatch[1]) : wMatch ? parseFloat(wMatch[1]) : 800;
-        const svgH = vbMatch ? parseFloat(vbMatch[2]) : hMatch ? parseFloat(hMatch[1]) : 600;
-        const html = `<!DOCTYPE html><html><head><style>@page{margin:0;size:${svgW}px ${svgH}px}` +
-            `html,body{margin:0;padding:0;width:${svgW}px;height:${svgH}px;overflow:hidden}` +
-            `svg{display:block;width:${svgW}px!important;height:${svgH}px!important}</style></head><body>${svgText}</body></html>`;
-        await pdfWin.webContents.loadURL('about:blank');
-        await pdfWin.webContents.executeJavaScript(`document.open();document.write(${JSON.stringify(html)});document.close();`);
-        await new Promise(r => setTimeout(r, 200));
-        const pdfData = await pdfWin.webContents.printToPDF({ printBackground: true, margins: { marginType: 'none' } });
-        fs.writeFileSync(pdfPath, pdfData);
+        const svgW = vbParts ? vbParts[2] : wMatch ? parseFloat(wMatch[1]) : 800;
+        const svgH = vbParts ? vbParts[3] : hMatch ? parseFloat(hMatch[1]) : 600;
+        const doc = new PDFDocument({ size: [svgW, svgH], margin: 0, autoFirstPage: true });
+        const chunks = [];
+        doc.on('data', c => chunks.push(c));
+        await new Promise((resolve, reject) => {
+            doc.on('end', resolve);
+            doc.on('error', reject);
+            SVGtoPDF(doc, strippedSvg, 0, 0, { width: svgW, height: svgH });
+            doc.end();
+        });
+        fs.writeFileSync(pdfPath, Buffer.concat(chunks));
         console.log(`PDF written to: ${pdfPath}`);
-        pdfWin.close();
     }
 
     process.exit(0);

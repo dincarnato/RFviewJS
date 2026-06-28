@@ -1,7 +1,7 @@
 {
   "name": "RFview",
   "version": "1.1.2",
-  "description": "RFview \u2014 headless CLI build (display-free, jsdom-based)",
+  "description": "RFview — headless CLI build (display-free, jsdom-based)",
   "main": "main.js",
   "author": {
     "name": "Danny Incarnato",
@@ -17,10 +17,12 @@
   },
   "devDependencies": {
     "electron": "42.3.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "jsdom": "^25.0.0"
+    "jsdom": "^25.0.0",
+    "pdfkit": "^0.15.0",
+    "svg-to-pdfkit": "^0.1.8"
   },
   "build": {
     "appId": "com.rfviewjs.headless",
