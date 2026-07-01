@@ -462,7 +462,7 @@ async function runHeadless(args) {
     if (args.noLabels)  viewer._showR3dLabels   = false;
     if (args.noInsets)  viewer._showR3dInsets   = false;
     if (args.incSsEnds) viewer.setShowSsEnds(true);
-    if (!viewer._rna) { console.error('[!] Structure failed to render.'); process.exit(1); }
+    if (!viewer._rna) { console.error('[!] Error: Structure failed to render.'); process.exit(1); }
 
     if (annotText) {
         try { viewer.loadCov(annotText); }
@@ -479,7 +479,7 @@ async function runHeadless(args) {
 
     viewer._render();
     const svgText = viewer.exportSVGString();
-    if (!svgText) { console.error('[!] exportSVGString() returned empty.'); process.exit(1); }
+    if (!svgText) { console.error('[!] Error: exportSVGString() returned empty.'); process.exit(1); }
 
     fs.writeFileSync(outPath, svgText, 'utf8');
     console.log(`SVG written to: ${outPath}`);

@@ -7745,6 +7745,32 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				maxX = Math.max(maxX, coords[i].x);
 				maxY = Math.max(maxY, coords[i].y);
 			}
+			// Extend bounding box to include 5'/3' end labels (offset outside base positions)
+			if (!!this._rna?.baseDisplay && n > 0) {
+				const endFSz = BASE_R * 2;
+				const endOff = BASE_R + endFSz;
+				const labelRadius = endOff + endFSz;
+				const cxMid = (coords[0].x + coords[n - 1].x) / 2;
+				const cyMid = (coords[0].y + coords[n - 1].y) / 2;
+				[[0, 1.0], [n - 1, 1.2]].forEach(([idx, offMult]) => {
+					const cx = coords[idx].x, cy = coords[idx].y;
+					const isNaview = this._layoutAlgo === 'naview';
+					let dx, dy;
+					if (isNaview) {
+						const ni = idx === 0 ? 1 : n - 2;
+						dx = cx - (coords[ni]?.x ?? cx); dy = cy - (coords[ni]?.y ?? cy);
+					} else {
+						dx = cx - cxMid; dy = cy - cyMid;
+					}
+					const dist = Math.hypot(dx, dy) || 1;
+					const lx = cx + (dx / dist) * endOff * offMult;
+					const ly = cy + (dy / dist) * endOff * offMult;
+					minX = Math.min(minX, lx - labelRadius);
+					minY = Math.min(minY, ly - labelRadius);
+					maxX = Math.max(maxX, lx + labelRadius);
+					maxY = Math.max(maxY, ly + labelRadius);
+				});
+			}
 			const pad = 40;
 			const vbX = minX - pad,
 				  vbY = minY - pad;
@@ -8704,7 +8730,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const a = document.createElement('a');
 			a.href = URL.createObjectURL(blob);
 			a.download = exportName;
+			document.body.appendChild(a);
 			a.click();
+			document.body.removeChild(a);
 			URL.revokeObjectURL(a.href);
 		}
 		// Return the current structure as a standalone SVG string (no download)
@@ -9258,6 +9286,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._lastConfig = config;
 			this._errEl.style.display = 'none';
 			this._legend.style.display = 'none';
+			if (this._alnActive) this._exitAlnView();
 			// Save existing state so we can restore it if load fails while structures are already loaded
 			const prevRna = this._rna;
 			const prevStructures = this._structures;
