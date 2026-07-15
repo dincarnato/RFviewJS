@@ -54,7 +54,7 @@ if (isCLI) {
 if (cliArgs.help || cliArgs.h) {
 
     console.log(`
- RFview (v1.1.3)
+ RFview (v1.1.4)
  RNA Framework Structure Viewer [https://github.com/dincarnato/RFviewJS]
 
  Author:   Danny Incarnato (dincarnato[at]rnaframework.com)
@@ -354,8 +354,67 @@ async function runHeadless(args) {
     }
     structureName = rfamId + '.sto';
     } else {
-        structureText = fs.readFileSync(args.structureFile, 'utf8');
         structureName = path.basename(args.structureFile);
+        // Peek to detect Stockholm format
+        const _peek = Buffer.alloc(64);
+        const _fd = fs.openSync(args.structureFile, 'r');
+        fs.readSync(_fd, _peek, 0, 64, 0);
+        fs.closeSync(_fd);
+        if (_peek.toString('utf8').trimStart().startsWith('# STOCKHOLM')) {
+            // Stream line by line — keep only first 1000 sequences + SS_cons lines.
+            // Never store #=GS, #=GR or other annotation lines to avoid OOM.
+            const readline = require('readline');
+            const LIMIT = 1000;
+            const seqs = new Map(), seqOrder = [];
+            const ssConsParts = [], ssConsFeatureParts = {};
+            let stoId = null, stoAc = null;
+            await new Promise((resolve, reject) => {
+                const rl = readline.createInterface({
+                    input: fs.createReadStream(args.structureFile, { encoding: 'utf8' }),
+                    crlfDelay: Infinity,
+                });
+                rl.on('line', line => {
+                    if (line.startsWith('#=GC SS_cons_')) {
+                        const fields = line.split(/\s+/);
+                        const fn = fields[1].slice('SS_cons_'.length);
+                        if (fn) { if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = []; ssConsFeatureParts[fn].push(fields[fields.length-1]); }
+                    } else if (line.startsWith('#=GC SS_cons')) {
+                        const fields = line.split(/\s+/);
+                        ssConsParts.push(fields[fields.length-1]);
+                    } else if (line.startsWith('#=GF ID ')) { stoId = line.slice(8).trim();
+                    } else if (line.startsWith('#=GF AC ')) { stoAc = line.slice(8).trim();
+                    } else if (!line.startsWith('#')) {
+                        const t = line.trim(), sp = t.search(/\s/);
+                        if (sp > 0) {
+                            const sid = t.slice(0, sp), seq = t.slice(sp).trim();
+                            if (sid && seq) {
+                                if (!seqs.has(sid)) {
+                                    if (seqOrder.length >= LIMIT) return;
+                                    seqs.set(sid, ''); seqOrder.push(sid);
+                                }
+                                seqs.set(sid, seqs.get(sid) + seq);
+                            }
+                        }
+                    }
+                });
+                rl.on('close', resolve);
+                rl.on('error', reject);
+            });
+            // Reconstruct minimal valid Stockholm text
+            const ssConsLines = ssConsParts.map((p, i) => '#=GC SS_cons' + ' '.repeat(20) + p);
+            const ssFeatureLines = Object.entries(ssConsFeatureParts).flatMap(([fn, parts]) =>
+                parts.map(p => '#=GC SS_cons_' + fn + ' '.repeat(Math.max(1,19-fn.length)) + p));
+            const seqLines = seqOrder.map(id => id + ' '.repeat(Math.max(1, 30-id.length)) + seqs.get(id));
+            structureText = '# STOCKHOLM 1.0\n' +
+                (stoId ? '#=GF ID ' + stoId + '\n' : '') +
+                (stoAc ? '#=GF AC ' + stoAc + '\n' : '') +
+                seqLines.join('\n') + '\n' +
+                ssConsLines.join('\n') + '\n' +
+                ssFeatureLines.join('\n') + '\n' +
+                '//\n';
+        } else {
+            structureText = fs.readFileSync(args.structureFile, 'utf8');
+        }
     }
     const xmlText = args.xml ? fs.readFileSync(args.xml, 'utf8') : null;
     const annotText = args.basePairAnno ? fs.readFileSync(args.basePairAnno, 'utf8') : null;
