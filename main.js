@@ -578,10 +578,10 @@ async function runHeadless(args) {
 
     setTimeout(() => {
 
-        console.error('[!] Error: timed out — renderer did not respond within 30 s.');
+        console.error('[!] Error: timed out — renderer did not respond within 5 min.');
         app.exit(1);
 
-    }, 30_000);
+    }, 300_000);
 
 }
 
