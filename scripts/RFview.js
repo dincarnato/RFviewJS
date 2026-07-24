@@ -8027,7 +8027,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			}
 			const pad = 40;
-			const vbX = minX - pad,
+			let vbX = minX - pad,
 				  vbY = minY - pad;
 			let vbW = maxX - minX + 2 * pad;
 			let vbH = maxY - minY + 2 * pad;
@@ -8618,18 +8618,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								featureName: fn.replace(/^SS_cons_/, '')
 							});
 
-				// Collect all stems across all sources
-				const expAllStems = []; // [{stem, featureName}]
+				// Collect all stems across all sources, grouped by featureName
+				const expStemsByName = new Map(); // featureName → [stem, stem, ...]
 				const expR3dPosToName = new Map();
 				if (this._rna.ssConsFeatures)
 					for (const [name, positions] of Object.entries(this._rna.ssConsFeatures))
 						for (const p of positions) expR3dPosToName.set(p, name);
 
-				for (const {
-						pairs: srcPairs,
-						featureName
-					}
-					of expPairSources) {
+				for (const { pairs: srcPairs, featureName } of expPairSources) {
 					const expSorted = [...srcPairs].sort((a, b) => a.i - b.i);
 					const expStems = [];
 					let expCur = null;
@@ -8645,35 +8641,32 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						expCur = [ps];
 					}
 					if (expCur) expStems.push(expCur);
-					expStems.forEach((stem, si) => {
+					expStems.forEach(stem => {
 						let lbl = featureName;
 						if (!lbl) {
 							for (const p of stem.map(ps => ps.i))
-								if (expR3dPosToName.has(p)) {
-									lbl = expR3dPosToName.get(p);
-									break;
-								}
+								if (expR3dPosToName.has(p)) { lbl = expR3dPosToName.get(p); break; }
 							if (!lbl)
 								for (const p of stem.map(ps => ps.j))
-									if (expR3dPosToName.has(p)) {
-										lbl = expR3dPosToName.get(p);
-										break;
-									}
-							if (!lbl) lbl = `PK${expAllStems.length + 1}`;
+									if (expR3dPosToName.has(p)) { lbl = expR3dPosToName.get(p); break; }
+							if (!lbl) lbl = `PK`;
 						}
-						expAllStems.push({
-							stem,
-							featureName: lbl
-						});
+						if (!expStemsByName.has(lbl)) expStemsByName.set(lbl, []);
+						expStemsByName.get(lbl).push(stem);
 					});
 				}
+
+				// One panel per unique featureName (grouping stems with same name)
+				const expAllStems = [...expStemsByName.entries()].map(([featureName, stems]) => ({
+					featureName,
+					stems, // array of stems to stack vertically in one panel
+				}));
 
 				if (expAllStems.length && this._showR3dInsets !== false) {
 					// Panel geometry (same proportions as interactive panels)
 					const pk_baseR = BASE_R; // * Math.min(LS, 1.2) * 0.57 * 1.2;
 					const pk_colSep = pk_baseR * 6;
 					const pk_rowStep = pk_baseR * 3.2;
-					const pk_svgW = pk_colSep + pk_baseR * 4;
 					const pk_col5x = pk_baseR * 2;
 					const pk_col3x = pk_col5x + pk_colSep;
 					const _pkHelixPad = ((parseFloat(_gv('--rv-helix-annot-padding')) || BASE_R * 1.7) / BASE_R) * pk_baseR;
@@ -8681,19 +8674,36 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const pk_hPad = pk_baseR * 2;
 					const pk_gap = pk_baseR * 4;
 					const pk_titleH = indexFSz * 1.8 + pk_baseR * 2.5;
-
-					const pk_totalW = expAllStems.length * (pk_svgW + pk_hPad) - pk_hPad;
-					const pk_maxH = Math.max(...expAllStems.map(({
-							stem
-						}) =>
-						(stem.length - 1) * pk_rowStep + pk_baseR * 2 + pk_vPad + pk_vPad * 0.4
-					)) + pk_titleH + pk_vPad;
+					// Per-panel width: each panel sized to its own title
+					const pk_titleCharW = indexFSz * 1.8 * 0.6; // approx monospace char width
+					const pk_stemW = pk_colSep + pk_baseR * 4; // minimum width for stem diagram
+					const pk_panelWidths = expAllStems.map(({ featureName: lbl }) =>
+						Math.max(pk_stemW, (lbl?.length || 0) * pk_titleCharW + pk_baseR * 2)
+					);
+					const pk_totalW = pk_panelWidths.reduce((s, w) => s + w + pk_hPad, 0) - pk_hPad;
+					// Panel height: sum of all stems in the group + gap between stems
+					const pk_stemGap = pk_baseR * 5; // gap between stacked stems in one panel
+					const pk_maxH = Math.max(...expAllStems.map(({ stems }) => {
+						const totalRows = stems.reduce((s, stem) => s + stem.length, 0);
+						const stemGaps = (stems.length - 1) * pk_stemGap;
+						return (totalRows - 1) * pk_rowStep + pk_baseR * 2 + pk_vPad + pk_vPad * 0.4 + stemGaps;
+					})) + pk_titleH + pk_vPad;
 
 					const pk_blockH = pk_maxH + pk_gap;
 					const oldVbY = parseFloat(exp.getAttribute('viewBox').split(' ')[1]);
 					const newVbY = oldVbY - pk_blockH;
 					const oldVbH = parseFloat(exp.getAttribute('viewBox').split(' ')[3]);
-					exp.setAttribute('viewBox', `${vbX} ${newVbY} ${vbW} ${oldVbH + pk_blockH}`);
+					// Extend width if panels are wider than the structure
+					const pk_panelsTotalW = pk_totalW + 2 * pad;
+					if (pk_panelsTotalW > vbW) {
+						const extra = pk_panelsTotalW - vbW;
+						vbX = vbX - extra / 2;
+						vbW = pk_panelsTotalW;
+						exp.setAttribute('viewBox', `${vbX} ${newVbY} ${vbW} ${oldVbH + pk_blockH}`);
+						exp.setAttribute('width', Math.round(vbW * scale));
+					} else {
+						exp.setAttribute('viewBox', `${vbX} ${newVbY} ${vbW} ${oldVbH + pk_blockH}`);
+					}
 					exp.setAttribute('height', Math.round((oldVbH + pk_blockH) * scale));
 
 					const pk_startX = vbX + (vbW - pk_totalW) / 2;
@@ -8714,42 +8724,44 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const bsW2 = _gvn('--rv-base-stroke-width', 2) * _scale2;
 					const bgCol2 = C.bg;
 
-					expAllStems.forEach(({
-						stem,
-						featureName: lbl
-					}, si) => {
-						const nbp = stem.length;
-						const row0y = pk_startY + pk_titleH + pk_vPad;
-						const panelX = pk_startX + si * (pk_svgW + pk_hPad);
+					expAllStems.forEach(({ stems, featureName: lbl }, si) => {
+						const pk_svgW = pk_panelWidths[si];
+						// panelX: sum of previous panel widths + hPad gaps
+						const panelX = pk_startX + pk_panelWidths.slice(0, si).reduce((s, w) => s + w + pk_hPad, 0);
+						// Center stem columns within this panel's width
+						const stemContentW = pk_colSep + pk_baseR * 4;
+						const stemOffsetX = (pk_svgW - stemContentW) / 2;
+						const pk_col5x_l = stemOffsetX + pk_baseR * 2;
+						const pk_col3x_l = pk_col5x_l + pk_colSep;
 						const panelG = document.createElementNS(NS, 'g');
 						exp.appendChild(panelG);
-						const inCoords = {};
-						stem.forEach((ps, k) => {
-							inCoords[ps.i] = {
-								x: panelX + pk_col5x,
-								y: row0y + k * pk_rowStep
-							};
-							inCoords[ps.j] = {
-								x: panelX + pk_col3x,
-								y: row0y + k * pk_rowStep
-							};
-						});
-						const inPairs2 = {};
-						stem.forEach(ps => {
-							inPairs2[ps.i] = ps.j;
-							inPairs2[ps.j] = ps.i;
+
+						// Build inCoords and inPairs2 across all stems in this panel
+						const inCoords = {}, inPairs2 = {};
+						let _rowY = pk_startY + pk_titleH + pk_vPad;
+						stems.forEach(stem => {
+							stem.forEach((ps, k) => {
+								inCoords[ps.i] = { x: panelX + pk_col5x_l, y: _rowY + k * pk_rowStep };
+								inCoords[ps.j] = { x: panelX + pk_col3x_l, y: _rowY + k * pk_rowStep };
+								inPairs2[ps.i] = ps.j; inPairs2[ps.j] = ps.i;
+							});
+							_rowY += (stem.length - 1) * pk_rowStep + pk_baseR * 2 + pk_stemGap;
 						});
 
+						// Panel total height
+						const totalRows = stems.reduce((s, stem) => s + stem.length, 0);
+						const stemGapsTotal = (stems.length - 1) * pk_stemGap;
+						const panelH = (totalRows - 1) * pk_rowStep + pk_baseR * 2 + pk_vPad + pk_vPad * 0.4 + stemGapsTotal;
+						const row0y = pk_startY + pk_titleH + pk_vPad;
+
 						// Background
-						const panelH = (nbp - 1) * pk_rowStep + pk_baseR * 2 + pk_vPad + pk_vPad * 0.4;
 						const bgRect = document.createElementNS(NS, 'rect');
 						bgRect.setAttribute('x', panelX - pk_baseR * 0.5);
 						bgRect.setAttribute('y', pk_startY);
 						bgRect.setAttribute('width', pk_svgW + pk_baseR);
 						bgRect.setAttribute('height', pk_titleH + pk_vPad + panelH + pk_vPad * 0.4);
 						bgRect.setAttribute('rx', pk_baseR * 0.6);
-						bgRect.setAttribute('fill', bgCol2);
-						bgRect.setAttribute('stroke', 'none');
+						bgRect.setAttribute('fill', bgCol2); bgRect.setAttribute('stroke', 'none');
 						panelG.appendChild(bgRect);
 
 						// Title
@@ -8764,87 +8776,117 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						titleT.textContent = lbl.toUpperCase();
 						panelG.appendChild(titleT);
 
-						// 1. Backbone
-						if (nbp > 1) {
-							[panelX + pk_col5x, panelX + pk_col3x].forEach(cx => {
-								const l = document.createElementNS(NS, 'line');
-								l.setAttribute('class', 'rv-backbone');
-								l.setAttribute('x1', cx);
-								l.setAttribute('y1', row0y);
-								l.setAttribute('x2', cx);
-								l.setAttribute('y2', row0y + (nbp - 1) * pk_rowStep);
-								panelG.appendChild(l);
-							});
-						}
+						// Per-stem rendering: backbone, erasers, helix box, bases, bonds
+						let stemY = row0y;
+						stems.forEach(stem => {
+							const nbp = stem.length;
 
-						// 2. Eraser circles (behind everything)
-						stem.forEach((ps, k) => {
-							const ry = row0y + k * pk_rowStep;
-							[
-								[ps.i, panelX + pk_col5x],
-								[ps.j, panelX + pk_col3x]
-							].forEach(([ri, cx]) => {
-								const bd = this._rna.baseDisplay?.[ri];
-								if (!bd || bd.skip || bd.letter == null) return;
-								const er = document.createElementNS(NS, 'circle');
-								er.setAttribute('cx', cx);
-								er.setAttribute('cy', ry);
-								er.setAttribute('r', pk_baseR * 1.5);
-								er.style.cssText = `fill:${bgCol2};stroke:none`;
-								panelG.appendChild(er);
-							});
-						});
-
-						// 3. Helix annotation box
-						if (this._showPairAnnotations && !this._covCanonMode && this._rna.helixAnnotations?.length) {
-							for (const ann of this._rna.helixAnnotations) {
-								const hasPair = (ann.subHelices || []).some(sh =>
-										sh.pos5p.some(ri => stem.some(p => p.i === ri || p.j === ri)) ||
-										sh.pos3p.some(ri => stem.some(p => p.i === ri || p.j === ri))) ||
-									(ann.pkPairs || []).some(pk => stem.some(p =>
-										(p.i === pk.i && p.j === pk.j) || (p.i === pk.j && p.j === pk.i)));
-								if (!hasPair) continue;
-								const annPad2 = (ann.padding ?? _pkHelixPad);
-								const cx5 = panelX + pk_col5x,
-									cx3 = panelX + pk_col3x;
-								const yTop = row0y - annPad2;
-								const yBot = row0y + (nbp - 1) * pk_rowStep + annPad2;
-								const bw2 = (cx3 - cx5) + annPad2 * 2;
-								const bh2 = yBot - yTop;
-								const rx2 = Math.min(pk_baseR * 0.6, bw2 / 2, bh2 / 2);
-								const r = document.createElementNS(NS, 'rect');
-								r.setAttribute('x', cx5 - annPad2);
-								r.setAttribute('y', yTop);
-								r.setAttribute('width', bw2);
-								r.setAttribute('height', bh2);
-								r.setAttribute('rx', rx2);
-								r.setAttribute('ry', rx2);
-								r.setAttribute('fill', ann.color ?? helixColor2);
-								r.setAttribute('fill-opacity', String(ann.opacity ?? helixOpa2));
-								r.setAttribute('stroke', ann.color ?? helixColor2);
-								r.setAttribute('stroke-opacity', '0.45');
-								r.setAttribute('stroke-width', String(ann.strokeWidth ?? 1.5));
-								panelG.appendChild(r);
-								break;
+							// 1. Backbone
+							if (nbp > 1) {
+								[panelX + pk_col5x_l, panelX + pk_col3x_l].forEach(cx => {
+									const l = document.createElementNS(NS, 'line');
+									l.setAttribute('class', 'rv-backbone');
+									l.setAttribute('x1', cx); l.setAttribute('y1', stemY);
+									l.setAttribute('x2', cx); l.setAttribute('y2', stemY + (nbp - 1) * pk_rowStep);
+									panelG.appendChild(l);
+								});
 							}
-						}
 
-						// 4. Pair annotation boxes
+							// 2. Eraser circles
+							stem.forEach((ps, k) => {
+								const ry = stemY + k * pk_rowStep;
+								[[ps.i, panelX + pk_col5x_l], [ps.j, panelX + pk_col3x_l]].forEach(([ri, cx]) => {
+									const bd = this._rna.baseDisplay?.[ri];
+									if (!bd || bd.skip || bd.letter == null) return;
+									const er = document.createElementNS(NS, 'circle');
+									er.setAttribute('cx', cx); er.setAttribute('cy', ry);
+									er.setAttribute('r', pk_baseR * 1.5);
+									er.style.cssText = `fill:${bgCol2};stroke:none`;
+									panelG.appendChild(er);
+								});
+							});
+
+							// 3. Helix annotation box
+							if (this._showPairAnnotations && !this._covCanonMode && this._rna.helixAnnotations?.length) {
+								for (const ann of this._rna.helixAnnotations) {
+									const hasPair =
+										(ann.subHelices || []).some(sh =>
+											sh.pos5p.some(ri => stem.some(p => p.i === ri || p.j === ri)) ||
+											sh.pos3p.some(ri => stem.some(p => p.i === ri || p.j === ri))) ||
+										(ann.pkPairs || []).some(pk => stem.some(p =>
+											(p.i === pk.i && p.j === pk.j) || (p.i === pk.j && p.j === pk.i)));
+									if (!hasPair) continue;
+									const annPad2 = ann.padding ?? _pkHelixPad;
+									const cx5 = panelX + pk_col5x_l, cx3 = panelX + pk_col3x_l;
+									const yTop = stemY - annPad2, yBot = stemY + (nbp - 1) * pk_rowStep + annPad2;
+									const bw2 = (cx3 - cx5) + annPad2 * 2, bh2 = yBot - yTop;
+									const rx2 = Math.min(pk_baseR * 0.6, bw2 / 2, bh2 / 2);
+									const r = document.createElementNS(NS, 'rect');
+									r.setAttribute('x', cx5 - annPad2); r.setAttribute('y', yTop);
+									r.setAttribute('width', bw2); r.setAttribute('height', bh2);
+									r.setAttribute('rx', rx2); r.setAttribute('ry', rx2);
+									r.setAttribute('fill', ann.color ?? helixColor2);
+									r.setAttribute('fill-opacity', String(ann.opacity ?? helixOpa2));
+									r.setAttribute('stroke', ann.color ?? helixColor2);
+									r.setAttribute('stroke-opacity', '0.45');
+									r.setAttribute('stroke-width', String(ann.strokeWidth ?? 1.5));
+									panelG.appendChild(r);
+									break;
+								}
+							}
+
+							// 5. Base letters / fill circles
+							stem.forEach((ps, k) => {
+								const ry = stemY + k * pk_rowStep;
+								[[ps.i, panelX + pk_col5x_l], [ps.j, panelX + pk_col3x_l]].forEach(([ri, cx]) => {
+									const bd = this._rna.baseDisplay?.[ri];
+									if (!bd || bd.skip) return;
+									if (bd.letter !== null && bd.letter !== undefined) {
+										const t = document.createElementNS(NS, 'text');
+										t.setAttribute('x', cx); t.setAttribute('y', ry);
+										t.setAttribute('dy', '0.35em'); t.setAttribute('text-anchor', 'middle');
+										t.setAttribute('font-size', pk_baseR * 3);
+										t.setAttribute('font-family', 'monospace');
+										t.setAttribute('font-weight', 'bold');
+										t.setAttribute('fill', bd.textColor || C.baseText);
+										t.textContent = bd.letter;
+										panelG.appendChild(t);
+									} else if (bd.fillColor) {
+										const circ = document.createElementNS(NS, 'circle');
+										circ.setAttribute('cx', cx); circ.setAttribute('cy', ry);
+										circ.setAttribute('r', pk_baseR);
+										circ.style.cssText = `fill:${bd.fillColor};stroke:#111111;stroke-width:${bsW2}`;
+										panelG.appendChild(circ);
+									}
+								});
+							});
+
+							// 6. Bonds
+							stem.forEach((ps, k) => {
+								const ry = stemY + k * pk_rowStep;
+								const cx5 = panelX + pk_col5x_l, cx3 = panelX + pk_col3x_l;
+								const b5 = (this._rna.sequence?.[ps.i] || '?').toUpperCase();
+								const b3 = (this._rna.sequence?.[ps.j] || '?').toUpperCase();
+								const canonPct = this._rna.pairCanonPct?.[ps.i] ?? null;
+								this._mkStockholmBond(cx5, ry, cx3, ry, b5, b3, pk_baseR, dotR2, canonPct)
+									.forEach(el => panelG.appendChild(el));
+							});
+
+							stemY += (stem.length - 1) * pk_rowStep + pk_baseR * 2 + pk_stemGap;
+						}); // end stems.forEach
+
+						// 4. Pair annotation boxes (across all stems)
 						if (this._showPairAnnotations) {
 							for (const ann of (this._rna.pairAnnotations || [])) {
-								let ai = ann.i,
-									aj = ann.j;
+								let ai = ann.i, aj = ann.j;
 								if (ai != null && aj != null) {
-									if (!stem.some(p => (p.i === ai && p.j === aj) || (p.i === aj && p.j === ai))) continue;
+									if (!stems.some(stem => stem.some(p => (p.i === ai && p.j === aj) || (p.i === aj && p.j === ai)))) continue;
 								} else if (ai != null) {
-									aj = inPairs2[ai];
-									if (aj == null) continue;
+									aj = inPairs2[ai]; if (aj == null) continue;
 								} else if (aj != null) {
-									ai = inPairs2[aj];
-									if (ai == null) continue;
+									ai = inPairs2[aj]; if (ai == null) continue;
 								} else continue;
-								const ic5 = inCoords[ai],
-									ic3 = inCoords[aj];
+								const ic5 = inCoords[ai], ic3 = inCoords[aj];
 								if (!ic5 || !ic3) continue;
 								let color = ann.color;
 								if (!color && ann.key != null && this._rna.pairAnnotColorMap) {
@@ -8854,65 +8896,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								panelG.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
 									color || '#ffffff', ann.opacity ?? pAnnotOpa2, ann.strokeWidth ?? pAnnotSW2, ann.padding ?? pAnnotPad2, pk_baseR));
 							}
-							for (const {
-									i,
-									j,
-									color
-								}
-								of(this._rna.pseudoCovAnnotations || [])) {
-								if (!stem.some(p => (p.i === i && p.j === j) || (p.i === j && p.j === i))) continue;
-								const ic5 = inCoords[i],
-									ic3 = inCoords[j];
+							for (const { i, j, color } of (this._rna.pseudoCovAnnotations || [])) {
+								if (!stems.some(stem => stem.some(p => (p.i === i && p.j === j) || (p.i === j && p.j === i)))) continue;
+								const ic5 = inCoords[i], ic3 = inCoords[j];
 								if (!ic5 || !ic3) continue;
 								panelG.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
 									color, pAnnotOpa2, pAnnotSW2, pAnnotPad2, pk_baseR));
 							}
 						}
-
-						// 5. Base letters / fill circles
-						stem.forEach((ps, k) => {
-							const ry = row0y + k * pk_rowStep;
-							[
-								[ps.i, panelX + pk_col5x],
-								[ps.j, panelX + pk_col3x]
-							].forEach(([ri, cx]) => {
-								const bd = this._rna.baseDisplay?.[ri];
-								if (!bd || bd.skip) return;
-								if (bd.letter !== null && bd.letter !== undefined) {
-									const t = document.createElementNS(NS, 'text');
-									t.setAttribute('x', cx);
-									t.setAttribute('y', ry);
-									t.setAttribute('dy', '0.35em');
-									t.setAttribute('text-anchor', 'middle');
-									t.setAttribute('font-size', pk_baseR * 3);
-									t.setAttribute('font-family', 'monospace');
-									t.setAttribute('font-weight', 'bold');
-									t.setAttribute('fill', bd.textColor || C.baseText);
-									t.textContent = bd.letter;
-									panelG.appendChild(t);
-								} else if (bd.fillColor) {
-									const circ = document.createElementNS(NS, 'circle');
-									circ.setAttribute('cx', cx);
-									circ.setAttribute('cy', ry);
-									circ.setAttribute('r', pk_baseR);
-									circ.style.cssText = `fill:${bd.fillColor};stroke:#111111;stroke-width:${bsW2}`;
-									panelG.appendChild(circ);
-								}
-							});
-						});
-
-						// 6. Bonds (topmost)
-						stem.forEach((ps, k) => {
-							const ry = row0y + k * pk_rowStep;
-							const cx5 = panelX + pk_col5x,
-								cx3 = panelX + pk_col3x;
-							const b5 = (this._rna.sequence?.[ps.i] || '?').toUpperCase();
-							const b3 = (this._rna.sequence?.[ps.j] || '?').toUpperCase();
-							const canonPct = this._rna.pairCanonPct?.[ps.i] ?? null;
-							this._mkStockholmBond(cx5, ry, cx3, ry, b5, b3, pk_baseR, dotR2, canonPct)
-								.forEach(el => panelG.appendChild(el));
-						});
-					});
+					}); // end expAllStems.forEach
 				} // end if expAllStems.length
 			}
 			// For Stockholm structures, labels can extend beyond the structure bounding box.
