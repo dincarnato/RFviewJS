@@ -158,7 +158,7 @@ if (!isCLI) {
 }
 
 // Window state (GUI only)
-const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
+const STATE_FILE = (() => { try { return path.join(app.getPath('userData'), 'window-state.json'); } catch { return path.join(require('os').tmpdir(), 'rfview-window-state.json'); } })();
 function loadState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return {}; } }
 function saveState(win) {
 
