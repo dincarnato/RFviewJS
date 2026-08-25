@@ -9963,6 +9963,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				showR3dLabels: this._showR3dLabels,
 				showSsEnds: this._showSsEnds,
 				covCanonMode: this._covCanonMode,
+				layoutAlgo: this._layoutAlgo,
 			};
 			// Clear transient canon state from the source — it will be rebuilt on switch-back
 			srcRna._canonAnnotations = null;
@@ -9979,6 +9980,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._showR3dLabels = s.showR3dLabels;
 				this._showSsEnds = s.showSsEnds;
 				this._covCanonMode = s.covCanonMode ?? false;
+				if (s.layoutAlgo) { this._layoutAlgo = s.layoutAlgo; this._syncLayoutBtn(this._layoutAlgo); }
 				// Sync button visual states
 				if (this._chkPAnnot) this._chkPAnnot.classList.toggle('rv--active', this._showPairAnnotations);
 				if (this._chkColors) this._chkColors.classList.toggle('rv--active', this._showColors);
