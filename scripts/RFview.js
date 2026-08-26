@@ -841,9 +841,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 				return;
 			}
-			if (raw.startsWith('#=GC SS_cons')) {
+			if (raw.startsWith('#=GC')) {
 				const fields = raw.split(/\s+/);
-				ssConsParts.push(fields[fields.length - 1]);
+				if (fields[1] === 'SS_cons' && fields[2]) ssConsParts.push(fields[fields.length - 1]);
+				else if (fields[1]?.startsWith('SS_cons_') && fields[2]) {
+					const fn = fields[1].slice('SS_cons_'.length);
+					if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = [];
+					ssConsFeatureParts[fn].push(fields[fields.length - 1]);
+				}
 				return;
 			}
 			if (raw.startsWith('#=GF ID ')) { id = raw.slice(8).trim(); return; }
