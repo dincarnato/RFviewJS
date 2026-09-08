@@ -8019,9 +8019,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const hasPAnnotLegend = !this._noLegend && this._showPairAnnotations && ((pairAnnotColorMap?.length && this._rna.isCovAnnot) || hasHelixAnnot);
 			const hasCanonLegend = !this._noLegend && this._covCanonMode && !!this._rna?.pairCanonPct;
 			const hasAlnLegend = !this._noLegend && !!this._rna?.baseDisplay;
-			// Legend scale, proportional to the shorter viewBox dimension
-			// This keeps legends readable on both tiny and huge structures.
-			const LS = Math.max(0.5, Math.min(4, Math.min(vbW, vbH) / 200)) * 0.9;
+			// Legend scale, proportional to the plot area.
+			// Use max of (shorter/200) and (longer/800) so wide single-stranded RNAs still get readable legends.
+			const LS = Math.max(1.0, Math.min(4, Math.max(Math.min(vbW, vbH) / 200, Math.max(vbW, vbH) / 800))) * 0.9;
 			const LX = 8 * LS;
 			const LY = 6 * LS;
 			const LROW = 16 * LS;
