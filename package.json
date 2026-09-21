@@ -1,6 +1,6 @@
 {
   "name": "RFview",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "RFview — RNA Framework Structure Viewer",
   "main": "main.js",
   "author": {
@@ -97,7 +97,13 @@
       "category": "Science",
       "icon": "assets/icon.png"
     },
-    "publish": null
+    "publish": null,
+    "extraFiles": [
+      {
+       	"from": "/data/bin/RFviewJS/headless/libz.so.1.arm64",
+        "to": "usr/lib/libz.so.1"
+      }
+    ]
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"
