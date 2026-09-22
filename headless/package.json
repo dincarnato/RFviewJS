@@ -63,12 +63,6 @@
           "!**/*.map"
         ]
       }
-    ],
-    "extraFiles": [
-      {
-       	"from": "/data/bin/RFviewJS/headless/libz.so.1.arm64",
-        "to": "usr/lib/libz.so.1"
-      }
     ]
   }
 }
