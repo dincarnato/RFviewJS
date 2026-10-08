@@ -6062,6 +6062,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						hCol.value = '#aff0a8';
 						this._root.style.setProperty('--rv-helix-annot-color', '#aff0a8');
 					}
+					// Reset colormap stops, type, and NaN color to defaults
+					const def = this._getDefaultShapeColorMap();
+					p._cmType = def.type;
+					p._cmMin = def.min ?? 0;
+					p._cmStops = def.stops.map(s => ({ value: s.value, color: s.color }));
+					p.querySelectorAll('.rv-cm-type-btn').forEach(b => b.classList.toggle('rv--active', b.dataset.type === def.type));
+					const nanIn = q('.rv-set-nan');
+					if (nanIn) nanIn.value = def.nanColor || '#999999';
+					this._refreshStopsList();
+					this._applySettingsCM();
 					// Reset General tab
 					this._relaxedSequence = true;
 					const relaxedChk = q('.rv-set-relaxed-seq');
