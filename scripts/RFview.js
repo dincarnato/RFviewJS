@@ -66,6 +66,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-aln-legend-row{display:flex;align-items:center;gap:5px}
 .rv-base-circle{stroke:var(--rv-base-stroke,#000);stroke-width:var(--rv-base-stroke-width,2);fill:var(--rv-base-fill,#eee);cursor:pointer;transition:fill .1s}
 .rv-base-circle:hover{fill:var(--rv-base-hover,#ccc)}
+.rv-selected>circle{stroke:var(--rv-accent,#0969da)!important;stroke-width:3!important}
 .rv-base-label{font-family:var(--rv-base-label-font,monospace);font-size:var(--rv-base-label-font-size,16px);fill:var(--rv-base-label-color,#1f2328);text-anchor:middle;dominant-baseline:central;pointer-events:none;user-select:none}
 .rv-base-index{font-family:var(--rv-base-index-font,monospace);font-size:var(--rv-base-index-font-size,16px);fill:var(--rv-base-index-color,#656d76);text-anchor:middle;dominant-baseline:central;pointer-events:none;user-select:none}
 /* Configurable base geometry
@@ -3133,6 +3134,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._showIndices = config.showIndices !== false; // default true
 			this._showColors = config.showColors !== false; // default true
 			this._relaxedSequence = config.relaxedSequence !== false;
+			this._nucColorOn = !!config.nucleotideColors;
+			this._nucColors = Object.assign({ A: '#e15759', C: '#4e79a7', G: '#f28e2b', U: '#59a14f' }, config.nucleotideColors || {});
+			this._stretchState = null;
+			this._sel = new Set(); // box-selected base indices (Ctrl+drag)
+			this._boxStart = null;
 			this._showPairAnnotations = config.showPairAnnotations !== false;
 			this._autoTolerance = config.autoLayoutTolerance ?? 0;
 			this._id = config.id || null; // used as SVG export filename
@@ -3345,6 +3351,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                   <input type="range" class="rv-set-lbl-font" min="1" max="30" step="1" value="16"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">Index font  <span class="rv-setting-val rv-val-idx-font">16</span></span>
                   <input type="range" class="rv-set-idx-font" min="1" max="30" step="1" value="16"></div>
+                <div class="rv-setting-row"><span class="rv-setting-label">Color by nucleotide</span>
+                  <input type="checkbox" class="rv-set-nuc-on" style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)"></div>
+                <div class="rv-setting-row"><span class="rv-setting-label">A / C / G / U</span>
+                  <span><input type="color" class="rv-set-nuc" data-nuc="A"><input type="color" class="rv-set-nuc" data-nuc="C"><input type="color" class="rv-set-nuc" data-nuc="G"><input type="color" class="rv-set-nuc" data-nuc="U"></span></div>
               </div>
               <div class="rv-settings-pane" data-pane="colormap">
                 <div class="rv-setting-row"><span class="rv-setting-label">NaN / missing</span>
@@ -3765,6 +3775,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				passive: false
 			});
 			this._svgEl.addEventListener('mousedown', e => this._onMouseDown(e));
+			this._selRect = document.createElementNS(NS, 'rect');
+			this._selRect.style.cssText = 'display:none;pointer-events:none;fill:#0969da1a;stroke:#0969da;stroke-width:1;stroke-dasharray:4 3';
+			this._svgEl.appendChild(this._selRect);
+			this._svgEl.addEventListener('contextmenu', e => { if (e.target.closest('[data-idx]')) e.preventDefault(); });
 			// Global move / up, keep as bound refs so destroy() can remove them
 			this._boundMove = e => this._onMouseMove(e);
 			this._boundUp = e => this._onMouseUp(e);
@@ -3772,6 +3786,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			window.addEventListener('mouseup', this._boundUp);
 			// Cmd-S (macOS) / Ctrl-S (other) shortcut to save current structure as SVG
 			this._boundKeyDown = e => {
+				if (e.key === 'Escape' && this._sel.size) {
+					this._sel.clear();
+					this._render();
+				}
 				if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 					const tag = document.activeElement?.tagName?.toLowerCase();
 					if (tag !== 'input' && tag !== 'textarea') {
@@ -3870,6 +3888,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Public API
 		// Load (or reload) an RNA structure, accepts the same config object as the constructor
 		load(config) {
+			this._sel.clear();
 			if (config.rfamId) {
 				this.fetchRfam(config.rfamId).catch(err => {
 					if (this._rna) this._showErrorDialog(err.message);
@@ -3959,7 +3978,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				values: values || null,
 				colorMap: normalizeColorMap(config),
 				helices: null,
-				positionLabels: positionLabels || null,
+				positionLabels: config.positionLabels || null,
 				pairAnnotations: config.pairAnnotations || null,
 				pairAnnotColorMap: normalizePairAnnotColorMap(config.pairAnnotColorMap),
 				helixAnnotations: config.helixAnnotations?.length ? resolveHelixAnnotations(config.helixAnnotations, pairs, config.positionLabels) : null,
@@ -6026,6 +6045,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			bindRange('.rv-set-ha-opac', '--rv-helix-annot-opacity', '.rv-val-ha-opac', '', true);
 			bindRange('.rv-set-ha-pad', '--rv-helix-annot-padding', '.rv-val-ha-pad', '', true);
 
+			// Per-nucleotide coloring (overrides reactivity colors when enabled)
+			const nucChk = q('.rv-set-nuc-on');
+			nucChk.checked = this._nucColorOn;
+			nucChk.addEventListener('change', () => {
+				this._nucColorOn = nucChk.checked;
+				this._render();
+			});
+			p.querySelectorAll('.rv-set-nuc').forEach(inp => {
+				inp.value = this._nucColors[inp.dataset.nuc];
+				inp.addEventListener('input', () => {
+					this._nucColors[inp.dataset.nuc] = inp.value;
+					if (this._nucColorOn) rerender();
+				});
+			});
+
 			// General tab: relaxed sequence checkbox
 			const relaxedChk = q('.rv-set-relaxed-seq');
 			if (relaxedChk) {
@@ -7804,8 +7838,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			for (let i = 0; i < n; i++) {
 				const grp = document.createElementNS(NS, 'g');
 				grp.setAttribute('data-idx', i);
+				if (this._sel.has(i)) grp.classList.add('rv-selected');
 				const bd = this._rna.baseDisplay?.[i];
-				const fillColor = (this._showColors && values && colorMap?.stops?.length) ? valueToColor(values[i], colorMap) : null;
+				const fillColor = this._nucFill(i) || ((this._showColors && values && colorMap?.stops?.length) ? valueToColor(values[i], colorMap) : null);
 				if (!bd?.skip) {
 					const circ = document.createElementNS(NS, 'circle');
 					circ.setAttribute('class', 'rv-base-circle');
@@ -9106,6 +9141,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				coords[k].y = ay + t * uy - perpY;
 			}
 		}
+		_nucFill(i) {
+			if (!this._nucColorOn || this._rna?.baseDisplay?.[i]?.skip) return null;
+			const b = (this._rna.baseDisplay?.[i]?.letter ?? this._rna.sequence[i] ?? '').toUpperCase();
+			return this._nucColors[b === 'T' ? 'U' : b] || null;
+		}
 		_findDirectHelix(idx) {
 			const {
 				pairs,
@@ -9124,8 +9164,36 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		_onMouseDown(e) {
 			if (this._isAnimating) return;
-			if (e.button !== 0) return;
 			const grp = e.target.closest('[data-idx]');
+			const idx = grp ? parseInt(grp.getAttribute('data-idx')) : -1;
+			const ctrl = e.ctrlKey || e.metaKey;
+			// Ctrl+drag on a selected base moves the selection; elsewhere it draws a selection box.
+			if (this._rna && e.button === 0 && ctrl) {
+				e.preventDefault();
+				if (this._sel.has(idx)) this._startMove([...this._sel], e);
+				else {
+					this._boxStart = { x: e.clientX, y: e.clientY };
+					this._updateSelRect(e);
+					this._selRect.style.display = 'block';
+				}
+				return;
+			}
+			// Right-drag or Shift+drag on a base: translate the selection (if the base is in it),
+			// else the base (unpaired) or its whole helix subtree (paired), stretching the
+			// backbone bonds that connect it.
+			if (grp && this._rna && (e.button === 2 || (e.button === 0 && e.shiftKey))) {
+				e.preventDefault();
+				if (this._sel.has(idx)) return this._startMove([...this._sel], e);
+				const helix = this._findDirectHelix(idx);
+				const [lo, hi] = helix ? [helix.i, helix.j] : [idx, idx];
+				this._startMove(Array.from({ length: hi - lo + 1 }, (_, k) => lo + k), e);
+				return;
+			}
+			if (e.button !== 0) return;
+			if (this._sel.size) {
+				this._sel.clear();
+				this._render();
+			}
 			if (grp) {
 				const idx = parseInt(grp.getAttribute('data-idx'));
 				const helix = this._findDirectHelix(idx);
@@ -9238,7 +9306,47 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			this._canvas.classList.add('grabbing');
 		}
+		_startMove(idxs, e) {
+			const coords = this._rna.coords;
+			idxs = idxs.filter(i => i < this._rna.n);
+			const set = new Set(idxs);
+			this._stretchState = {
+				idxs,
+				start: this._clientToScene(e.clientX, e.clientY),
+				snapCoords: idxs.map(i => ({ x: coords[i].x, y: coords[i].y })),
+				lcs: this._rna.helices.filter(h => set.has(h.i) && set.has(h.j)).map(h => ({ lc: h.loopCenter, x: h.loopCenter.x, y: h.loopCenter.y })),
+			};
+			this._canvas.classList.add('grabbing');
+		}
+		_updateSelRect(e) {
+			const o = this._svgEl.getBoundingClientRect();
+			const b = this._boxStart;
+			this._selRect.setAttribute('x', Math.min(b.x, e.clientX) - o.left);
+			this._selRect.setAttribute('y', Math.min(b.y, e.clientY) - o.top);
+			this._selRect.setAttribute('width', Math.abs(e.clientX - b.x));
+			this._selRect.setAttribute('height', Math.abs(e.clientY - b.y));
+		}
 		_onMouseMove(e) {
+			if (this._boxStart) {
+				this._updateSelRect(e);
+				return;
+			}
+			if (this._stretchState) {
+				const { idxs, start, snapCoords, lcs } = this._stretchState;
+				const pt = this._clientToScene(e.clientX, e.clientY);
+				const dx = pt.x - start.x,
+					dy = pt.y - start.y;
+				snapCoords.forEach((c, k) => {
+					this._rna.coords[idxs[k]].x = c.x + dx;
+					this._rna.coords[idxs[k]].y = c.y + dy;
+				});
+				for (const h of lcs) {
+					h.lc.x = h.x + dx;
+					h.lc.y = h.y + dy;
+				}
+				this._render();
+				return;
+			}
 			if (this._flipState) {
 				const {
 					helix,
@@ -9448,8 +9556,22 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			if (this._tooltip.style.display !== 'none') this._positionTooltip(e.clientX, e.clientY);
 		}
-		_onMouseUp() {
-			const wasActive = !!(this._rotState || this._flipState);
+		_onMouseUp(e) {
+			if (this._boxStart) {
+				const a = this._clientToScene(this._boxStart.x, this._boxStart.y),
+					b = this._clientToScene(e.clientX, e.clientY);
+				const [x0, x1] = [Math.min(a.x, b.x), Math.max(a.x, b.x)],
+					[y0, y1] = [Math.min(a.y, b.y), Math.max(a.y, b.y)];
+				this._rna.coords.forEach((c, i) => {
+					if (c.x >= x0 && c.x <= x1 && c.y >= y0 && c.y <= y1 && !this._rna.baseDisplay?.[i]?.skip) this._sel.add(i);
+				});
+				this._boxStart = null;
+				this._selRect.style.display = 'none';
+				this._render();
+				return;
+			}
+			const wasActive = !!(this._rotState || this._flipState || this._stretchState);
+			this._stretchState = null;
 			this._panStart = null;
 			this._rotState = null;
 			this._flipState = null;
@@ -9949,6 +10071,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		// Switch to a structure by index or label, with animated transition
 		switchToStructure(idxOrLabel) {
+			this._sel.clear();
 			if (!this._structLayouts.length) return;
 			// Ignore new requests while an animation is running, prevents corrupted frames
 			if (this._isAnimating) return;
@@ -10327,7 +10450,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Bases
 			for (let i = 0; i < n; i++) {
 				const bd = this._rna?.baseDisplay?.[i];
-				const fillColor = (this._showColors && values) ? valueToColor(values[i], colorMap) : null;
+				const fillColor = this._nucFill(i) || ((this._showColors && values) ? valueToColor(values[i], colorMap) : null);
 				if (bd?.skip && !fillColor) {
 					// Skip invisible positions, still render index label below if needed
 				} else {
