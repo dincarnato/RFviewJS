@@ -68,17 +68,19 @@
   --rv-pair-annot-padding:      5;
   --rv-helix-annot-padding:     21;
   --rv-helix-annot-color:       #8e44ad;
-  --rv-helix-annot-opacity:     0.08;
-  --rv-inset-hover-glow:        8px;
-  --rv-inset-max-width:         120px;
-  --rv-inset-min-width:         80px;
-  --rv-logo-filter:             none;
 
   /* Non-canonical dot colour */
   --rv-noncanon-dot: #27ae60;
 
   /* Error border (semi-transparent) */
   --rv-error-border: #c0392b60;
+
+  /* Outline mode (backbone-only view with coloured domains) */
+  --rv-outline-color: #3d2b1f;
+  --rv-outline-width: 25;
+
+  /* Annotation (SS_cons_*) label font size */
+  --rv-annot-label-font-size: 12;
 }
 
 /* ─── Toolbar ─────────────────────────────────────────────────────────────── */
@@ -157,6 +159,82 @@
 .rv-theme-warm .rv-about-name { color: var(--rv-accent); }
 .rv-theme-warm .rv-about-link { color: var(--rv-accent); }
 .rv-theme-warm .rv-about-link:hover { color: var(--rv-accent2); }
+
+/* ─── Inset panels & outline mode ─────────────────────────────────────────── */
+
+.rv-theme-warm .rv-pk-panel,
+.rv-theme-warm .rv-outline-legend,
+.rv-theme-warm .rv-outline-bar { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-warm .rv-pk-panel h4,
+.rv-theme-warm .rv-outline-hint,
+.rv-theme-warm .rv-outline-cols,
+.rv-theme-warm .rv-outline-empty { color: var(--rv-muted); }
+.rv-theme-warm .rv-outline-bar button { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-accent); }
+.rv-theme-warm .rv-outline-bar button:hover:not(:disabled) { border-color: var(--rv-accent); }
+.rv-theme-warm .rv-outline-bar input[type=color],
+.rv-theme-warm .rv-outline-row input[type=color],
+.rv-theme-warm .rv-setting-row input[type=color] { border-color: var(--rv-border); }
+.rv-theme-warm .rv-outline-name,
+.rv-theme-warm .rv-stop-val { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-warm .rv-outline-swatch,
+.rv-theme-warm .rv-pal-swatch { border-color: color-mix(in srgb,var(--rv-text) 25%,transparent); }
+.rv-theme-warm .rv-stop-del { color: var(--rv-muted); }
+.rv-theme-warm .rv-stop-del:hover { color: var(--rv-error); }
+.rv-theme-warm .rv-stop-add { color: var(--rv-accent); border-color: var(--rv-border); }
+.rv-theme-warm .rv-setting-row input[type=range] { accent-color: var(--rv-accent); }
+
+/* ─── Rfam panel, error dialog, loading box ───────────────────────────────── */
+
+.rv-theme-warm .rv-rfam-panel,
+.rv-theme-warm .rv-error-dialog,
+.rv-theme-warm .rv-loading { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-warm .rv-rfam-input { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-warm .rv-rfam-spinner,
+.rv-theme-warm .rv-loading-msg { color: var(--rv-muted); }
+.rv-theme-warm .rv-loading-spinner { border-color: var(--rv-border); border-top-color: var(--rv-accent); }
+.rv-theme-warm .rv-error-dialog-hdr { border-bottom-color: var(--rv-border); }
+.rv-theme-warm .rv-error-dialog-hdr h3 { color: var(--rv-error); }
+.rv-theme-warm .rv-error-dialog-body { color: var(--rv-text); }
+.rv-theme-warm .rv-error { background: var(--rv-surface); border-color: var(--rv-error-border); color: var(--rv-error); }
+
+/* ─── Panel headers, inputs and lists ─────────────────────────────────────── */
+
+.rv-theme-warm .rv-upload-hdr h3,
+.rv-theme-warm .rv-upload-lbl { color: var(--rv-text); }
+.rv-theme-warm .rv-upload-lbl span { color: var(--rv-muted); }
+.rv-theme-warm .rv-upload-x { color: var(--rv-muted); }
+.rv-theme-warm .rv-upload-x:hover { color: var(--rv-accent); }
+.rv-theme-warm .rv-upload-drop { border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-warm .rv-upload-drop:hover,
+.rv-theme-warm .rv-upload-drop.rv--drag { border-color: var(--rv-accent); background: color-mix(in srgb,var(--rv-accent) 6%,transparent); color: var(--rv-text); }
+.rv-theme-warm .rv-upload-btn-cancel { background: transparent; border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-warm .rv-upload-btn-cancel:hover { border-color: var(--rv-text); color: var(--rv-text); }
+.rv-theme-warm .rv-xml-target-row,
+.rv-theme-warm .rv-annot-target-row { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-warm .rv-xml-target-row:hover,
+.rv-theme-warm .rv-annot-target-row:hover { border-color: var(--rv-accent); }
+.rv-theme-warm .rv-struct-order-idx,
+.rv-theme-warm .rv-struct-order-src,
+.rv-theme-warm .rv-struct-order-btn { color: var(--rv-muted); }
+.rv-theme-warm .rv-struct-order-btn:hover { color: var(--rv-text); }
+
+/* ─── .rv-theme-warmoolbar tooltips, zoom label, status dot, about ─────────────────────── */
+
+.rv-theme-warm .rv-toolbar .rv-btn::after { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-warm.rv--toolbar-left .rv-toolbar { border-right-color: var(--rv-border); }
+.rv-theme-warm .rv-zoom-lbl { color: var(--rv-muted); }
+.rv-theme-warm .rv-dot { background: var(--rv-accent2); }
+.rv-theme-warm .rv-about-ver,
+.rv-theme-warm .rv-about-desc { color: var(--rv-muted); }
+
+/* ─── Alignment view ──────────────────────────────────────────────────────── */
+
+.rv-theme-warm .rv-aln-scroll { background: var(--rv-bg); }
+.rv-theme-warm .rv-aln-thead th { background: var(--rv-surface); border-bottom-color: var(--rv-border); }
+.rv-theme-warm .rv-aln-tfoot td { background: var(--rv-surface); border-top-color: var(--rv-border); }
+.rv-theme-warm .rv-aln-name { background: var(--rv-bg); color: var(--rv-muted); }
+.rv-theme-warm .rv-aln-thead .rv-aln-name,
+.rv-theme-warm .rv-aln-tfoot .rv-aln-name { background: var(--rv-surface); color: var(--rv-text); }
 
 /* ─── Scrollbars ──────────────────────────────────────────────────────────── */
 

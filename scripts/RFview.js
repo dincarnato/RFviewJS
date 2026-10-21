@@ -13,6 +13,7 @@
   
    Usage:  const viewer = new RFviewJS(containerElement, config);
  */
+
 (function(global) {
 	'use strict';
 	// Constants (ported from VARNA Java source)
@@ -28,9 +29,11 @@
 		Math.PI, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4
 	];
 	const NS = 'http://www.w3.org/2000/svg';
+
 	// Scoped CSS (injected once)
 	const STYLE_ID = 'rfviewjs-css';
-	// Structural CSS — all  colors use var(--rv-*, fallback).
+
+	// Structural CSS - all  colors use var(--rv-*, fallback).
 	// Fallback values match rfviewjs.css exactly, so appearance is identical
 	// whether or not the external stylesheet is loaded.
 	const CSS = `
@@ -72,20 +75,40 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
    --rv-base-radius: visual radius of the nucleotide circles (default 11, unitless SVG)
    --rv-base-index-offset: extra clearance beyond the circle edge for index labels (default 26)
    Pair annotation boxes
-   --rv-noncanon-dot-r:4.5 — non-canonical base-pair dot radius
-   --rv-pair-annot-opacity — annotation box fill opacity (declared in .rv{})
-   --rv-pair-annot-stroke-width — annotation box border width (declared in .rv{})
-   --rv-pair-annot-padding — annotation box padding in scene units (declared in .rv{})
+   --rv-noncanon-dot-r:4.5 - non-canonical base-pair dot radius
+   --rv-pair-annot-opacity - annotation box fill opacity (declared in .rv{})
+   --rv-pair-annot-stroke-width - annotation box border width (declared in .rv{})
+   --rv-pair-annot-padding - annotation box padding in scene units (declared in .rv{})
 */
 .rv-pk-panels{position:absolute;top:52px;left:16px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:10}
-.rv-pk-panel{width:var(--rv-inset-max-width,120px);min-width:var(--rv-inset-min-width,80px);background:var(--rv-bg,#ffffff);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 10px;pointer-events:all;cursor:default;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif}
+.rv-pk-panel{flex-shrink:0;width:var(--rv-inset-max-width,120px);min-width:var(--rv-inset-min-width,80px);background:var(--rv-bg,#ffffff);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 10px;pointer-events:all;cursor:default;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif}
 .rv-pk-panel svg{display:block;width:100%;height:auto}
-.rv-pk-panel h4{font-size:12px;color:var(--rv-muted,#656d76);margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.rv-pk-panel h4{overflow-wrap:anywhere;font-size:12px;color:var(--rv-muted,#656d76);margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .rv-pal-legend{position:absolute;top:52px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:10px 14px;font-size:13px;display:none;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;min-width:120px;z-index:10}
 .rv-pal-legend h4{font-size:12px;color:var(--rv-muted,#656d76);margin:0 0 6px;text-transform:uppercase;letter-spacing:.05em}
 .rv-pal-entry{display:flex;align-items:center;gap:7px;margin:2px 0}
 .rv-pal-swatch{width:20px;height:11px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);opacity:var(--rv-pair-annot-opacity,0.5)}
 .rv-pal-key{font-size:13px}
+.rv-outline-legend{position:absolute;top:52px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:10px 14px;font-size:13px;display:none;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;min-width:120px;z-index:10}
+.rv-outline-entry{display:flex;align-items:center;gap:7px;margin:2px 0}
+.rv-outline-swatch{width:20px;height:11px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.15)}
+.rv-outline-bar{position:absolute;top:52px;left:16px;display:none;align-items:center;gap:8px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:10;max-width:calc(100% - 32px);box-sizing:border-box}
+.rv-outline-bar.rv-visible{display:flex}
+.rv-outline-bar input[type=color]{width:28px;height:22px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;padding:1px 2px;cursor:pointer;background:none;flex-shrink:0}
+.rv-outline-hint{color:var(--rv-muted,#656d76);white-space:nowrap}
+.rv-outline-bar button{font-size:12px;color:var(--rv-accent,#0969da);background:none;border:1px solid var(--rv-border,#d0d7de);border-radius:5px;padding:2px 8px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.rv-outline-bar button:disabled{color:var(--rv-muted,#656d76);cursor:default;opacity:.6}
+.rv--outline .rv-legend,.rv--outline .rv-pal-legend,.rv--outline .rv-aln-legend,.rv--outline .rv-pk-panels{display:none!important}
+.rv-outline-hit{cursor:crosshair}
+.rv-outline-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.rv-outline-name{flex:1;min-width:0;padding:3px 5px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;font-size:13px;font-family:inherit;background:var(--rv-bg,#fff);color:var(--rv-text,#1f2328)}
+.rv-outline-row .rv-stop-val{width:62px;box-sizing:border-box;-moz-appearance:textfield}
+.rv-outline-row .rv-stop-val::-webkit-inner-spin-button,.rv-outline-row .rv-stop-val::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.rv-outline-row input[type=color]{width:30px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;padding:1px 2px;cursor:pointer;background:none;flex-shrink:0}
+.rv-outline-cols{display:flex;gap:5px;font-size:11px;color:var(--rv-muted,#656d76);margin:8px 0 3px}
+.rv-outline-cols span:first-child{flex:1}
+.rv-outline-cols .rv-outline-col-n{width:62px;padding:0 5px;box-sizing:border-box}
+.rv-outline-empty{font-size:12px;color:var(--rv-muted,#656d76);margin:4px 0}
 .rv-tooltip{position:absolute;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:6px;padding:6px 10px;font-family:monospace;font-size:13px;color:var(--rv-text,#1f2328);pointer-events:none;display:none;z-index:100;max-width:200px;line-height:1.6}
 .rv-legend{position:absolute;bottom:16px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:10px 14px;font-size:13px;display:none;min-width:160px;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;}
 .rv-legend h4{font-size:12px;color:var(--rv-muted,#656d76);margin:0 0 6px;text-transform:uppercase;letter-spacing:.05em}
@@ -283,7 +306,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (/^\d+\s/.test(line) || /^\d+$/.test(line)) {
 				// Could be header or data, we disambiguate by checking if 2nd field is a single letter
 				const parts = line.split(/\s+/);
-				const isData = parts.length >= 5 && /^[ACGUTXacgutx]$/i.test(parts[1]);
+				const isData = parts.length >= 5 && /^[A-Za-z]$/.test(parts[1]) &&
+					[0, 2, 3, 4, ...(parts.length > 5 ? [5] : [])].every(k => /^-?\d+$/.test(parts[k]));
 				if (!isData) {
 					// New block header
 					cur = {
@@ -383,629 +407,516 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// Requires #=GC SS_cons line for the consensus structure.
 	// Shared Stockholm parser constants
 	const _STO_BRACKET_RE = /[()[\]{}<>A-Za-z]/;
-	const _STO_NUC_SET = new Set(['A', 'C', 'G', 'U']);
+	// R2R strengthColorMap: 1 = red (≥97%), 2 = black (≥90%), 3 = grey (≥75%), 4 = white (≥50% present)
 	const _STO_RED = '#cc0000', _STO_BLACK = '#111111', _STO_GREY = '#888888', _STO_WHITE = '#ffffff';
-	const _STO_IUPAC2 = {AC:'M',AG:'R',AU:'W',CG:'S',CU:'Y',GU:'K'};
-	const _STO_IUPAC3 = {ACG:'V',ACU:'H',AGU:'D',CGU:'B'};
-	const _STO_CANON_PAIRS = new Set(['AU','UA','CG','GC','GU','UG']);
-	const _STO_NUCS = ['A','C','G','U'];
+
+	// R2R-like structure rendering
+	const _R2R_NUC_THRESH = [0.97, 0.9, 0.75];          // nucThreshold
+	const _R2R_PRESENT_THRESH = [0.97, 0.9, 0.75, 0.5]; // nucPresentThreshold
+	// Up to this many sequences R2R's GSC weights are used (as R2R/R-scape do).
+	// GSC is too slow in a browser beyond that, so larger alignments use squid's position-based (PB)
+	// weights, over every sequence.
+	const _R2R_GSC_MAX_SEQS = 1000;
+	// R2R column codes (reduced alignment): 0..3 = A,C,G,U ; 4 = gap ; 5 = degenerate letter (N)
+	const _R2R_GAP = 4, _R2R_DEGEN = 5;
+
+	const _STO_CLS_GAP = 5;
+	const _STO_CLS = (() => {
+		const t = new Uint8Array(256).fill(6);
+		for (let c = 65; c <= 90; c++) t[c] = t[c + 32] = 4;
+		for (const [ch, k] of [['A', 0], ['C', 1], ['G', 2], ['U', 3], ['T', 3]]) t[ch.charCodeAt(0)] = t[ch.toLowerCase().charCodeAt(0)] = k;
+		t[45] = t[46] = t[95] = _STO_CLS_GAP;
+		return t;
+	})();
+	function _stoClassInto(out, from, str) {
+		for (let p = 0; p < str.length; p++) { const c = str.charCodeAt(p); out[from + p] = c < 256 ? _STO_CLS[c] : 6; }
+		return from + str.length;
+	}
+	function _stoClassify(str, alnLen) {
+		const out = new Uint8Array(alnLen).fill(_STO_CLS_GAP);
+		_stoClassInto(out, 0, str.length > alnLen ? str.slice(0, alnLen) : str);
+		return out;
+	}
+
+	// GSC weights 
+	//   distance  = 1 - PairwiseIdentity (idents / min(#nongap1, #nongap2), case-sensitive raw chars)
+	//   tree      = Cluster(..., CLUSTER_MIN)  (single linkage, squid's row/col swapping & tie order)
+	//   weights   = upweight/downweight 
+	// Returns Float64Array of N weights (sum N).
+	function _computeGSCWeights(codes, alnLen) {
+		const N = codes.length;
+		const wgt = new Float64Array(N);
+		if (N === 0) return wgt;
+		if (N === 1) { wgt[0] = 1; return wgt; }
+		const f = Math.fround;
+		// Gaps are stored as 0 so the identity loop is a single compare.
+		const S = new Array(N), nongap = new Int32Array(N);
+		for (let s = 0; s < N; s++) {
+			const c = codes[s], a = new Uint8Array(alnLen);
+			let n = 0;
+			for (let p = 0; p < alnLen; p++) if (c[p] !== _R2R_GAP) { a[p] = c[p] + 1; n++; }
+			S[s] = a; nongap[s] = n;
+		}
+		// MakeDiffMx
+		const mx = [];
+		for (let i = 0; i < N; i++) mx.push(new Float32Array(N));
+		for (let i = 0; i < N; i++) {
+			const si = S[i];
+			for (let j = i; j < N; j++) {
+				const sj = S[j];
+				let id = 0;
+				for (let p = 0; p < alnLen; p++) { const c = si[p]; if (c !== 0 && c === sj[p]) id++; }
+				const len = nongap[i] < nongap[j] ? nongap[i] : nongap[j];
+				const ident = len === 0 ? 0 : f(id / len);
+				mx[i][j] = mx[j][i] = f(1.0 - ident);
+			}
+		}
+		// Cluster(dmx, N, CLUSTER_MIN)
+		const tLeft = new Int32Array(N - 1), tRight = new Int32Array(N - 1), tInc = new Int32Array(N - 1);
+		const tLbl = new Float32Array(N - 1), tRbl = new Float32Array(N - 1), diff = new Float32Array(N - 1);
+		const coord = new Int32Array(N);
+		for (let c = 0; c < N; c++) coord[c] = c;
+		for (let Np = N; Np >= 2; Np--) {
+			let min = f(999999.), i = 0, j = 0;
+			for (let row = 0; row < Np; row++) {
+				const r = mx[row];
+				for (let col = row + 1; col < Np; col++) if (r[col] < min) { min = r[col]; i = row; j = col; }
+			}
+			const k = Np - 2;
+			tLeft[k] = coord[i]; tRight[k] = coord[j];
+			diff[k] = min;
+			tLbl[k] = min; tRbl[k] = min;
+			if (coord[i] >= N) tLbl[k] = f(tLbl[k] - diff[coord[i] - N]);
+			if (coord[j] >= N) tRbl[k] = f(tRbl[k] - diff[coord[j] - N]);
+			tInc[k] = (coord[i] < N ? 1 : tInc[coord[i] - N]) + (coord[j] < N ? 1 : tInc[coord[j] - N]);
+			if (i === Np - 1 || j === Np - 2) { const t = i; i = j; j = t; }
+			if (i !== Np - 2) {
+				let tr = mx[Np - 2]; mx[Np - 2] = mx[i]; mx[i] = tr;
+				for (let row = 0; row < Np; row++) { const tc = mx[row][Np - 2]; mx[row][Np - 2] = mx[row][i]; mx[row][i] = tc; }
+				const tcd = coord[i]; coord[i] = coord[Np - 2]; coord[Np - 2] = tcd;
+			}
+			if (j !== Np - 1) {
+				let tr = mx[Np - 1]; mx[Np - 1] = mx[j]; mx[j] = tr;
+				for (let row = 0; row < Np; row++) { const tc = mx[row][Np - 1]; mx[row][Np - 1] = mx[row][j]; mx[row][j] = tc; }
+				const tcd = coord[j]; coord[j] = coord[Np - 1]; coord[Np - 1] = tcd;
+			}
+			i = Np - 2; j = Np - 1;
+			const ri = mx[i], rj = mx[j];
+			for (let col = 0; col < Np; col++) ri[col] = Math.min(ri[col], rj[col]);
+			for (let col = 0; col < Np; col++) mx[col][i] = ri[col];
+			coord[Np - 2] = Np + N - 2;
+		}
+		// upweight (children have larger tree index than parents, iterate k = N-2 … 0)
+		const lwt = new Float32Array(2 * N - 1), rwt = new Float32Array(2 * N - 1), fwt = new Float32Array(2 * N - 1);
+		for (let k = N - 2; k >= 0; k--) {
+			const node = k + N, ld = tLeft[k], rd = tRight[k];
+			lwt[node] = f(f(lwt[ld] + rwt[ld]) + tLbl[k]);
+			rwt[node] = f(f(lwt[rd] + rwt[rd]) + tRbl[k]);
+		}
+		// downweight from root (node N = tree[0]), parents before children, k = 0 … N-2
+		fwt[N] = N;
+		for (let k = 0; k <= N - 2; k++) {
+			const node = k + N, ld = tLeft[k], rd = tRight[k];
+			const tot = f(lwt[node] + rwt[node]);
+			if (tot > 0) {
+				fwt[ld] = f(fwt[node] * f(lwt[node] / tot));
+				fwt[rd] = f(fwt[node] * f(rwt[node] / tot));
+			} else {
+				const lnum = ld >= N ? tInc[ld - N] : 1, rnum = rd >= N ? tInc[rd - N] : 1;
+				fwt[ld] = f(f(fwt[node] * lnum) / (lnum + rnum));
+				fwt[rd] = f(f(fwt[node] * rnum) / (lnum + rnum));
+			}
+		}
+		for (let i = 0; i < N; i++) wgt[i] = fwt[i];
+		return wgt;
+	}
+
+	// Position-based weights. Returns Float64Array of N weights (sum N).
+	function _computePBWeights(codes, alnLen) {
+		const N = codes.length;
+		const wgt = new Float64Array(N);
+		if (N === 0) return wgt;
+		if (N === 1) { wgt[0] = 1; return wgt; }
+		const f = Math.fround;
+		const w = new Float32Array(N), cnt = new Int32Array(6);
+		for (let p = 0; p < alnLen; p++) {
+			cnt.fill(0);
+			for (let i = 0; i < N; i++) cnt[codes[i][p]]++;
+			let nres = 0;
+			for (let x = 0; x < 6; x++) if (x !== _R2R_GAP && cnt[x] > 0) nres++;
+			for (let i = 0; i < N; i++) { const x = codes[i][p]; if (x !== _R2R_GAP) w[i] = f(w[i] + 1 / f(nres * cnt[x])); }
+		}
+		for (let i = 0; i < N; i++) {
+			let len = 0;
+			const c = codes[i];
+			for (let p = 0; p < alnLen; p++) if (c[p] !== _R2R_GAP) len++;
+			w[i] = len > 0 ? f(w[i] / len) : 0;
+		}
+		let sum = 0;
+		for (let i = 0; i < N; i++) sum = f(sum + w[i]);
+		const norm = sum > 0 ? f(N / sum) : 0;
+		for (let i = 0; i < N; i++) wgt[i] = sum > 0 ? f(w[i] * norm) : 1;
+		return wgt;
+	}
+
+	// Per-column normalized frequencies, residues and gaps both count, degenerate letters are ignored, normalized to sum 1.
+	// Returns Float64Array(alnLen*5) laid out [A,C,G,U,gap] per column.
+	function _r2rColumnFreqs(codes, weights, alnLen) {
+		const F = new Float64Array(alnLen * 5);
+		for (let s = 0; s < codes.length; s++) {
+			const w = weights ? weights[s] : 1, c = codes[s];
+			for (let p = 0; p < alnLen; p++) { const x = c[p]; if (x !== _R2R_DEGEN) F[p * 5 + x] += w; }
+		}
+		for (let p = 0; p < alnLen; p++) {
+			const o = p * 5, norm = F[o] + F[o + 1] + F[o + 2] + F[o + 3] + F[o + 4];
+			if (norm > 0) for (let k = 0; k < 5; k++) F[o + k] /= norm;
+			else F[o + 4] = NaN; // all-degenerate column
+		}
+		return F;
+	}
+
+	// R2R consensus symbol + strength for one column (exact rule order of GSCWeightedConsensus_OneColumn).
+	function _r2rClassify(F, o) {
+		const T = _R2R_NUC_THRESH;
+		for (let t = 0; t < T.length; t++)
+			for (let n = 0; n < 4; n++)
+				if (F[o + n] >= T[t]) return { sym: 'ACGU'[n], strength: t + 1 };
+		for (let t = 0; t < T.length; t++) {
+			if (F[o] + F[o + 2] >= T[t]) return { sym: 'R', strength: t + 1 };
+			if (F[o + 1] + F[o + 3] >= T[t]) return { sym: 'Y', strength: t + 1 };
+		}
+		const P = _R2R_PRESENT_THRESH;
+		for (let t = 0; t < P.length; t++)
+			if (1.0 - F[o + 4] >= P[t]) return { sym: 'n', strength: t + 1 };
+		return { sym: '-', strength: 0 };
+	}
+
+	// Build per-column display descriptors.
+	// R2R colours (strengthColorMap): 1 red, 2 black, 3 grey, 4 white; letters use the same map.
+	// '-' columns are removed (RemoveGaps) unless paired
+	function _r2rDisplayColumns(F, alnLen, pairedMask) {
+		const TXT = [null, _STO_RED, _STO_BLACK, _STO_GREY];
+		const FILL = [null, _STO_RED, _STO_BLACK, _STO_GREY, _STO_WHITE];
+		const allBD = new Array(alnLen), allSeq = new Array(alnLen);
+		for (let p = 0; p < alnLen; p++) {
+			const o = p * 5;
+			const pct = v => Number.isFinite(v) ? +(v * 100).toFixed(1) : 0;
+			const colStats = { A: pct(F[o]), C: pct(F[o + 1]), G: pct(F[o + 2]), U: pct(F[o + 3]),
+				gap: Number.isFinite(F[o + 4]) ? pct(F[o + 4]) : 100 };
+			// most common nucleotide (used only as the layout's sequence letter)
+			let mx = 'N', mv = 0;
+			for (let n = 0; n < 4; n++) if (F[o + n] > mv) { mv = F[o + n]; mx = 'ACGU'[n]; }
+			allSeq[p] = mx;
+			const { sym, strength } = _r2rClassify(F, o);
+			if (sym === 'n') allBD[p] = { letter: null, textColor: null, fillColor: FILL[strength], colStats };
+			else if (sym === '-') allBD[p] = pairedMask[p] ? { letter: null, textColor: null, fillColor: null, colStats } : { skip: true, colStats };
+			else allBD[p] = { letter: sym, textColor: TXT[strength], fillColor: null, colStats };
+		}
+		return { allBD, allSeq };
+	}
+
+	// % canonical pairs (AU/UA/GC/CG/GU/UG) per paired column, over sequences that have a
+	// nucleotide at both ends; each sequence counts with its weight (uniform when weights=null).
+	function _r2rCanonPct(codes, weights, alnLen, pairedCols) {
+		const out = new Array(alnLen).fill(null);
+		// codes: 0 A,1 C,2 G,3 U ; canonical: A-U, C-G, G-U (both orders)
+		const CAN = [[0,0,0,1],[0,0,1,0],[0,1,0,1],[1,0,1,0]];
+		for (const [ci, cj] of pairedCols) {
+			let can = 0, tot = 0;
+			for (let s = 0; s < codes.length; s++) {
+				const a = codes[s][ci], b = codes[s][cj];
+				if (a > 3 || b > 3) continue;
+				const w = weights ? weights[s] : 1;
+				tot += w;
+				if (CAN[a][b]) can += w;
+			}
+			const pct = tot > 0 ? (can / tot) * 100 : 0;
+			out[ci] = pct; out[cj] = pct;
+		}
+		return out;
+	}
+
+	// Shared Stockholm consensus builder (used by both the in-memory and the chunked parser).
+	// Reproduces what R-scape draws with R2R (default options):
+	//   1. R-scape original_msa_manipulate():
+	//        RemoveFragments(-F 0) : drop sequences with no residues
+	//        RemoveGapColumns(0.75): keep a column only if residues/(residues+gaps) >= 0.25
+	//                                (unweighted; '~' missing ignored; any letter is a residue)
+	//        RemoveBrokenBasepairs : a pair (SS_cons or SS_cons_*) losing a column is unpaired
+	//        ConvertDegen2N / ConvertMissingNonresidue2Gap, T>U, uppercase
+	//   2. GSC weights are computed on the kept columns only
+	//   3. R2R drawing with "keep allpairs": '-' columns are dropped unless paired.
+	//   seqs         : every sequence of the alignment (order kept), each a gapped string or a
+	//                  Uint8Array of class codes (_stoClassify)
+	//   ssCons       : raw #=GC SS_cons string
+	//   featureLines : raw #=GC SS_cons_* strings (their pairs are kept like SS_cons pairs)
+	// Returns the kept-column arrays (positionLabels = original alignment columns), trimmed/untrimmed
+	// (ssEnds) data and two display variants: wVar (default; weighted when >= 2 sequences) and rVar
+	// (unweighted, for the W toggle; null when no weighting applies). Both share the same columns.
+	const _RSCAPE_MIN_RES_FRAC = 0.25; // 1 - R-scape --gapthresh 0.75
+	function _stoBuildConsensus(seqs, ssCons, featureLines = null) {
+		const alnLen = ssCons.length;
+		// 1. R-scape preprocessing (class codes: <= 4 letter, 5 counted gap, 6 other)
+		const seqsUsed = [];
+		for (const sq of seqs) {
+			const a = typeof sq === 'string' ? _stoClassify(sq, alnLen) : sq;
+			for (let p = 0; p < alnLen; p++) if (a[p] <= 4) { seqsUsed.push(a); break; }
+		}
+		const useCol = new Uint8Array(alnLen);
+		{
+			const res = new Int32Array(alnLen), tot = new Int32Array(alnLen);
+			for (const a of seqsUsed)
+				for (let p = 0; p < alnLen; p++) {
+					const x = a[p];
+					if (x <= 4) { res[p]++; tot[p]++; }
+					else if (x === _STO_CLS_GAP) tot[p]++;
+				}
+			for (let p = 0; p < alnLen; p++) useCol[p] = res[p] > 0 && res[p] / tot[p] >= _RSCAPE_MIN_RES_FRAC ? 1 : 0;
+		}
+		const sArr = Array.from(ssCons).map(c => _STO_BRACKET_RE.test(c) ? c : '.');
+		{
+			const { pairs: p0, pseudoPairs: k0 } = parseDotBracket(sArr.join(''));
+			for (let i = 0; i < alnLen; i++) { const j = p0[i]; if (j > i && !(useCol[i] && useCol[j])) sArr[i] = sArr[j] = '.'; }
+			for (const { i, j } of k0) if (!(useCol[i] && useCol[j])) sArr[i] = sArr[j] = '.';
+		}
+		const structFull = sArr.join('');
+		const featKeep = new Uint8Array(alnLen);
+		for (const str of featureLines || []) {
+			if (!str || str.length !== alnLen) continue;
+			for (const { i, j } of matchBracketPairs(str)) if (useCol[i] && useCol[j]) featKeep[i] = featKeep[j] = 1;
+		}
+		const cols = [];
+		for (let p = 0; p < alnLen; p++) if (useCol[p]) cols.push(p);
+		const L = cols.length;
+		// Reduced alignment in R2R codes: degenerate letters > N, T > U, any non-letter > gap
+		const codes = seqsUsed.map(a => {
+			const o = new Uint8Array(L);
+			for (let k = 0; k < L; k++) { const x = a[cols[k]]; o[k] = x < 4 ? x : x === 4 ? _R2R_DEGEN : _R2R_GAP; }
+			return o;
+		});
+		// R2R weighted consensus on the reduced alignment: GSC up to _R2R_GSC_MAX_SEQS, PB above
+		const N = codes.length;
+		let weights = null, weighting = null;
+		if (N >= 2) {
+			if (N <= _R2R_GSC_MAX_SEQS) { weights = _computeGSCWeights(codes, L); weighting = 'GSC'; }
+			else { weights = _computePBWeights(codes, L); weighting = 'PB'; }
+		}
+		const pairedSub = cols.map(p => structFull[p] !== '.' || featKeep[p] === 1);
+		const { pairs: pairsFull, pseudoPairs: pseudoFull } = parseDotBracket(structFull);
+		const subIdx = new Int32Array(alnLen).fill(-1);
+		cols.forEach((p, k) => { subIdx[p] = k; });
+		const pairedColsSub = [];
+		for (let i = 0; i < alnLen; i++) if (pairsFull[i] > i) pairedColsSub.push([subIdx[i], subIdx[pairsFull[i]]]);
+		for (const { i, j } of pseudoFull) if (i < j) pairedColsSub.push([subIdx[i], subIdx[j]]);
+		const mk = W => {
+			const F = _r2rColumnFreqs(codes, W, L);
+			const sub = _r2rDisplayColumns(F, L, pairedSub);
+			const canonSub = _r2rCanonPct(codes, W, L, pairedColsSub);
+			const allBD = new Array(alnLen), allSeq = new Array(alnLen), canon = new Array(alnLen).fill(null);
+			for (let p = 0; p < alnLen; p++) {
+				const k = subIdx[p];
+				if (k < 0) { allBD[p] = { skip: true, colStats: null }; allSeq[p] = 'N'; }
+				else { allBD[p] = sub.allBD[k]; allSeq[p] = sub.allSeq[k]; canon[p] = canonSub[k]; }
+			}
+			return { allBD, allSeq, canon };
+		};
+		const vW = mk(weights);
+		const vR = weights ? mk(null) : null;
+		// 3. columns drawn: R2R drops '-' columns except paired ones ("keep allpairs"), so a
+		// pair never loses one partner here.
+		let keep = [];
+		for (let c = 0; c < alnLen; c++) if (!vW.allBD[c].skip) keep.push(c);
+		if (!keep.length) keep = Array.from({ length: alnLen }, (_, c) => c); // render something valid
+		const cell = bd => bd.skip ? { letter: null, textColor: null, fillColor: null, colStats: bd.colStats } : bd;
+		const pick = v => ({ seq: keep.map(c => v.allSeq[c]), bd: keep.map(c => cell(v.allBD[c])), canon: keep.map(c => v.canon[c]) });
+		const pW = pick(vW), pR = vR ? pick(vR) : null;
+		const struct = keep.map(c => structFull[c]);
+		const posLabels = keep.map(c => c + 1);
+		// Trim terminal positions unpaired in SS_cons; untrimmed arrays go into ssEnds for the toggle.
+		// (SS_cons_* features in the trimmed ends are kept for the full view by _stoMakeRecord.)
+		let trimS = 0, trimE = struct.length - 1;
+		while (trimS <= trimE && struct[trimS] === '.') trimS++;
+		while (trimE >= trimS && struct[trimE] === '.') trimE--;
+		if (trimS > trimE) trimS = 0; // fully single-stranded, don't trim at all
+		const trimmed = trimS > 0 || trimE < struct.length - 1;
+		const cut = a => trimmed ? a.slice(trimS, trimE + 1) : a.slice();
+		let ssEnds = null;
+		if (trimmed) {
+			ssEnds = {
+				trimS, trimE,
+				fullSeq: pW.seq.slice(), fullStruct: struct.slice(), fullBaseDisplay: pW.bd.slice(),
+				fullPositionLabels: posLabels.slice(), fullCanonPct: pW.canon.slice(),
+			};
+			if (pR) {
+				ssEnds._wVar = { fullSeq: ssEnds.fullSeq, fullBaseDisplay: ssEnds.fullBaseDisplay, fullCanonPct: ssEnds.fullCanonPct };
+				ssEnds._rVar = { fullSeq: pR.seq.slice(), fullBaseDisplay: pR.bd.slice(), fullCanonPct: pR.canon.slice() };
+			}
+		}
+		const variant = p => ({ sequence: cut(p.seq).join(''), baseDisplay: cut(p.bd), pairCanonPct: cut(p.canon) });
+		return {
+			alnLen, structFull, ssEnds, weighting,
+			structure: cut(struct).join(''),
+			positionLabels: cut(posLabels),
+			wVar: variant(pW),
+			rVar: pR ? variant(pR) : null,
+		};
+	}
 
 	// Name taken from #=GF ID or #=GF AC, or falls back to filename hint.
 	// Returns [{label, sequence, structure, baseDisplay}], one record per alignment block.
 	//
-	function parseStockholmFile(text, filenameFallback) {
-		const BRACKET_RE = _STO_BRACKET_RE;
-		const NUC_SET = _STO_NUC_SET;
-		const RED = _STO_RED, BLACK = _STO_BLACK, GREY = _STO_GREY, WHITE = _STO_WHITE;
-		const records = [];
-		let id = null,
-			ac = null;
-		// ALN_SEQ_LIMIT: above this many sequences, drop alnSeqs/alnStruct to save memory.
-		const ALN_SEQ_LIMIT = 1000;
-		const seqMap = new Map(); // seqId → gapped sequence (only kept when N ≤ ALN_SEQ_LIMIT)
-		const seqOffset = new Map(); // seqId → next column index (handles interleaved format)
-		// colCounts[col] = {A,C,G,U} — accumulated per column, avoids storing full sequences
-		let colCounts = null;
-		let seqCount = 0;
-		const ssConsParts = [];
-		const ssConsFeatureParts = {};
+	// Sequences kept as text per Stockholm alignment block, for the alignment view. The consensus
+	// always uses every sequence (the rest are kept as 1-byte class codes only).
+	const _STO_MAX_SEQS = 1000;
 
-		function buildRecord() {
-			if (!ssConsParts.length || seqCount === 0) return;
-			const ssCons = ssConsParts.join('');
-			const N = seqMap.size; // number of sequences actually processed (≤ ALN_SEQ_LIMIT)
-			const alnLen = ssCons.length;
-			if (colCounts && colCounts.length !== alnLen) throw new Error('Stockholm: SS_cons length does not match alignment columns');
-			// normalize SS_cons, keeps bracket chars and everything else is a dot
-			const structFull = Array.from(ssCons).map(c => BRACKET_RE.test(c) ? c : '.').join('');
-			// Per-column conservation stats
-			const allBD = []; // display descriptor per column
-			const allSeq = []; // most common nucleotide per column
-			for (let col = 0; col < alnLen; col++) {
-				const cc = colCounts ? colCounts[col] : {A:0,C:0,G:0,U:0};
-				const nucCount = {A: cc.A||0, C: cc.C||0, G: cc.G||0, U: cc.U||0};
-				const numNuc = (cc.A||0) + (cc.C||0) + (cc.G||0) + (cc.U||0);
-				let maxNuc = 'N',
-					maxCnt = 0;
-				for (const [n, cnt] of Object.entries(nucCount))
-					if (cnt > maxCnt) {
-						maxCnt = cnt;
-						maxNuc = n;
-					}
-				allSeq.push(maxNuc);
-				const maxFreq = maxCnt / N;
-				const nucFreq = numNuc / N;
-				// Column frequency stats for the hover tooltip
-				const colStats = {
-					A: +((nucCount.A || 0) / N * 100).toFixed(1),
-					C: +((nucCount.C || 0) / N * 100).toFixed(1),
-					G: +((nucCount.G || 0) / N * 100).toFixed(1),
-					U: +((nucCount.U || 0) / N * 100).toFixed(1),
-					gap: +((1 - nucFreq) * 100).toFixed(1),
-				};
-				if (maxFreq >= 0.97) {
-					allBD.push({
-						letter: maxNuc,
-						textColor: RED,
-						fillColor: null,
-						colStats
-					});
-				} else if (maxFreq >= 0.90) {
-					allBD.push({
-						letter: maxNuc,
-						textColor: BLACK,
-						fillColor: null,
-						colStats
-					});
-				} else if (maxFreq >= 0.75) {
-					allBD.push({
-						letter: maxNuc,
-						textColor: GREY,
-						fillColor: null,
-						colStats
-					});
-				} else {
-					// IUPAC degenerate check
-					// Try 2 nt then 3 nt combos. Each component must be ≥30%;
-					// combined total must reach 75%. Same  color thresholds as single bases.
-					// This is better than the original R2R implementation that could have
-					// never returned 3 nt degenerations
-					const IUPAC2 = {
-						AC: 'M',
-						AG: 'R',
-						AU: 'W',
-						CG: 'S',
-						CU: 'Y',
-						GU: 'K'
-					};
-					const IUPAC3 = {
-						ACG: 'V',
-						ACU: 'H',
-						AGU: 'D',
-						CGU: 'B'
-					};
-					const NUCS = ['A', 'C', 'G', 'U'];
-					const MIN_C = 0.30;
-					const f = n => (nucCount[n] || 0) / N;
-					let iupac = null,
-						iupacFreq = 0;
-					// 2 nt
-					outer2: for (let i = 0; i < NUCS.length; i++) {
-						for (let j = i + 1; j < NUCS.length; j++) {
-							const fi = f(NUCS[i]),
-								fj = f(NUCS[j]);
-							if (fi >= MIN_C && fj >= MIN_C && fi + fj >= 0.75) {
-								iupac = IUPAC2[NUCS[i] + NUCS[j]];
-								iupacFreq = fi + fj;
-								break outer2;
-							}
-						}
-					}
-					// 3 nt (only if no 2 nt match)
-					if (!iupac) {
-						outer3: for (let i = 0; i < NUCS.length; i++) {
-							for (let j = i + 1; j < NUCS.length; j++) {
-								for (let k = j + 1; k < NUCS.length; k++) {
-									const fi = f(NUCS[i]),
-										fj = f(NUCS[j]),
-										fk = f(NUCS[k]);
-									if (fi >= MIN_C && fj >= MIN_C && fk >= MIN_C && fi + fj + fk >= 0.75) {
-										iupac = IUPAC3[NUCS[i] + NUCS[j] + NUCS[k]];
-										iupacFreq = fi + fj + fk;
-										break outer3;
-									}
-								}
-							}
-						}
-					}
-					if (iupac) {
-						const iupacColor = iupacFreq >= 0.97 ? RED : iupacFreq >= 0.90 ? BLACK : GREY;
-						allBD.push({
-							letter: iupac,
-							textColor: iupacColor,
-							fillColor: null
-						});
-					} else {
-						const fill = nucFreq >= 0.97 ? RED : nucFreq >= 0.90 ? BLACK : nucFreq >= 0.75 ? GREY : nucFreq >= 0.50 ? WHITE : null;
-						const isPairedCol = structFull[col] !== '.';
-						allBD.push(fill !== null ? {
-							letter: null,
-							textColor: null,
-							fillColor: fill
-						} : isPairedCol ? {
-							letter: null,
-							textColor: null,
-							fillColor: null
-						} : {
-							skip: true
-						});
-					}
-					// Attach column stats to the last pushed entry for the tooltip
-					allBD[allBD.length - 1].colStats = colStats;
-				}
+	// SS_cons_* feature lines > {ssConsFeatures: {name: [drawnIdx…]}, ssConsPkPairs: {name: [{i,j}…]}}.
+	// A feature covers every drawn column whose character is not '.', ':', '_' or '-'; its bracket /
+	// letter pairs become inset pairs when both ends are drawn.
+	function _stoFeatureAnnotations(featParts, alnLen, positionLabels) {
+		const colToRi = colToRenderedMap(positionLabels);
+		const ssConsFeatures = {}, ssConsPkPairs = {};
+		for (const [fn, parts] of Object.entries(featParts)) {
+			const str = parts.join('');
+			if (str.length !== alnLen) continue;
+			const pos = [];
+			for (let c = 0; c < alnLen; c++) {
+				if ('.:_-'.includes(str[c])) continue;
+				const ri = colToRi.get(c);
+				if (ri !== undefined) pos.push(ri);
 			}
-			// To preserve pair consistency, if one partner is skipped, skip both
-			// Parse the full-length structure to find all pairs
-			const {
-				pairs: pairsFull,
-				pseudoPairs: pseudoFull
-			} = parseDotBracket(structFull);
-			// Compute % canonical base-pairs per paired column across all sequences
-			const CANON_PAIRS = _STO_CANON_PAIRS;
-			const canonPctFull = new Array(alnLen).fill(null);
-			const allPairedCols = [];
-			for (let i = 0; i < alnLen; i++)
-				if (pairsFull[i] > i) allPairedCols.push([i, pairsFull[i]]);
-			for (const {
-					i,
-					j
-				}
-				of pseudoFull)
-				if (i < j) allPairedCols.push([i, j]);
-			const seqs = [...seqMap.values()];
-			for (const [ci, cj] of allPairedCols) {
-				let canonCount = 0, totalSeqs = 0;
-				for (const seq of seqs) {
-					const bi = (seq[ci] || '-').toUpperCase().replace('T', 'U');
-					const bj = (seq[cj] || '-').toUpperCase().replace('T', 'U');
-					if (NUC_SET.has(bi) && NUC_SET.has(bj)) {
-						totalSeqs++;
-						if (CANON_PAIRS.has(bi + bj)) canonCount++;
-					}
-				}
-				const pct = totalSeqs > 0 ? (canonCount / totalSeqs) * 100 : 0;
-				canonPctFull[ci] = pct;
-				canonPctFull[cj] = pct;
+			const featPairs = [];
+			for (const { i, j } of matchBracketPairs(str)) {
+				const ri = colToRi.get(i), rj = colToRi.get(j);
+				if (ri !== undefined && rj !== undefined) featPairs.push({ i: Math.min(ri, rj), j: Math.max(ri, rj) });
 			}
-			for (let i = 0; i < alnLen; i++) {
-				const j = pairsFull[i];
-				if (j > i && (allBD[i].skip || allBD[j].skip)) {
-					allBD[i] = {
-						skip: true
-					};
-					allBD[j] = {
-						skip: true
-					};
-				}
-			}
-			for (const {
-					i,
-					j
-				}
-				of pseudoFull) {
-				if (allBD[i].skip || allBD[j].skip) {
-					allBD[i] = {
-						skip: true
-					};
-					allBD[j] = {
-						skip: true
-					};
-				}
-			}
-			// Filter to remove skipped positions entirely
-			const baseDisplay = [];
-			const filteredSeq = [];
-			const filteredStruct = [];
-			const positionLabels = []; // 1-based original alignment index per kept position
-			const filteredCanonPct = [];
-			for (let col = 0; col < alnLen; col++) {
-				if (allBD[col].skip) continue;
-				filteredSeq.push(allSeq[col]);
-				filteredStruct.push(structFull[col]);
-				baseDisplay.push(allBD[col]);
-				positionLabels.push(col + 1);
-				filteredCanonPct.push(canonPctFull[col]);
-			}
-			// If all positions were skipped (e.g. fully single-stranded / all gaps),
-			// keep everything so we at least render a valid (if empty) structure.
-			if (filteredStruct.length === 0) {
-				for (let col = 0; col < alnLen; col++) {
-					filteredSeq.push(allSeq[col]);
-					filteredStruct.push(structFull[col]);
-					baseDisplay.push(allBD[col].skip ? { letter: null, textColor: null, fillColor: null, colStats: allBD[col].colStats } : allBD[col]);
-					positionLabels.push(col + 1);
-					filteredCanonPct.push(canonPctFull[col]);
-				}
-			}
-			// filenameFallback (caller-provided label) takes priority over #=GF ID / AC
-			const label = ac || id || (filenameFallback ? filenameFallback.replace(/\.[^.]+$/, '') : null) || 'alignment';
-			// Trims terminal unstructured positions (leading/trailing dots only).
-			// Saves the untrimmed data in ssEnds so it can be restored by the toggle.
-			let trimS = 0,
-				trimE = filteredStruct.length - 1;
-			while (trimS <= trimE && filteredStruct[trimS] === '.') trimS++;
-			while (trimE >= trimS && filteredStruct[trimE] === '.') trimE--;
-			let ssEnds = null;
-			if (trimS > trimE) trimS = 0; // fully single-stranded: don't trim at all
-			if (trimS > 0 || trimE < filteredStruct.length - 1) {
-				ssEnds = {
-					trimS,
-					trimE,
-					fullSeq: filteredSeq.slice(),
-					fullStruct: filteredStruct.slice(),
-					fullBaseDisplay: baseDisplay.slice(),
-					fullPositionLabels: positionLabels.slice(),
-					fullCanonPct: filteredCanonPct.slice(),
-				};
-				filteredSeq.splice(trimE + 1);
-				filteredStruct.splice(trimE + 1);
-				baseDisplay.splice(trimE + 1);
-				positionLabels.splice(trimE + 1);
-				filteredCanonPct.splice(trimE + 1);
-				filteredSeq.splice(0, trimS);
-				filteredStruct.splice(0, trimS);
-				baseDisplay.splice(0, trimS);
-				positionLabels.splice(0, trimS);
-				filteredCanonPct.splice(0, trimS);
-			}
-			const _colToRi = new Map();
-			positionLabels.forEach((col1, ri) => _colToRi.set(col1 - 1, ri));
-			const ssConsFeatures = {};
-			// Extra pairs from SS_cons_* features to inject into the structure
-			// (bracket chars in these lines represent additional base pairs).
-			// We collect all such pairs first, then add them to filteredStruct.
-			const ssConsPkPairs = {}; // featureName → [{i,j}] — bracket pairs from SS_cons_* features, rendered as insets only
-			for (const [fn, parts] of Object.entries(ssConsFeatureParts)) {
-				const str = parts.join('');
-				if (str.length !== alnLen) continue;
-				const pos = [];
-				const featureStacks = {};
-				const featPairs = [];
-				for (let col = 0; col < alnLen; col++) {
-					const c = str[col];
-					const ri = _colToRi.get(col);
-					if (c === '.' || c === ':' || c === '-' || c === '_') continue;
-					if ('([{<'.includes(c) || (c >= 'A' && c <= 'Z')) {
-						if (!featureStacks[c]) featureStacks[c] = [];
-						featureStacks[c].push(col);
-					} else if (')]}>'.includes(c)) {
-						const openCh = {
-							'(': '(',
-							')': '(',
-							']': '[',
-							'[': '[',
-							'}': '{',
-							'{': '{',
-							'>': '<',
-							'<': '<'
-						} [c] || null;
-						if (openCh && featureStacks[openCh]?.length) {
-							const openCol = featureStacks[openCh].pop();
-							const riOpen = _colToRi.get(openCol);
-							const riClose = ri;
-							if (riOpen !== undefined && riClose !== undefined)
-								featPairs.push({
-									i: Math.min(riOpen, riClose),
-									j: Math.max(riOpen, riClose)
-								});
-						}
-					} else if (c >= 'a' && c <= 'z') {
-						const open = c.toUpperCase();
-						if (featureStacks[open]?.length) {
-							const openCol = featureStacks[open].pop();
-							const riOpen = _colToRi.get(openCol);
-							if (riOpen !== undefined && ri !== undefined)
-								featPairs.push({
-									i: Math.min(riOpen, ri),
-									j: Math.max(riOpen, ri)
-								});
-						}
-					}
-					if (ri !== undefined) pos.push(ri);
-				}
-				if (pos.length) ssConsFeatures[fn] = pos.sort((a, b) => a - b);
-				if (featPairs.length) ssConsPkPairs[fn] = featPairs;
-			}
-			// Note: SS_cons_* bracket pairs are NOT injected into filteredStruct.
-			// They are rendered only as inset panels via _renderPkStockholm(ssConsPkPairs).
-			// This handles both pseudoknots and alternative/crossing pairs that conflict
-			// with the main structure.
-			records.push({
-				label,
-				sequence: filteredSeq.join(''),
-				structure: filteredStruct.join(''),
-				baseDisplay,
-				positionLabels,
-				pairCanonPct: filteredCanonPct,
-				alnSeqs: seqMap.size > 0 ? [...seqMap.entries()].map(([name, seq]) => ({ name, seq })) : null,
-				alnStruct: seqMap.size > 0 ? structFull : null,
-				alnLen: alnLen,
-				ssConsFeatures,
-				ssConsPkPairs,
-				ssEnds, // null if no terminal unpaired bases were trimmed
-			});
+			if (pos.length) ssConsFeatures[fn] = pos.sort((x, y) => x - y);
+			if (featPairs.length) ssConsPkPairs[fn] = featPairs;
 		}
-		const _lineRe = /[^\n]*(?:\r\n|\r|\n|$)/g;
-		for (const _m of text.matchAll(_lineRe)) {
-			if (_m.index === text.length) break;
-			const raw = _m[0].replace(/[\r\n]+$/, '');
-			if (raw.startsWith('# STOCKHOLM') || raw.startsWith('#=GS') || raw.startsWith('#=GR')) continue;
-			if (raw === '//') {
-				buildRecord();
-				id = null;
-				ac = null;
-				seqMap.clear();
-				seqOffset.clear();
-				colCounts = null;
-				seqCount = 0;
-				ssConsParts.length = 0;
-				for (const k of Object.keys(ssConsFeatureParts)) delete ssConsFeatureParts[k];
-				continue;
-			}
-			if (raw.startsWith('#=GF ID ')) {
-				id = raw.slice(8).trim();
-				continue;
-			}
-			if (raw.startsWith('#=GF AC ')) {
-				ac = raw.slice(8).trim();
-				continue;
-			}
-			if (raw.startsWith('#=GF')) continue;
-			if (raw.startsWith('#=GC')) {
-				const fields = raw.split(/\s+/);
-				if (fields[1] === 'SS_cons' && fields[2]) ssConsParts.push(fields[2]);
-				else if (fields[1]?.startsWith('SS_cons_') && fields[2]) {
-					const fn = fields[1].slice(8);
-					if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = [];
-					ssConsFeatureParts[fn].push(fields[2]);
-				}
-				continue;
-			}
-			if (raw.startsWith('#')) continue;
-			const trim = raw.trim();
-			if (!trim) continue;
-			const fields = trim.split(/\s+/);
-			if (fields.length >= 2) {
-				const sid = fields[0],
-					seq = fields[fields.length - 1];
-				const isFirstSeen = !seqOffset.has(sid);
-				if (isFirstSeen) { seqOffset.set(sid, 0); seqCount++; }
-				// Only process first ALN_SEQ_LIMIT sequences — consistent with seqMap
-				if (seqCount > ALN_SEQ_LIMIT) continue;
-				const colStart = seqOffset.get(sid);
-				seqOffset.set(sid, colStart + seq.length);
-				seqMap.set(sid, (seqMap.get(sid) || '') + seq);
-				if (!colCounts) colCounts = [];
-				for (let ci = 0; ci < seq.length; ci++) {
-					const colIdx = colStart + ci;
-					if (!colCounts[colIdx]) colCounts[colIdx] = {A:0,C:0,G:0,U:0};
-					const ch = seq[ci].toUpperCase();
-					const nuc = ch === 'T' ? 'U' : ch;
-					if (nuc === 'A' || nuc === 'C' || nuc === 'G' || nuc === 'U') colCounts[colIdx][nuc]++;
-				}
-			}
-		}
-		buildRecord(); // If file lacks end of record marker //
-		if (!records.length) throw new Error('No valid Stockholm alignment found');
-		return records;
+		return { ssConsFeatures, ssConsPkPairs };
 	}
 
-	// Streaming Stockholm parser — reads the file in chunks via parseFileChunked,
-	// never assembles the full text string. Reuses the same line-handling logic
-	// Chunked Stockholm parser.
-	// Reads the first SAMPLE_SIZE sequences, skips the rest, keeps all SS_cons lines.
-	async function parseStockholmFileChunked(file, filenameFallback, parseFileChunked, useAllSeqs, onProgress) {
-		const BRACKET_RE = _STO_BRACKET_RE;
-		const SAMPLE_SIZE = 1000;
+	// One structure record from a finished Stockholm alignment block (null when it has no
+	// SS_cons or no sequences). seqs: id > text (alignment view); extra: id > {a, n} class codes
+	// of the sequences beyond those (consensus only).
+	function _stoMakeRecord({ id, ac, seqs, extra, ssConsParts, featParts, filenameFallback }) {
+		if (!ssConsParts.length || !(seqs.size + (extra?.size || 0))) return null;
+		const ssCons = ssConsParts.join('');
+		const alnLen = ssCons.length;
+		let maxLen = 0;
+		for (const sq of seqs.values()) if (sq.length > maxLen) maxLen = sq.length;
+		if (extra) for (const e of extra.values()) if (e.n > maxLen) maxLen = e.n;
+		if (maxLen !== alnLen) throw new Error('Stockholm: SS_cons length does not match alignment columns');
+		const all = [...seqs.values()];
+		if (extra)
+			for (const e of extra.values()) {
+				if (e.n === alnLen) { all.push(e.a.subarray(0, alnLen)); continue; }
+				const a = new Uint8Array(alnLen).fill(_STO_CLS_GAP); // short sequence: padded with gaps
+				a.set(e.a.subarray(0, e.n));
+				all.push(a);
+			}
+		// R2R consensus over every sequence (weighted by default, unweighted variant for the W toggle)
+		const C = _stoBuildConsensus(all, ssCons, Object.values(featParts).map(p => p.join('')));
+		const { ssConsFeatures, ssConsPkPairs } = _stoFeatureAnnotations(featParts, alnLen, C.positionLabels);
+		if (C.ssEnds) {
+			// Features mapped onto the untrimmed columns, for the SS-ends view: a feature (or a pair
+			// feature with one end) lying in a trimmed end is still drawn when the ends are shown.
+			const full = _stoFeatureAnnotations(featParts, alnLen, C.ssEnds.fullPositionLabels);
+			C.ssEnds.fullSsConsFeatures = full.ssConsFeatures;
+			C.ssEnds.fullSsConsPkPairs = full.ssConsPkPairs;
+		}
+		return {
+			label: ac || id || (filenameFallback ? filenameFallback.replace(/\.[^.]+$/, '') : null) || 'alignment',
+			sequence: C.wVar.sequence,
+			structure: C.structure,
+			baseDisplay: C.wVar.baseDisplay,
+			positionLabels: C.positionLabels,
+			pairCanonPct: C.wVar.pairCanonPct,
+			alnSeqs: [...seqs.entries()].map(([name, seq]) => ({ name, seq })),
+			alnStruct: Array.from(ssCons).map(c => _STO_BRACKET_RE.test(c) ? c : '.').join(''),
+			alnLen,
+			ssConsFeatures,
+			ssConsPkPairs,
+			ssEnds: C.ssEnds, // null if no terminal unpaired bases were trimmed
+			// Sequence weighting (W toggle): weighted / unweighted display variants
+			weighting: C.weighting,
+			nSeqs: seqs.size + (extra?.size || 0), // sequences in the block (alnSeqs holds at most _STO_MAX_SEQS)
+			_wVar: C.rVar ? C.wVar : undefined,
+			_rVar: C.rVar || undefined,
+		};
+	}
+
+	// Line-by-line Stockholm reader shared by the text and the streamed (chunked) parser.
+	// Interleaved blocks append to the same sequence. The first maxSeqs sequence ids of each
+	// alignment block are kept as text (alignment view); every further sequence is kept only as
+	// 1-byte class codes, so the consensus covers the whole alignment without holding all of it
+	// as strings. Each '//' (or the end of input) closes a block > one record.
+	function _stoReader(filenameFallback, maxSeqs = _STO_MAX_SEQS) {
 		const records = [];
-
 		let id = null, ac = null;
-		const seqs = new Map();   // seqID → full concatenated sequence (first SAMPLE_SIZE only)
-		const seqOrder = [];      // order first seen
-		const ssConsParts = [];
-		const ssConsFeatureParts = {};
-
-		function resetRecord() {
-			id = null; ac = null;
-			seqs.clear(); seqOrder.length = 0;
+		const seqs = new Map();  // seqId > gapped sequence (first maxSeqs)
+		const extra = new Map(); // seqId > {a: Uint8Array class codes, n: length} (the rest)
+		const ssConsParts = [], featParts = {};
+		const appendExtra = (sid, seq) => {
+			let e = extra.get(sid);
+			if (!e) extra.set(sid, e = { a: new Uint8Array(Math.max(64, seq.length)), n: 0 });
+			if (e.n + seq.length > e.a.length) { // grow (doubling)
+				const b = new Uint8Array(Math.max(e.a.length * 2, e.n + seq.length));
+				b.set(e.a.subarray(0, e.n));
+				e.a = b;
+			}
+			e.n = _stoClassInto(e.a, e.n, seq);
+		};
+		const endBlock = () => {
+			const rec = _stoMakeRecord({ id, ac, seqs, extra, ssConsParts, featParts, filenameFallback });
+			if (rec) records.push(rec);
+			id = ac = null;
+			seqs.clear();
+			extra.clear();
 			ssConsParts.length = 0;
-			for (const k of Object.keys(ssConsFeatureParts)) delete ssConsFeatureParts[k];
-		}
-
-		function processLine(raw) {
-			if (raw === '//') { buildRecord(); resetRecord(); return; }
-			if (!raw.startsWith('#')) {
-				const trimmed = raw.trim();
-				if (!trimmed) return;
-				const sp = trimmed.search(/\s/);
-				if (sp < 1) return;
-				const sid = trimmed.slice(0, sp);
-				const seq = trimmed.slice(sp).trim();
-				if (!seq) return;
-				// Only store if within limit OR already started (continuation line)
-				if (!seqs.has(sid)) {
-					if (!useAllSeqs && seqOrder.length >= SAMPLE_SIZE) return; // skip
-					seqs.set(sid, '');
-					seqOrder.push(sid);
-				}
-				seqs.set(sid, seqs.get(sid) + seq);
-				return;
-			}
-			if (raw.startsWith('#=GC SS_cons_')) {
-				const fields = raw.split(/\s+/);
-				const fn = fields[1].slice('SS_cons_'.length);
-				if (fn) {
-					if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = [];
-					ssConsFeatureParts[fn].push(fields[fields.length - 1]);
+			for (const k of Object.keys(featParts)) delete featParts[k];
+		};
+		const line = raw => {
+			if (raw === '//') return endBlock();
+			if (raw.startsWith('#')) {
+				if (raw.startsWith('#=GF ID ')) id = raw.slice(8).trim();
+				else if (raw.startsWith('#=GF AC ')) ac = raw.slice(8).trim();
+				else if (raw.startsWith('#=GC')) {
+					const f = raw.trim().split(/\s+/);
+					if (f.length < 3) return;
+					if (f[1] === 'SS_cons') ssConsParts.push(f[2]);
+					else if (f[1].startsWith('SS_cons_') && f[1].length > 8) (featParts[f[1].slice(8)] || (featParts[f[1].slice(8)] = [])).push(f[2]);
 				}
 				return;
 			}
-			if (raw.startsWith('#=GC')) {
-				const fields = raw.split(/\s+/);
-				if (fields[1] === 'SS_cons' && fields[2]) ssConsParts.push(fields[fields.length - 1]);
-				else if (fields[1]?.startsWith('SS_cons_') && fields[2]) {
-					const fn = fields[1].slice('SS_cons_'.length);
-					if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = [];
-					ssConsFeatureParts[fn].push(fields[fields.length - 1]);
-				}
-				return;
-			}
-			if (raw.startsWith('#=GF ID ')) { id = raw.slice(8).trim(); return; }
-			if (raw.startsWith('#=GF AC ')) { ac = raw.slice(8).trim(); return; }
-		}
+			const f = raw.trim().split(/\s+/);
+			if (f.length < 2) return;
+			const sid = f[0], seq = f[f.length - 1];
+			if (seqs.has(sid)) seqs.set(sid, seqs.get(sid) + seq);
+			else if (seqs.size < maxSeqs && !extra.has(sid)) seqs.set(sid, seq);
+			else appendExtra(sid, seq);
+		};
+		const finish = () => {
+			endBlock(); // file may lack the final '//'
+			if (!records.length) throw new Error('No valid Stockholm alignment found');
+			return records;
+		};
+		return { line, finish };
+	}
 
-		function buildRecord() {
-			if (!ssConsParts.length || seqOrder.length === 0) return;
-			const ssCons = ssConsParts.join('');
-			const alnLen = ssCons.length;
-			const N = seqOrder.length;
+	function parseStockholmFile(text, filenameFallback) {
+		const reader = _stoReader(filenameFallback);
+		for (const raw of text.split(/\r\n|\r|\n/)) reader.line(raw);
+		return reader.finish();
+	}
 
-			// Compute colCounts from sampled sequences
-			const colCounts = new Int32Array(alnLen * 4);
-			for (const sid of seqOrder) {
-				const seq = seqs.get(sid);
-				if (!seq) continue;
-				for (let col = 0; col < alnLen && col < seq.length; col++) {
-					const ch = seq[col].toUpperCase();
-					const nuc = ch === 'T' ? 'U' : ch;
-					const base = col * 4;
-					if      (nuc === 'A') colCounts[base]++;
-					else if (nuc === 'C') colCounts[base + 1]++;
-					else if (nuc === 'G') colCounts[base + 2]++;
-					else if (nuc === 'U') colCounts[base + 3]++;
-				}
-			}
-
-			const RED=_STO_RED,BLACK=_STO_BLACK,GREY=_STO_GREY,WHITE=_STO_WHITE;
-			const structFull = Array.from(ssCons).map(c => BRACKET_RE.test(c) ? c : '.').join('');
-			const allBD = [], allSeq = [];
-			for (let col = 0; col < alnLen; col++) {
-				const base = col * 4;
-				const nA=colCounts[base], nC=colCounts[base+1], nG=colCounts[base+2], nU=colCounts[base+3];
-				const numNuc = nA+nC+nG+nU;
-				const nucCount = {A:nA,C:nC,G:nG,U:nU};
-				let maxNuc='N', maxCnt=0;
-				for (const [n,cnt] of Object.entries(nucCount)) if (cnt>maxCnt){maxCnt=cnt;maxNuc=n;}
-				allSeq.push(maxNuc);
-				const maxFreq=maxCnt/N, nucFreq=numNuc/N;
-				const colStats={
-					A:+((nA/N)*100).toFixed(1), C:+((nC/N)*100).toFixed(1),
-					G:+((nG/N)*100).toFixed(1), U:+((nU/N)*100).toFixed(1),
-					gap:+((1-nucFreq)*100).toFixed(1),
-				};
-				if (maxFreq>=0.97) allBD.push({letter:maxNuc,textColor:RED,fillColor:null,colStats});
-				else if (maxFreq>=0.90) allBD.push({letter:maxNuc,textColor:BLACK,fillColor:null,colStats});
-				else if (maxFreq>=0.75) allBD.push({letter:maxNuc,textColor:GREY,fillColor:null,colStats});
-				else {
-					const IUPAC2=_STO_IUPAC2,IUPAC3=_STO_IUPAC3,NUCS=_STO_NUCS,MIN_C=0.30;
-					const f=n=>(nucCount[n]||0)/N;
-					let iupac=null,iupacFreq=0;
-					outer2: for(let i=0;i<NUCS.length;i++) for(let j=i+1;j<NUCS.length;j++){
-						const fi=f(NUCS[i]),fj=f(NUCS[j]);
-						if(fi>=MIN_C&&fj>=MIN_C&&fi+fj>=0.75){iupac=IUPAC2[NUCS[i]+NUCS[j]];iupacFreq=fi+fj;break outer2;}
-					}
-					if(!iupac){
-						outer3: for(let i=0;i<NUCS.length;i++) for(let j=i+1;j<NUCS.length;j++) for(let k=j+1;k<NUCS.length;k++){
-							const fi=f(NUCS[i]),fj=f(NUCS[j]),fk=f(NUCS[k]);
-							if(fi>=MIN_C&&fj>=MIN_C&&fk>=MIN_C&&fi+fj+fk>=0.75){iupac=IUPAC3[NUCS[i]+NUCS[j]+NUCS[k]];iupacFreq=fi+fj+fk;break outer3;}
-						}
-					}
-					if(iupac){
-						const c=iupacFreq>=0.97?RED:iupacFreq>=0.90?BLACK:GREY;
-						allBD.push({letter:iupac,textColor:c,fillColor:null,colStats});
-					} else {
-						const fill=nucFreq>=0.97?RED:nucFreq>=0.90?BLACK:nucFreq>=0.75?GREY:nucFreq>=0.50?WHITE:null;
-						const _isPairedCol=structFull[col]!=='.';
-						allBD.push(fill!==null?{letter:null,textColor:null,fillColor:fill,colStats}:_isPairedCol?{letter:null,textColor:null,fillColor:null,colStats}:{skip:true,colStats});
-					}
-				}
-			}
-			const {pairs:pairsFull,pseudoPairs:pseudoFull}=parseDotBracket(structFull);
-			const CANON_PAIRS=_STO_CANON_PAIRS;
-			const canonPctFull=new Array(alnLen).fill(null);
-			const allPairedCols=[];
-			for(let i=0;i<alnLen;i++) if(pairsFull[i]>i) allPairedCols.push([i,pairsFull[i]]);
-			for(const {i,j} of pseudoFull) if(i<j) allPairedCols.push([i,j]);
-			for(const [ci,cj] of allPairedCols){
-				const bi=ci*4,bj=cj*4;
-				const ai=colCounts[bi],ci2=colCounts[bi+1],gi=colCounts[bi+2],ui=colCounts[bi+3];
-				const aj=colCounts[bj],cj2=colCounts[bj+1],gj=colCounts[bj+2],uj=colCounts[bj+3];
-				const ti=ai+ci2+gi+ui,tj=aj+cj2+gj+uj,denom=ti*tj;
-				const pct=denom===0?0:Math.min(100,(ai*uj+ui*aj+ci2*gj+gi*cj2+gi*uj+ui*gj)/denom*100);
-				canonPctFull[ci]=pct; canonPctFull[cj]=pct;
-			}
-			for(let i=0;i<alnLen;i++){
-				const j=pairsFull[i];
-				if(j>i&&(allBD[i].skip||allBD[j].skip)){allBD[i]={skip:true};allBD[j]={skip:true};}
-			}
-			for(const {i,j} of pseudoFull)
-				if(allBD[i].skip||allBD[j].skip){allBD[i]={skip:true};allBD[j]={skip:true};}
-			const baseDisplay=[],filteredSeq=[],filteredStruct=[],positionLabels=[],filteredCanonPct=[];
-			for(let col=0;col<alnLen;col++){
-				if(allBD[col].skip) continue;
-				filteredSeq.push(allSeq[col]); filteredStruct.push(structFull[col]);
-				baseDisplay.push(allBD[col]); positionLabels.push(col+1); filteredCanonPct.push(canonPctFull[col]);
-			}
-			if(filteredStruct.length===0){
-				for(let col=0;col<alnLen;col++){
-					filteredSeq.push(allSeq[col]); filteredStruct.push(structFull[col]);
-					baseDisplay.push(allBD[col].skip?{letter:null,textColor:null,fillColor:null,colStats:allBD[col].colStats}:allBD[col]);
-					positionLabels.push(col+1); filteredCanonPct.push(canonPctFull[col]);
-				}
-			}
-			const label=ac||id||(filenameFallback?filenameFallback.replace(/\.[^.]+$/,''):null)||'alignment';
-			let trimS=0,trimE=filteredStruct.length-1;
-			while(trimS<=trimE&&filteredStruct[trimS]==='.') trimS++;
-			while(trimE>=trimS&&filteredStruct[trimE]==='.') trimE--;
-			let ssEnds=null;
-			if(trimS>trimE) trimS=0; // fully single-stranded: don't trim at all
-			if(trimS>0||trimE<filteredStruct.length-1){
-				ssEnds={trimS,trimE,fullSeq:filteredSeq.slice(),fullStruct:filteredStruct.slice(),
-					fullBaseDisplay:baseDisplay.slice(),fullPositionLabels:positionLabels.slice(),fullCanonPct:filteredCanonPct.slice()};
-				for(const arr of [filteredSeq,filteredStruct,baseDisplay,positionLabels,filteredCanonPct]) arr.splice(trimE+1);
-				for(const arr of [filteredSeq,filteredStruct,baseDisplay,positionLabels,filteredCanonPct]) arr.splice(0,trimS);
-			}
-			const _colToRi=new Map();
-			positionLabels.forEach((col1,ri)=>_colToRi.set(col1-1,ri));
-			const ssConsFeatures={},ssConsPkPairs={};
-			for(const [fn,parts] of Object.entries(ssConsFeatureParts)){
-				const str=parts.join('');
-				if(str.length!==alnLen) continue;
-				const pos=[],featureStacks={},featPairs=[];
-				const openFor={')':"(",'}':"{",'>':"<",']':"["};
-				for(let col=0;col<alnLen;col++){
-					const c=str[col],ri=_colToRi.get(col);
-					if('.:_-'.includes(c)) continue;
-					if('([{<'.includes(c)||(c>='A'&&c<='Z')){if(!featureStacks[c])featureStacks[c]=[];featureStacks[c].push(col);}
-					else if(')]}>'.includes(c)){const op=openFor[c];if(op&&featureStacks[op]?.length){const openCol=featureStacks[op].pop(),riOpen=_colToRi.get(openCol);if(riOpen!==undefined&&ri!==undefined)featPairs.push({i:Math.min(riOpen,ri),j:Math.max(riOpen,ri)});}}
-					else if(c>='a'&&c<='z'){const op=c.toUpperCase();if(featureStacks[op]?.length){const openCol=featureStacks[op].pop(),riOpen=_colToRi.get(openCol);if(riOpen!==undefined&&ri!==undefined)featPairs.push({i:Math.min(riOpen,ri),j:Math.max(riOpen,ri)});}}
-					if(ri!==undefined) pos.push(ri);
-				}
-				if(pos.length) ssConsFeatures[fn]=pos.sort((a,b)=>a-b);
-				if(featPairs.length) ssConsPkPairs[fn]=featPairs;
-			}
-			records.push({
-				label, sequence:filteredSeq.join(''), structure:filteredStruct.join(''),
-				baseDisplay, positionLabels, pairCanonPct:filteredCanonPct,
-				alnSeqs:[...seqs.entries()].map(([name,seq])=>({name,seq})), alnStruct:ssCons, alnLen, ssConsFeatures, ssConsPkPairs, ssEnds,
-			});
-		}
-
+	// Streaming Stockholm parser - reads the file in chunks via parseFileChunked and never
+	// assembles the full text. The consensus always uses every sequence; useAllSeqs also keeps
+	// every sequence as text for the alignment view (default: the first _STO_MAX_SEQS).
+	async function parseStockholmFileChunked(file, filenameFallback, parseFileChunked, useAllSeqs, onProgress) {
+		const reader = _stoReader(filenameFallback, useAllSeqs ? Infinity : _STO_MAX_SEQS);
 		if (onProgress) onProgress('Reading file. Please wait...');
-		await parseFileChunked(file, processLine);
-		buildRecord();
-		if (!records.length) throw new Error('No valid Stockholm alignment found');
-		return records;
+		await parseFileChunked(file, reader.line);
+		return reader.finish();
 	}
 
 
@@ -1029,7 +940,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!line) {
 				i++;
 				continue;
-			} // blank — skip
+			} // blank - skip
 			if (line.startsWith('>')) {
 				// Named record: >label / sequence / structure
 				const label = line.slice(1).trim() || `structure_${records.length + 1}`;
@@ -1191,7 +1102,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return pairs;
 	}
 	// Parse R-scape .helixcov file.
-	// Returns all RM_HELIX records.  significant=true when starred (LANCASTER) or nbpCov>0 (NONE).
+	// Returns all RM_HELIX records. significant=true only for an aggregated E-value marked with "*" (e.g. LANCASTER);
+	// with aggregation NONE there is no helix-level significance (R-scape then draws no helix covariation either).
 	// Positions returned are 0-based alignment columns.
 	function parseHelixCovFile(text) {
 		const helices = [];
@@ -1236,69 +1148,36 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return helices;
 	}
 	// Extracts all base-pair positions from a dot-bracket string as a Set of "i,j" strings (i<j)
-	function buildPairsArray(structure) {
-		const n = structure.length;
-		const p = new Int32Array(n).fill(-1);
-		const st = {};
-		const cl = {
-			')': '(',
-			']': '[',
-			'}': '{',
-			'>': '<'
-		};
-		for (let i = 0; i < n; i++) {
-			const c = structure[i];
-			if ('([{<'.includes(c) || (c >= 'A' && c <= 'Z')) {
-				if (!st[c]) st[c] = [];
-				st[c].push(i);
-			} else if (cl[c]) {
-				const j = st[cl[c]]?.pop();
-				if (j != null) {
-					p[i] = j;
-					p[j] = i;
-				}
-			} else if (c >= 'a' && c <= 'z') {
-				const j = st[c.toUpperCase()]?.pop();
-				if (j != null) {
-					p[i] = j;
-					p[j] = i;
-				}
+	// Match brackets of a dot-bracket / WUSS / Stockholm SS string. Openers are ( [ { < and A-Z,
+	// closers ) ] } > and a-z (Rfam pseudoknot letters); each bracket type has its own stack and
+	// unmatched brackets are ignored. Returns [{i, j, bracket}] (i < j) in closing order.
+	function matchBracketPairs(structure) {
+		const out = [], stacks = {}, OPEN = { ')': '(', ']': '[', '}': '{', '>': '<' };
+		for (let k = 0; k < structure.length; k++) {
+			const c = structure[k];
+			if (c === '(' || c === '[' || c === '{' || c === '<' || (c >= 'A' && c <= 'Z')) (stacks[c] || (stacks[c] = [])).push(k);
+			else {
+				const o = OPEN[c] || (c >= 'a' && c <= 'z' ? c.toUpperCase() : null);
+				if (o && stacks[o]?.length) out.push({ i: stacks[o].pop(), j: k, bracket: o });
 			}
 		}
+		return out;
+	}
+
+	function buildPairsArray(structure) {
+		const p = new Int32Array(structure.length).fill(-1);
+		for (const { i, j } of matchBracketPairs(structure)) { p[i] = j; p[j] = i; }
 		return p;
 	}
 
 	function getStructurePairSet(structure) {
-		const pairs = new Set();
-		const stacks = {
-			'(': [],
-			'[': [],
-			'{': [],
-			'<': []
-		};
-		const close = {
-			')': '(',
-			']': '[',
-			'}': '{',
-			'>': '<'
-		};
-		for (let k = 0; k < structure.length; k++) {
-			const c = structure[k];
-			if (stacks[c] !== undefined) {
-				stacks[c].push(k);
-			} else if (close[c]) {
-				const l = stacks[close[c]]?.pop();
-				if (l !== undefined) pairs.add(`${Math.min(l,k)},${Math.max(l,k)}`);
-			} else if (c >= 'A' && c <= 'Z') {
-				if (!stacks[c]) stacks[c] = [];
-				stacks[c].push(k);
-			} else if (c >= 'a' && c <= 'z') {
-				const open = c.toUpperCase();
-				const l = stacks[open]?.pop();
-				if (l !== undefined) pairs.add(`${Math.min(l,k)},${Math.max(l,k)}`);
-			}
-		}
-		return pairs;
+		return new Set(matchBracketPairs(structure).map(({ i, j }) => `${i},${j}`));
+	}
+
+	// Escape text (labels, file names, category keys from user files) for use inside innerHTML
+	// and double-quoted attributes.
+	function escHtml(s) {
+		return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 	}
 
 	function normalizeSeq(s) {
@@ -1340,17 +1219,60 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return null;
 	}
 
+	// SS-ends support: annotations are stored in trimmed-index space on the base layout and
+	// shifted by +trimS when the full (untrimmed) layout is shown, and by -trimS on the way back.
+	function shiftIdx(arr, d, keys = ['i', 'j']) {
+		if (!arr || !d) return arr;
+		return arr.map(p => {
+			const r = { ...p };
+			for (const k of keys) if (r[k] != null) r[k] += d;
+			return r;
+		});
+	}
+	function shiftHelixAnnots(arr, d) {
+		if (!arr || !d) return arr;
+		return arr.map(h => ({
+			...h,
+			subHelices: (h.subHelices || []).map(sh => ({ ...sh, pos5p: sh.pos5p.map(p => p + d), pos3p: sh.pos3p.map(p => p + d) })),
+			...(h.pkPairs ? { pkPairs: shiftIdx(h.pkPairs, d) } : {}),
+		}));
+	}
+	// {name: [pos…]} (ssConsFeatures) or {name: [{i,j}…]} (ssConsPkPairs)
+	function shiftFeatureMap(obj, d) {
+		if (!obj || !d) return obj;
+		const out = {};
+		for (const [k, v] of Object.entries(obj)) out[k] = v.map(x => typeof x === 'number' ? x + d : { ...x, i: x.i + d, j: x.j + d });
+		return out;
+	}
+
+	// Group pseudoknot pairs into stems: runs of consecutive i whose partner j steps by ±1.
+	function groupPkStems(pairs) {
+		const stems = [];
+		let cur = null;
+		for (const ps of [...pairs].sort((a, b) => a.i - b.i)) {
+			const last = cur?.[cur.length - 1];
+			if (last && ps.i === last.i + 1 && (ps.j === last.j - 1 || ps.j === last.j + 1)) cur.push(ps);
+			else stems.push(cur = [ps]);
+		}
+		return stems;
+	}
+
+	// Map 0-based original alignment column > drawn (rendered) index, from 1-based positionLabels.
+	function colToRenderedMap(positionLabels) {
+		const m = new Map();
+		if (positionLabels) positionLabels.forEach((col1, ri) => m.set(col1 - 1, ri));
+		return m;
+	}
+
 	function remapAnnotPairs(pairs, positionLabels) {
 		if (!positionLabels?.length) return pairs;
-		const origToRendered = new Map();
-		positionLabels.forEach((origCol1, renderedIdx) => {
-			origToRendered.set(origCol1 - 1, renderedIdx);
-		});
+		const origToRendered = colToRenderedMap(positionLabels);
 		if (!pairs.some(p => origToRendered.has(p.i) || origToRendered.has(p.j))) return pairs;
+		// Alignment coordinates: an endpoint that is not drawn becomes -1 (reported as invalid)
 		return pairs.map(p => ({
 			...p,
-			i: origToRendered.has(p.i) ? origToRendered.get(p.i) : p.i,
-			j: origToRendered.has(p.j) ? origToRendered.get(p.j) : p.j,
+			i: origToRendered.get(p.i) ?? -1,
+			j: origToRendered.get(p.j) ?? -1,
 		}));
 	}
 	// Returns { annotArr, pairAnnotColorMap, invalid } or throws if no valid pairs.
@@ -1365,7 +1287,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}) => structPairs.has(pairKey(i, j)));
 		if (!validPairs.length) {
 			const ex = invalid.slice(0, 3).map(p => `(${p.i},${p.j})`).join(', ');
-			throw new Error(`"${filename}": no valid pairs found in structure "${label || 'selected'}"` + (ex ? ` — e.g. ${ex}` : ''));
+			throw new Error(`"${filename}": no valid pairs found in structure "${label || 'selected'}"` + (ex ? ` - e.g. ${ex}` : ''));
 		}
 		const colorMap = buildAnnotColorMapAuto(validPairs);
 		const annotArr = validPairs.map(({
@@ -1439,6 +1361,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 	// Math helpers
 	function normalizeAngle(angle, fromVal = 0) {
+		if (!Number.isFinite(angle)) return angle;
 		const toVal = fromVal + 2 * Math.PI;
 		let r = angle;
 		while (r < fromVal) r += 2 * Math.PI;
@@ -1510,43 +1433,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		const n = structure.length;
 		const pairs = new Int32Array(n).fill(-1);
 		const pseudoPairs = [];
-		// Parse every bracket type into a flat pair list
-		const stacks = {
-			'(': [],
-			'[': [],
-			'{': [],
-			'<': []
-		};
-		const matchSt = {
-			')': '(',
-			']': '[',
-			'}': '{',
-			'>': '<'
-		};
-		const allPairs = []; // {i, j, bracket} with i < j
-		for (let k = 0; k < n; k++) {
-			const c = structure[k];
-			if (stacks[c] !== undefined) {
-				stacks[c].push(k);
-			} else if (matchSt[c]) {
-				const st = stacks[matchSt[c]];
-				if (st.length) allPairs.push({
-					i: st.pop(),
-					j: k,
-					bracket: matchSt[c]
-				});
-			} else if (c >= 'A' && c <= 'Z') {
-				if (!stacks[c]) stacks[c] = [];
-				stacks[c].push(k);
-			} else if (c >= 'a' && c <= 'z') {
-				const open = c.toUpperCase();
-				if (stacks[open]?.length) allPairs.push({
-					i: stacks[open].pop(),
-					j: k,
-					bracket: open
-				});
-			}
-		}
+		// Parse every bracket type into a flat pair list {i, j, bracket} with i < j
+		const allPairs = matchBracketPairs(structure);
 		//
 		// Assign pairs to levels via crossing analysis.
 		// Two pairs (a,b) and (c,d) cross (pseudoknot) when a<c<b<d or c<a<d<b.
@@ -2632,15 +2520,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						ii++;
 						jj--;
 					}
-					const sub = [];
-					for (let k = i; k <= j; k++) sub.push(k);
 					helices.push({
 						i,
 						j,
 						loopCenter: {
 							...centers[i]
 						},
-						sub,
 						ml: getMultiLoop(i, j),
 						prevUnpaired: getPreviousUnpaired(j),
 						nextUnpaired: getNextUnpaired(i),
@@ -2868,7 +2753,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// _hasRN / _hasLN used only to guard fixUnpairedPositions below.
 		const _hasRN = prevIndex !== hi;
 		const _hasLN = nextIndex !== hj;
-		// Restore original VARNA [0, 2π) clamping — signed delta breaks the
+		// Restore original VARNA [0, 2π) clamping - signed delta breaks the
 		// while/if guards and lets helices rotate past neighbours.
 		const minDelta = normalizeAngle(pLimR2 - pHelR + 0.25);
 		let maxDelta = normalizeAngle(pLimL2 - pHelL - 0.25);
@@ -2896,7 +2781,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Skip fixUnpairedPositions when neither side has a real neighbouring
 		// helix: the limit angles collapse to the helix endpoints, and
 		// distributeUnpaired would place outer-loop bases on a small-radius
-		// circle around the inner loop centre — directly over the inner
+		// circle around the inner loop centre - directly over the inner
 		// loop content (the entanglement seen with single-pair helices).
 		if (_hasRN || _hasLN) {
 			fixUnpairedPositions(isDirect, pHelRnew, pLimL, pLimR, pHelLnew, radius, base, cx, cy, helix.prevUnpaired, helix.nextUnpaired, coords);
@@ -2912,7 +2797,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return {
 				type: cm.type || 'gradient',
 				min: cm.min,
-				stops: [...cm.stops].sort((a, b) => a.value - b.value),
+				stops: [...(cm.stops || [])].sort((a, b) => a.value - b.value),
 				nanColor: cm.nanColor ?? config.nanColor ?? config.colorMapNaN ?? '#808080',
 				title: cm.title ?? null,
 				showTitle: cm.showTitle !== false,
@@ -3005,7 +2890,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return last.color;
 	}
 	// Given a hex fill  color, return a text  color (#dark or #light) that
-	// guarantees readable contrast — using the WCAG relative-luminance formula.
+	// guarantees readable contrast - using the WCAG relative-luminance formula.
 	function getContrastTextColor(hex) {
 		if (!hex || hex[0] !== '#' || hex.length < 7) return null;
 		const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -3013,23 +2898,22 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		const b = parseInt(hex.slice(5, 7), 16) / 255;
 		const lin = c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 		const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-		// Switch at L ≈ 0.2 — white text below, dark text above
+		// Switch at L ≈ 0.2 - white text below, dark text above
 		return L > 0.2 ? '#1a1a2e' : '#f0f6ff';
 	}
 	// Convert user-friendly helixAnnotations [{i, color, opacity}] to internal
 	// [{subHelices:[{pos5p,pos3p}], color, opacity}] format.
 	// Entries already in internal format (have .subHelices) are passed through unchanged.
 	function resolveHelixAnnotations(annotations, pairs, positionLabels = null) {
-		const origToRendered = new Map();
-		if (positionLabels?.length) positionLabels.forEach((col1, ri) => origToRendered.set(col1 - 1, ri));
+		const origToRendered = colToRenderedMap(positionLabels);
 		return annotations.map(ann => {
 			if (ann.subHelices) return ann; // already internal
 			const i = origToRendered.size ? (origToRendered.get(ann.i) ?? ann.i) : ann.i;
 			const j = pairs[i];
 			if (j === undefined || j < 0) throw new Error(`helixAnnotations: position ${i} is not paired`);
-			// Walk outward to find the outermost pair of this helix
-			let a = i,
-				b = j;
+			// Walk outward to find the outermost pair of this helix (i may be the 3' partner)
+			let a = Math.min(i, j),
+				b = Math.max(i, j);
 			while (a > 0 && pairs[a - 1] === b + 1) {
 				a--;
 				b++;
@@ -3056,6 +2940,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		});
 	}
 	// RFviewJS class
+	// Live viewer instances (keyboard shortcuts must only act on the viewer the user is in)
+	const _liveViewers = new Set();
+	let _viewerSeq = 0;
+	const ICON_ALN = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>';
+	// Structure file extensions accepted by the upload picker and by canvas drop
+	const _DB_EXTS = ['db', 'dbn', 'dot', 'fa', 'fasta', 'ct', 'sto', 'stk', 'stockholm', 'txt'];
+	const _DB_EXT_RE = new RegExp(`\\.(${_DB_EXTS.join('|')})$`, 'i');
+	// Per-structure toolbar toggles saved/restored when switching structures: [flag, button]
+	const _STRUCT_TOGGLES = [
+		['_showPairAnnotations', '_chkPAnnot'], ['_showColors', '_chkColors'], ['_showIndices', '_chkIndices'],
+		['_showPseudoknots', '_chkPk'], ['_showR3dInsets', '_chkR3dInsets'], ['_showR3dLabels', '_chkR3dLabels'],
+		['_showSsEnds', '_chkSsEnds'],
+	];
 	class RFviewJS {
 		constructor(container, config = {}) {
 			injectStyles();
@@ -3074,59 +2971,24 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._layoutAlgo = (config.layout === 'naview' || config.layout === 'radiate') ? config.layout : 'auto';
 			// normalize buttons config: true/omitted, then all on; false, then all off,
 			// object: merge with all-on defaults.
-			const ALL_ON = {
-				zoomIn: true,
-				zoomOut: true,
-				fit: true,
-				reset: true,
-				save: true,
-				indices: true,
-				colorMap: true,
-				layout: true,
-				pseudoknots: true,
-				pairAnnotations: true,
-				upload: true,
-				rfam: true,
-				cleanOne: true,
-				cleanAll: true,
-				manualInput: true,
-				toolbarPos: true,
-				ssEnds: true,
-				autoRefit: true,
-				percCanonical: true,
-			};
+			// Toolbar buttons: every key defaults to on; `buttons: false` turns all of them off,
+			// `buttons: {key: false}` turns off individual ones. Values are normalised to booleans.
+			const BUTTON_KEYS = ['zoomIn', 'zoomOut', 'fit', 'reset', 'save', 'indices', 'colorMap', 'layout', 'alignment',
+				'pseudoknots', 'pairAnnotations', 'percCanonical', 'insets', 'labels', 'ssEnds', 'weighting', 'upload', 'rfam',
+				'cleanOne', 'cleanAll', 'manualInput', 'toolbarPos', 'autoRefit', 'outline'];
 			const b = config.buttons;
-			this._btns = b === false ? {
-				zoomIn: false,
-				zoomOut: false,
-				fit: false,
-				reset: false,
-				save: false,
-				indices: false,
-				colorMap: false,
-				layout: false,
-				pairAnnotations: false,
-				upload: false,
-				rfam: false,
-				cleanOne: false,
-				cleanAll: false,
-				manualInput: false,
-				toolbarPos: false,
-				ssEnds: false,
-				autoRefit: false,
-				percCanonical: false,
-			} : (b && typeof b === 'object' ? {
-				...ALL_ON,
-				...b
-			} : {
-				...ALL_ON
-			});
+			this._btns = {};
+			for (const k of BUTTON_KEYS) this._btns[k] = b !== false && !(b && typeof b === 'object' && b[k] === false);
 			// Viewer state
 			this._vx = 0;
 			this._vy = 0;
 			this._vscale = 1;
 			this._autoRefit = config.autoRefit !== false;
 			this._covCanonMode = !!config.showPercCanonical;
+			// Outline mode: backbone only, with colored domains (per structure: s.outlineDomains)
+			this._outlineMode = !!config.outlineMode;
+			this._outlinePick = null;      // {idx} start base of the domain being picked by clicking
+			this._outlineColorIdx = 0;     // next palette colour for click-made domains
 			this._panStart = null;
 			this._rotState = null;
 			this._flipState = null;
@@ -3136,7 +2998,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._showPairAnnotations = config.showPairAnnotations !== false;
 			this._autoTolerance = config.autoLayoutTolerance ?? 0;
 			this._id = config.id || null; // used as SVG export filename
-			if (config.theme) this._root.classList.add(`rv-theme-${config.theme}`);
 			this._lastPickedAlgo = null;
 			this._rna = null;
 			// Multi-structure state
@@ -3146,13 +3007,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._isAnimating = false;
 			this._animFrame = null;
 			this._transitionDuration = config.transitionDuration ?? 600;
+			this._uid = ++_viewerSeq; // per-instance suffix for element ids
 			this._buildDOM();
+			if (config.theme) this._root.classList.add(`rv-theme-${config.theme}`);
 			this._bindEvents();
 			// Apply default toggle states to buttons if they were built
 			if (this._showIndices && this._chkIndices) this._chkIndices.classList.add('rv--active');
 			if (this._showColors && this._chkColors) this._chkColors.classList.add('rv--active');
 			if (this._showPairAnnotations && this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-			// Initial button label — for 'auto' shows 'Auto' until _pickLayout runs
+			if (this._outlineMode) {
+				this._root.classList.add('rv--outline');
+				if (this._chkOutline) this._chkOutline.classList.add('rv--active');
+				this._syncOutlineColorInput();
+			}
+			// Initial button label - for 'auto' shows 'Auto' until _pickLayout runs
 			if (this._layoutBtn) {
 				const lbl = this._layoutBtn.querySelector('.rv-layout-lbl');
 				if (lbl) lbl.textContent = this._layoutAlgo === 'naview' ? 'NAView' : this._layoutAlgo === 'auto' ? 'Auto' : 'Radiate';
@@ -3167,6 +3035,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const pos = this._toolbarPos;
 			// Build toolbar content: separators only appear between non-empty groups
 			const btnHTML = (cls, extraCls, icon, label) => `<button class="rv-btn${extraCls ? ' '+extraCls : ''} ${cls}" title="${label}">${icon}<span class="rv-btn-label">${label}</span></button>`;
+			// Toggle buttons start hidden; they are shown when the loaded structure supports them.
+			const toggleBtn = (cls, title, icon, label) => `<button class="rv-btn rv-btn-toggle ${cls}" title="${title}" style="display:none">${icon}<span class="rv-btn-label">${label}</span></button>`;
+			const letterIcon = ch => `<span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${ch}</span>`;
 			const ICONS = {
 				zoomIn: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="5"/><path d="M11 11l3 3M4.5 6.5h4M6.5 4.5v4"/></svg>`,
 				zoomOut: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="5"/><path d="M11 11l3 3M4.5 6.5h4"/></svg>`,
@@ -3174,13 +3045,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				reset: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8a6 6 0 1 1 1.4 3.8"/><path d="M2 14V9h5"/></svg>`,
 				save: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 1v5h6V1M8 10v4M6 12l2 2 2-2"/></svg>`,
 			};
-			const chk = `style="accent-color:var(--rv-accent,#58a6ff);margin-right:2px"`;
 			const ICON_INDICES = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 2l-2 12M12 2l-2 12M3 6h11M3 10h11"/></svg>`;
 			const ICON_COLORMAP = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="5" width="3.2" height="6" rx="1" opacity=".28"/><rect x="6.4" y="5" width="3.2" height="6" rx="1" opacity=".6"/><rect x="10.8" y="5" width="3.2" height="6" rx="1" opacity=".92"/></svg>`;
 			// NAView icon: two concentric arcs with spokes, suggests a radial layout
 			const ICON_PK = '<span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">PK</span>';
 			const ICON_PAIR_ANNOT = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="4.5" width="13" height="7" rx="2.5"/><circle cx="5" cy="8" r="1.6" fill="currentColor" stroke="none"/><circle cx="11" cy="8" r="1.6" fill="currentColor" stroke="none"/><line x1="6.8" y1="8" x2="9.2" y2="8"/></svg>`;
 			const ICON_MANUAL = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="12" height="9" rx="1.5"/><line x1="5" y1="8" x2="5" y2="8.01"/><line x1="8" y1="8" x2="8" y2="8.01"/><line x1="11" y1="8" x2="11" y2="8.01"/><line x1="5" y1="11" x2="5" y2="11.01"/><line x1="8" y1="11" x2="11" y2="11.01"/><path d="M6 4V3a2 2 0 014 0v1"/></svg>`;
+			const ICON_WEIGHT = `<svg width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="3.4" r="2.1" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.4 6.6h5.2l3.1 8.1H2.3z" fill="currentColor" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+			const ICON_OUTLINE = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5C4 12.5 4 3.5 6.5 3.5S8 12.5 10.5 12.5 12 3.5 14 3.5"/></svg>`;
 			const ICON_UPLOAD = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,9 8,4 12,9"/><line x1="8" y1="4" x2="8" y2="13"/><line x1="2" y1="14" x2="14" y2="14"/></svg>`;
 			const ICON_CLEAN_ONE = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>`;
 			const ICON_CLEAN_ALL = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,4 13,4"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M6 7v5M10 7v5"/><path d="M4 4l.8 8.5a1 1 0 001 .9h4.4a1 1 0 001-.9L12 4"/></svg>`;
@@ -3204,21 +3076,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				[b.fit || b.reset, [
 					b.fit ? btnHTML('rv-fit', '', ICONS.fit, 'Fit to canvas') : '',
 					b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
-					b.autoRefit ? `<button class="rv-btn rv-btn-toggle rv-chk-autofit rv--active" title="Auto-refit on helix move"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5.5 12L8 5l2.5 7M6.4 9.5h3.2"/></svg><span class="rv-btn-label">Auto-refit</span></button>` : '',
+					b.autoRefit ? `<button class="rv-btn rv-btn-toggle rv-chk-autofit${this._autoRefit ? ' rv--active' : ''}" title="Auto-refit on helix move"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5.5 12L8 5l2.5 7M6.4 9.5h3.2"/></svg><span class="rv-btn-label">Auto-refit</span></button>` : '',
 				].join('')],
 				[b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
-				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets !== false || b.labels !== false || b.ssEnds !== false, [
+				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets || b.labels || b.ssEnds || b.weighting || b.outline, [
 					b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
-					b.colorMap !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
-					b.pairAnnotations !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="13"/><line x1="11" y1="1" x2="11" y2="13"/><line x1="3" y1="3.5" x2="11" y2="3.5"/><line x1="3" y1="7" x2="11" y2="7"/><line x1="3" y1="10.5" x2="11" y2="10.5"/></svg><span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
-					b.pairAnnotations !== false && b.percCanonical !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-cov-canon" title="Color by % canonical pairs" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="5.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5"/><line x1="11" y1="4" x2="5" y2="12"/></svg><span class="rv-btn-label">% Canonical pairs</span></button>` : '',
+					b.colorMap ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
+					b.pairAnnotations ? `<button class="rv-btn rv-btn-toggle rv-chk-pannot" title="Base-pair/helix annotations" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="13"/><line x1="11" y1="1" x2="11" y2="13"/><line x1="3" y1="3.5" x2="11" y2="3.5"/><line x1="3" y1="7" x2="11" y2="7"/><line x1="3" y1="10.5" x2="11" y2="10.5"/></svg><span class="rv-btn-label">Base-pair/helix annotations</span></button>` : '',
+					b.pairAnnotations && b.percCanonical ? `<button class="rv-btn rv-btn-toggle rv-chk-cov-canon" title="Color by % canonical pairs" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="5.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5"/><line x1="11" y1="4" x2="5" y2="12"/></svg><span class="rv-btn-label">% Canonical pairs</span></button>` : '',
 					b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots" style="display:none">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
-					b.insets !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-insets" title="Inset panels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">I</span><span class="rv-btn-label">Insets</span></button>` : '',
-					b.labels !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-r3d-labels" title="Annotation labels" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">L</span><span class="rv-btn-label">Labels</span></button>` : '',
-					b.ssEnds !== false ? `<button class="rv-btn rv-btn-toggle rv-chk-ssends" title="Show/hide single-stranded 5&prime;/3&prime; ends" style="display:none"><span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span><span class="rv-btn-label">SS ends</span></button>` : '',
+					b.insets ? toggleBtn('rv-chk-r3d-insets', 'Inset panels', letterIcon('I'), 'Insets') : '',
+					b.labels ? toggleBtn('rv-chk-r3d-labels', 'Annotation labels', letterIcon('L'), 'Labels') : '',
+					b.ssEnds ? toggleBtn('rv-chk-ssends', 'Single-stranded 5&prime;/3&prime; ends', '<span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span>', 'SS ends') : '',
+					b.weighting ? toggleBtn('rv-chk-weight rv--active', 'Sequence weighting', ICON_WEIGHT, 'Weighting') : '',
+					b.outline ? `<button class="rv-btn rv-btn-toggle rv-chk-outline" title="Outline mode" style="display:none">${ICON_OUTLINE}<span class="rv-btn-label">Outline</span></button>` : '',
 				].join('')],
 				// Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
-				[b.layout, [b.layout ? `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>` : '', `<button class="rv-btn rv-btn-toggle rv-btn-aln" title="Alignment view" style="display:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span></button>`, ].join('')],
+				[b.layout || b.alignment, [b.layout ? `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>` : '', b.alignment ? toggleBtn('rv-btn-aln', 'Alignment view', ICON_ALN, 'Alignment view') : '', ].join('')],
 				[b.toolbarPos, b.toolbarPos ? btnHTML('rv-btn-toolbar-pos', '', ICON_TOOLBAR_POS, this._toolbarPos === 'left' ? 'Move toolbar to top' : 'Move toolbar to left') : ''],
 			];
 			const sep = '<span class="rv-tsep"></span>';
@@ -3304,6 +3178,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             <div class="rv-legend-nan" style="display:none"></div>
           </div>
           <div class="rv-pal-legend"></div>
+          <div class="rv-outline-legend"></div>
+          <div class="rv-outline-bar">
+            <input type="color" class="rv-outline-color" value="#e6194b" title="Colour of the next domain">
+            <span class="rv-outline-hint"></span>
+            <button class="rv-outline-undo" title="Remove the last domain">Undo</button>
+          </div>
           <div class="rv-pk-panels"></div>
           <div class="rv-about-panel">
             <div class="rv-upload-hdr rv-drag-handle">
@@ -3312,7 +3192,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             </div>
             <div class="rv-about-logo"><img src="data:image/png;base64,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" style="width:90px;height:90px;object-fit:contain;display:block;margin:0 auto"><br/></div>
             <p class="rv-about-name">RFview</p>
-            <p class="rv-about-ver">v1.1.8</p>
+            <p class="rv-about-ver">v1.2.0</p>
 			<p class="rv-about-desc">RNA Framework Structure Viewer</p>
             <p style="font-size:11px;color:var(--rv-muted,#656d76);margin:0 0 10px">Author: Danny Incarnato<br>(dincarnato[at]rnaframework.com)</p>
 			<p style="font-size:11px;color:var(--rv-muted,#656d76);margin:0 0 10px"><b>Note: </b>The Radiate layout was ported from Yann Ponty's <a href="https://github.com/yannponty/VARNA" target="_blank">VARNA</a>,<br>while the NAView layout was ported from <a href="https://github.com/ViennaRNA/RNAcode/blob/master/librna/naview.c" target="_blank">Ivo Hofacker's adaptation</a> of Bruccoleri & Heinrich original algorithm.</p>
@@ -3331,6 +3211,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
               <button class="rv-settings-tab rv--active" data-tab="appearance">Appearance</button>
               <button class="rv-settings-tab" data-tab="colormap">Reactivity</button>
               <button class="rv-settings-tab rv-tab-pannot" data-tab="pannot" style="display:none">Annotations</button>
+              <button class="rv-settings-tab rv-tab-outline" data-tab="outline" style="display:none">Outline</button>
               <button class="rv-settings-tab" data-tab="general">General</button>
             </div>
             <div class="rv-settings-body">
@@ -3374,10 +3255,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                     <input type="color" class="rv-set-ha-color" value="#ef4444" style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px"></div>
                 </div>
               </div>
+              <div class="rv-settings-pane" data-pane="outline">
+                <div class="rv-setting-row"><span class="rv-setting-label">Line width  <span class="rv-setting-val rv-val-outline-w">25</span></span>
+                  <input type="range" class="rv-set-outline-w" min="1" max="60" step="1" value="25"></div>
+                <div class="rv-outline-cols"><span>Domain</span><span class="rv-outline-col-n">Start</span><span class="rv-outline-col-n">End</span><span style="width:30px"></span><span style="width:22px"></span></div>
+                <div class="rv-outline-list"></div>
+                <button class="rv-stop-add rv-outline-add">+ Add domain</button>
+              </div>
               <div class="rv-settings-pane" data-pane="general">
                 <div class="rv-setting-row" style="align-items:center;gap:8px">
-                  <input type="checkbox" class="rv-set-relaxed-seq" id="rv-set-relaxed-seq" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)">
-                  <label for="rv-set-relaxed-seq" style="cursor:pointer;font-size:13px;user-select:none">Allow non-standard characters in sequence</label>
+                  <input type="checkbox" class="rv-set-relaxed-seq" id="rv-set-relaxed-seq-${this._uid}" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)">
+                  <label for="rv-set-relaxed-seq-${this._uid}" style="cursor:pointer;font-size:13px;user-select:none">Allow non-standard characters in sequence</label>
                 </div>
               </div>
             </div>
@@ -3393,7 +3281,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
             <div class="rv-upload-section">
               <div class="rv-upload-lbl">Structure files <span>(dot-bracket, CT, or Stockholm)</span></div>
               <div class="rv-upload-drop rv-upload-drop-db">
-                <input type="file" class="rv-file-db" accept=".db,.dot,.fa,.fasta,.ct,.stk,.sto,.stockholm,.txt" multiple>
+                <input type="file" class="rv-file-db" accept="${_DB_EXTS.map(e => '.' + e).join(',')}" multiple>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/></svg>
                 Drop structure files here or click to browse
               </div>
@@ -3442,8 +3330,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
           </div>
         </div>
         <div class="rv-statusbar"${this._showStatusBar ? '' : ' style="display:none"'}>
-          <span><span class="rv-dot"></span><span class="rv-sb-seq">—</span></span>
-          <span class="rv-sb-pairs">— pairs</span>
+          <span><span class="rv-dot"></span><span class="rv-sb-seq">-</span></span>
+          <span class="rv-sb-pairs">- pairs</span>
           <span>&nbsp;</span>
         </div>`;
 			this._container.appendChild(root);
@@ -3459,7 +3347,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._errEl = q('.rv-error');
 			this._errDialog = q('.rv-error-dialog');
 			this._errDialogBody = q('.rv-error-dialog-body');
-			this._relaxedSequence = this._constructorConfig?.relaxedSequence !== false;
 			this._structWrap = q('.rv-struct-wrap');
 			this._alnViewEl = q('.rv-aln-view');
 			this._alnBtn = q('.rv-btn-aln');
@@ -3476,13 +3363,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._pkPanelsEl = q('.rv-pk-panels');
 			// ResizeObserver to re-scale overlays whenever canvas changes size
 			if (typeof ResizeObserver !== 'undefined') {
-				new ResizeObserver(() => this._scaleOverlays()).observe(this._canvas || this._root);
+				this._resizeObserver = new ResizeObserver(() => this._scaleOverlays());
+				this._resizeObserver.observe(this._canvas || this._root);
 			}
 			this._rotRing = q('.rv-rot-ring');
 			this._rotCirc = q('.rv-rot-circ');
 			this._rotLine = q('.rv-rot-line');
 			this._sbSeq = q('.rv-sb-seq');
 			this._sbPairs = q('.rv-sb-pairs');
+			this._chkOutline = q('.rv-chk-outline');
+			this._outlineLegend = q('.rv-outline-legend');
+			this._outlineBar = q('.rv-outline-bar');
+			this._outlineColorIn = q('.rv-outline-color');
 			this._chkIndices = q('.rv-chk-indices');
 			this._chkColors = q('.rv-chk-colors');
 			this._chkPAnnot = q('.rv-chk-pannot');
@@ -3491,8 +3383,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._chkR3dInsets = q('.rv-chk-r3d-insets');
 			this._chkR3dLabels = q('.rv-chk-r3d-labels');
 			this._chkSsEnds = q('.rv-chk-ssends');
+			this._chkWeight = q('.rv-chk-weight');
 			this._alnLegend = q('.rv-aln-legend');
-			this._showPseudoknots = this._config?.showPseudoknots !== false;
+			this._showPseudoknots = this._constructorConfig?.showPseudoknots !== false;
 			if (this._chkPk) this._chkPk.classList.toggle('rv--active', this._showPseudoknots);
 			this._showR3dInsets = this._constructorConfig?.showInsets !== false;
 			this._showR3dLabels = this._constructorConfig?.showLabels !== false;
@@ -3500,6 +3393,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
 			this._showSsEnds = this._constructorConfig?.showSsEnds === true;
 			if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
+			this._useWeighting = true; // sequence weighting on by default
+			if (this._chkWeight) this._chkWeight.classList.toggle('rv--active', this._useWeighting);
 			this._layoutBtn = q('.rv-btn-layout');
 			this._uploadBtn = q('.rv-btn-upload');
 			this._cleanBtn = q('.rv-btn-clean');
@@ -3516,8 +3411,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._rfamPanel = q('.rv-rfam-panel');
 			this._upFileDb = q('.rv-file-db');
 			this._upFileXml = q('.rv-file-xml');
-			this._upDbNames = q('.rv-db-names');
-			this._upXmlNames = q('.rv-xml-names');
 			this._upStatus = this._uploadPanel ? this._uploadPanel.querySelector('.rv-upload-status') : null;
 			this._upLoadBtn = this._uploadPanel ? this._uploadPanel.querySelector('.rv-upload-btn-load') : null;
 			this._upStructOrder = q('.rv-struct-order');
@@ -3529,9 +3422,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._upLoadedStructWrap = q('.rv-loaded-struct-wrap');
 			this._upLoadedStructList = q('.rv-loaded-struct-list');
 			this._loadedStructsOrder = [];
-			this._upAnnotDrop = q('.rv-upload-drop-annot');
 			this._upFileAnnot = q('.rv-file-annot');
-			this._upAnnotNames = q('.rv-annot-names');
 			this._upAnnotTargetSection = q('.rv-annot-target');
 			this._upAnnotTargetList = q('.rv-annot-target-list');
 			this._accumulatedAnnotFiles = [];
@@ -3579,6 +3470,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (!this._alnActive) this._render();
 				});
 			}
+			if (this._chkOutline) this._chkOutline.addEventListener('click', () => this.setOutlineMode(!this._outlineMode));
+			if (this._outlineBar) {
+				this._outlineColorIn.addEventListener('input', () => this._refreshOutlinePreview());
+				this._outlineBar.querySelector('.rv-outline-undo').addEventListener('click', () => {
+					const doms = this._outlineDomains(false);
+					if (doms.length) this.removeOutlineDomain(doms.length - 1);
+				});
+			}
 			if (this._chkR3dInsets) {
 				this._chkR3dInsets.addEventListener('click', () => {
 					this._showR3dInsets = !this._showR3dInsets;
@@ -3598,6 +3497,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._showSsEnds = !this._showSsEnds;
 					this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
 					if (!this._alnActive) this._rebuildCurrentLayout();
+				});
+			}
+			if (this._chkWeight) {
+				this._chkWeight.addEventListener('click', () => {
+					this._useWeighting = !this._useWeighting;
+					this._chkWeight.classList.toggle('rv--active', this._useWeighting);
+					this._updateWeightTitle();
+					this._applyWeighting(); // updates data even in alignment view; renders only in structure view
 				});
 			}
 			if (this._chkPAnnot) {
@@ -3687,36 +3594,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						}
 					});
 				}
-				this._upFileDb.addEventListener('change', () => this._updateUploadNames());
-				this._upFileXml.addEventListener('change', () => this._updateUploadNames());
+				// Drops on any zone above set the zone's input and dispatch 'change' > one path per kind
+				this._upFileDb.addEventListener('change', () => this._onUploadInput('db'));
+				this._upFileXml.addEventListener('change', () => this._onUploadInput('xml'));
+				this._upFileAnnot?.addEventListener('change', () => this._onUploadInput('annot'));
 				if (this._upLoadBtn) this._upLoadBtn.addEventListener('click', () => this._loadFromFiles());
-				if (this._upFileAnnot) {
-					this._upFileAnnot.addEventListener('change', () => this._updateUploadNames());
-					const ad = this._upAnnotDrop;
-					if (ad) {
-						ad.addEventListener('dragover', e => {
-							e.preventDefault();
-							e.stopPropagation();
-							ad.classList.add('rv--drag');
-						});
-						ad.addEventListener('dragleave', e => {
-							e.stopPropagation();
-							ad.classList.remove('rv--drag');
-						});
-						ad.addEventListener('drop', e => {
-							e.preventDefault();
-							e.stopPropagation();
-							ad.classList.remove('rv--drag');
-							const dt = e.dataTransfer;
-							if (dt?.files?.length) {
-								for (const f of dt.files)
-									if (!this._accumulatedAnnotFiles.some(x => x.name === f.name)) this._accumulatedAnnotFiles.push(f);
-								if (this._upAnnotNames) this._upAnnotNames.textContent = this._accumulatedAnnotFiles.map(f => f.name).join(', ');
-								this._previewAnnotFiles();
-							}
-						});
-					}
-				}
 			}
 			if (this._rfamPanel) {
 				const rfamClose = () => {
@@ -3733,7 +3615,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const status = this._rfamPanel.querySelector('.rv-rfam-status');
 					const spinner = this._rfamPanel.querySelector('.rv-rfam-spinner');
 					if (!/^RF\d+$/i.test(id)) {
-						status.textContent = 'Invalid ID — must be RF followed by digits (e.g. RF00162)';
+						status.textContent = 'Invalid ID - must be RF followed by digits (e.g. RF00162)';
 						status.classList.add('rv--err');
 						return;
 					}
@@ -3771,8 +3653,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			window.addEventListener('mousemove', this._boundMove);
 			window.addEventListener('mouseup', this._boundUp);
 			// Cmd-S (macOS) / Ctrl-S (other) shortcut to save current structure as SVG
+			_liveViewers.add(this);
 			this._boundKeyDown = e => {
+				if (e.key === 'Escape' && this._outlinePick && (_liveViewers.size === 1 || this._root.matches(':hover'))) {
+					this._cancelOutlinePick();
+					return;
+				}
 				if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+					// Several viewers on the page: only the hovered / focused one saves
+					if (_liveViewers.size > 1 && !this._root.matches(':hover') && !this._root.contains(document.activeElement)) return;
 					const tag = document.activeElement?.tagName?.toLowerCase();
 					if (tag !== 'input' && tag !== 'textarea') {
 						e.preventDefault();
@@ -3782,7 +3671,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			window.addEventListener('keydown', this._boundKeyDown);
 			// Drag-and-drop structure files directly onto the canvas
-			const DB_EXTS = /\.(db|dbn|ct|sto|stk|stockholm|txt)$/i;
+			const DB_EXTS = _DB_EXT_RE;
 			this._canvas.addEventListener('dragover', e => {
 				if (!this._canvasDrop) return;
 				const items = Array.from(e.dataTransfer?.items || []);
@@ -3813,7 +3702,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					);
 					if (unrecognized.length) {
 						const names = unrecognized.map(f => f.name).join(', ');
-						if (this._rna) this._showErrorDialog(`Unrecognized file format: ${names}\n\nSupported formats: .db, .dbn, .ct, .sto, .stk, .stockholm, .txt, .xml, .cov, .helixcov`);
+						if (this._rna) this._showErrorDialog(`Unrecognized file format: ${names}\n\nSupported formats: ${_DB_EXTS.map(e => '.' + e).join(', ')}, .xml, .cov, .helixcov`);
 						else this._showError(`Unrecognized file format: ${names}`);
 					}
 					return;
@@ -3857,13 +3746,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (this._upAnnotTargetSection) this._upAnnotTargetSection.style.display = 'none';
 					return;
 				}
-				// Normal structure file drop — start fresh
+				// Normal structure file drop - start fresh
+				this._resetPendingLoadState();
 				this._accumulatedDbFiles = [...dbFiles];
 				const dropErrors = await this._previewDbFiles();
 				if (this._pendingStructures.length === 0) {
 					if (dropErrors.length) this._showErrorDialog(dropErrors.join('\n'));
 					return;
 				}
+				// Reactivity (.xml) and covariation files dropped together with the structures
+				if (xmlFiles.length) { this._accumulatedXmlFiles = [...xmlFiles]; await this._previewXmlFiles(); }
+				if (covFiles.length) { this._accumulatedAnnotFiles = [...covFiles]; await this._previewAnnotFiles(); }
 				await this._loadFromFiles();
 			});
 		}
@@ -3885,7 +3778,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._showError('No structure records found in provided config');
 					return;
 				}
-				// If caller explicitly provided a label, use it — overrides whatever
+				// If caller explicitly provided a label, use it - overrides whatever
 				// the file itself contains (e.g. #=GF ID in Stockholm).
 				if (config.label) {
 					if (parsed.length === 1) {
@@ -3907,18 +3800,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._initStructures(config);
 				return;
 			}
-			const {
-				structure,
-				values
-			} = config;
-			// Convert DNA T to RNA U automatically
-			const sequence = config.sequence ?
-				(this._relaxedSequence ? config.sequence : normalizeSeq(config.sequence)) :
-				config.sequence;
-			// Clear any previous error and reset state
+			// Single structure: validate the pieces here (clear messages), then use the same
+			// path as multi-structure configs so state, legends, status bar and switcher are
+			// handled identically.
+			const { structure } = config;
+			const sequence = config.sequence;
 			this._errEl.style.display = 'none';
-			this._legend.style.display = 'none';
-			// Validate inputs
 			// No sequence AND no structure, then empty/clean start, nothing to render.
 			if (!sequence && !structure) return;
 			// One provided without the other, that's a config mistake, report it.
@@ -3930,78 +3817,28 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._showError('Sequence provided without a structure');
 				return;
 			}
-			if (sequence.length !== structure.length) {
-				this._showError(`Sequence and structure have different length (${sequence.length} nt != ${structure.length} nt)`);
-				return;
-			}
-			// Check all bracket types are balanced
-			const _balErr = checkBracketBalance(structure);
-			if (_balErr) {
-				this._showError(_balErr);
-				return;
-			}
-			this._lastConfig = config;
-			this._lastCovTexts = []; // annotations must be re-applied explicitly for this new structure
-			const {
-				pairs,
-				pseudoPairs
-			} = parseDotBracket(structure);
-			const result = this._layoutAlgo === 'naview' ? this._autoRotateLayout(drawRNANAView(pairs, sequence.length)) : this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) : this._pickLayout(pairs, sequence.length);
-			const _loadedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
-			this._rna = {
-				sequence,
-				structure: config.structure, // keep original dot-bracket for APPEND
-				coords: result.coords,
-				centers: result.centers,
-				pairs,
-				pseudoPairs,
-				n: sequence.length,
-				values: values || null,
-				colorMap: normalizeColorMap(config),
-				helices: null,
-				positionLabels: positionLabels || null,
-				pairAnnotations: config.pairAnnotations || null,
-				pairAnnotColorMap: normalizePairAnnotColorMap(config.pairAnnotColorMap),
-				helixAnnotations: config.helixAnnotations?.length ? resolveHelixAnnotations(config.helixAnnotations, pairs, config.positionLabels) : null,
-				isCovAnnot: !!(config.pairAnnotations?.length || config.helixAnnotations?.length),
-				_algo: _loadedAlgo,
-			};
-			// Remember any explicitly-provided colorMap so file-loader reuses it after clear()
-			this._rna.helices = buildHelixTree(pairs, sequence.length, result.centers);
-			// For Stockholm alignments: store pairCanonPct and show the canon toggle
-			if (config.pairCanonPct?.length) {
-				this._rna.pairCanonPct = config.pairCanonPct;
-				if (this._chkCovCanon) this._chkCovCanon.style.display = '';
-			}
-			// Validate pair annotations before rendering
-			if (this._rna.pairAnnotations) {
-				const err = this._validatePairAnnotationsWithMap(this._rna.pairAnnotations, pairs, sequence.length, this._rna.pairAnnotColorMap);
-				if (err) {
-					this._showError(err);
-					return;
-				}
-			}
-			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, this._rna?.isCovAnnot);
-			const np = pairs.reduce((s, p, i) => s + (p > i ? 1 : 0), 0) + pseudoPairs.length;
-			if (this._sbSeq) this._sbSeq.textContent = `${sequence.length} bases`;
-			if (this._sbPairs) this._sbPairs.textContent = `${np} pairs`;
-			if (values) {
-				this._updateLegend(this._rna.colorMap);
-				// Show legend if  color-map is already active (e.g. showColors:true in config)
-			}
-			this._updateLegendVisibility();
-			// Restore or hide indices based on this structure type.
-			this._applyStructIndices(this._rna, config);
-			this._render();
-			this.fit();
+			this._initStructures({
+				...config,
+				structures: [{
+					label: config.label,
+					sequence,
+					structure,
+					values: config.values,
+					colorMap: config.colorMap,
+					pairAnnotations: config.pairAnnotations,
+					pairAnnotColorMap: config.pairAnnotColorMap,
+					helixAnnotations: config.helixAnnotations,
+					positionLabels: config.positionLabels,
+					pairCanonPct: config.pairCanonPct,
+				}],
+			});
 		}
 		// Load covariation data from .cov or .helixcov text onto the current structure.
 		// Auto-detects the format: if the text contains RM_HELIX records it is treated
 		// as a .helixcov file and routed to loadHelixCov(); otherwise it is parsed as a
 		// standard .cov pair-annotation file.
 		loadCov(covText) {
-			if (!this._rna) throw new Error('No structure loaded — call load() first.');
-			this._lastCovTexts = [...(this._lastCovTexts || []), covText]; // accumulate for reset()
+			if (!this._rna) throw new Error('No structure loaded - call load() first.');
 			if (/^#\s+RM_HELIX\b/m.test(covText)) return this.loadHelixCov(covText);
 			const pairs = parseCovFile(covText);
 			// For Stockholm: keep the alignment-derived covRawPairs (synthetic pairs
@@ -4014,72 +3851,113 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._rna.pairCanonPct && this._chkCovCanon) {
 				this._chkCovCanon.style.display = '';
 			}
-			const remapped = remapAnnotPairs(pairs, this._rna.positionLabels);
-			// Build separate sets for nested vs pseudoknot pairs
-			const pkSet = this._buildPkSet(this._rna);
-			const allStructPairs = getStructurePairSet(this._rna.structure || '');
-			const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
-			const nestedCovPairs = remapped.filter(({
-				i,
-				j
-			}) => nestedStructPairs.has(pairKey(i, j)));
-			const pkCovPairs = remapped.filter(({
-				i,
-				j
-			}) => pkSet.has(pairKey(i, j)));
-			if (!nestedCovPairs.length && !pkCovPairs.length)
-				buildAnnotationArrays(remapped, allStructPairs, 'cov', this._rna.label); // throws with proper message
-			// Nested pairs → bounding boxes (existing flow)
-			if (nestedCovPairs.length) {
-				const {
-					annotArr,
-					pairAnnotColorMap
-				} =
-				buildAnnotationArrays(nestedCovPairs, nestedStructPairs, 'cov', this._rna.label);
-				this._rna.pairAnnotations = annotArr;
-				this._rna.pairAnnotColorMap = pairAnnotColorMap;
-				this._buildPairAnnotLegend(pairAnnotColorMap, true);
-			}
-			// Pseudoknot pairs → per-base boxes + coloured arcs
-			if (pkCovPairs.length) {
-				const pkColorMap = buildAnnotColorMapAuto(pkCovPairs);
-				this._rna.pseudoCovAnnotations = pkCovPairs.map(({
-					i,
-					j,
-					category
-				}) => ({
-					i,
-					j,
-					color: pkColorMap ?
-						(pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
-				}));
-			}
-			this._rna.isCovAnnot = true;
-			if (this._constructorConfig?.showPairAnnotations !== false) {
-				this._showPairAnnotations = true;
-				if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-			}
-			// Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
-			// always has the canonical unshifted source regardless of ssEnds state.
-			this._syncBaseAnnotations();
-			// If % canonical pairs coloring was active, switch it off — the cov file
+			// If % canonical pairs coloring was active, switch it off - the cov file
 			// provides its own coloring via E-value boxes.
 			if (this._covCanonMode) {
 				this._covCanonMode = false;
 				if (this._chkCovCanon) this._chkCovCanon.classList.remove('rv--active');
 			}
+			this._applyPairAnnotations(this._rna, pairs, 'cov', { isCov: true });
+			this._rememberCov(covText);
+			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, true);
+			this._enablePairAnnotToggle();
+			// Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
+			// always has the canonical unshifted source regardless of ssEnds state.
+			this._syncBaseAnnotations();
 			this._render();
+		}
+		// Apply pair annotations (alignment or drawn coordinates) to a layout, replacing previous
+		// ones: pairs of nested helices > boxes (pairAnnotations + colour map), pseudoknot pairs >
+		// coloured arcs / inset boxes (pseudoCovAnnotations). Throws if no pair matches the
+		// structure. Returns {invalid}: number of pairs that are not in the structure.
+		_applyPairAnnotations(layout, pairs, filename, { isCov = false } = {}) {
+			this._clearCanonState(layout);
+			const remapped = remapAnnotPairs(pairs, layout.positionLabels);
+			const pkSet = this._buildPkSet(layout);
+			const allStructPairs = getStructurePairSet(layout.structure || '');
+			const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
+			const nested = remapped.filter(({ i, j }) => nestedStructPairs.has(pairKey(i, j)));
+			const pk = remapped.filter(({ i, j }) => pkSet.has(pairKey(i, j)));
+			if (!nested.length && !pk.length) buildAnnotationArrays(remapped, allStructPairs, filename, layout.label); // throws with proper message
+			layout.pairAnnotations = null;
+			layout.pairAnnotColorMap = null;
+			layout.pseudoCovAnnotations = undefined;
+			if (nested.length) {
+				const { annotArr, pairAnnotColorMap } = buildAnnotationArrays(nested, nestedStructPairs, filename, layout.label);
+				layout.pairAnnotations = annotArr;
+				layout.pairAnnotColorMap = pairAnnotColorMap;
+			}
+			if (pk.length) {
+				const pkColorMap = buildAnnotColorMapAuto(pk);
+				layout.pseudoCovAnnotations = pk.map(({ i, j, category }) => ({
+					i, j,
+					color: pkColorMap ? (pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
+				}));
+			}
+			layout.isCovAnnot = !!isCov;
+			return { invalid: remapped.length - nested.length - pk.length };
+		}
+		// Apply one annotation file parsed by the upload panel / canvas drop to structure idx:
+		// .cov / .helixcov with covariation semantics (loadCov), other files as pair annotations.
+		// Returns a warning ('' when none).
+		_applyAnnotFile(idx, { filename, rawText, pairs, isCov, isHelixCov }) {
+			this._selectStructure(idx);
+			if (isCov || isHelixCov) {
+				this.loadCov(rawText);
+				return '';
+			}
+			const { invalid } = this._applyPairAnnotations(this._rna, pairs, filename);
+			this._syncBaseAnnotations();
+			this._enablePairAnnotToggle();
+			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, false);
+			return invalid ? `Warning: "${filename}", ${invalid} pair${invalid > 1 ? 's' : ''} not in structure were skipped` : '';
+		}
+		// Snapshot of the loaded structures as load() configs, for re-loading with extra structures
+		// (append) or new reactivity. Records give sequence / structure / alignment data; annotations
+		// come from the trimmed-index base layout (unshifted even when SS ends are shown, real pair
+		// colour map in % canonical mode), so a reload reproduces exactly what is loaded.
+		_snapshotStructures() {
+			return (this._structLayouts || []).map((l, i) => {
+				const s = this._structures?.[i] || {};
+				const b = l._base || l;
+				return {
+					...s,
+					label: s.label || l.label,
+					sequence: s.sequence || b.sequence || '',
+					structure: s.structure || b.structure,
+					layout: l._toggleState?.layoutAlgo || l._algo || s.layout,
+					values: b.values ?? s.values,
+					colorMap: b.colorMap ?? s.colorMap,
+					pairAnnotations: b.pairAnnotations || s.pairAnnotations || null,
+					pairAnnotColorMap: this._origPairAnnotColorMap(b) || s.pairAnnotColorMap || null,
+					helixAnnotations: b.helixAnnotations || s.helixAnnotations || null,
+					pseudoCovAnnotations: b.pseudoCovAnnotations || s.pseudoCovAnnotations || null,
+					pseudoHelixCovAnnotations: b.pseudoHelixCovAnnotations || s.pseudoHelixCovAnnotations || null,
+					isCovAnnot: b.isCovAnnot || s.isCovAnnot || false,
+					ssConsFeatures: b.ssConsFeatures || s.ssConsFeatures || null,
+					ssConsPkPairs: b.ssConsPkPairs || s.ssConsPkPairs || null,
+				};
+			});
+		}
+		// Make structure idx current immediately (no transition animation).
+		_selectStructure(idx) {
+			if (idx === this._currentStructIdx || !this._structLayouts?.[idx]) return;
+			this.switchToStructure(idx);
+			this._cancelAnimation(true);
+		}
+		_enablePairAnnotToggle() {
+			if (this._constructorConfig?.showPairAnnotations === false) return;
+			this._showPairAnnotations = true;
+			this._chkPAnnot?.classList.add('rv--active');
 		}
 		// Load significant helix-level covariation from .helixcov text.
 		// Draws a light-red bounding box around each significant helix.
 		loadHelixCov(text) {
-			if (!this._rna) throw new Error('No structure loaded — call load() first.');
+			if (!this._rna) throw new Error('No structure loaded - call load() first.');
 			const helices = parseHelixCovFile(text).filter(h => h.significant);
 			if (!helices.length) throw new Error('No significant helices found in .helixcov file.');
-			const o2r = new Map();
-			if (this._rna.positionLabels?.length) this._rna.positionLabels.forEach((col1, ri) => o2r.set(col1 - 1, ri));
-			else
-				for (let i = 0; i < this._rna.n; i++) o2r.set(i, i);
+			const o2r = this._rna.positionLabels?.length ? colToRenderedMap(this._rna.positionLabels) :
+				new Map(Array.from({ length: this._rna.n }, (_, i) => [i, i]));
 			const n = this._rna.n;
 			const _pairsArr = buildPairsArray(this._rna.structure || '');
 			// Build a combined partner map: ssConsPkPairs first, then pseudoPairs, then main structure.
@@ -4107,7 +3985,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				for (let c = h.start5p; c <= h.end5p; c++)
 					if (o2r.has(c)) ri5All.push(o2r.get(c));
 				// Map each 5' position directly to its structural partner.
-				// Do NOT filter by a 3' column range — for reversed helices (c > d)
+				// Do NOT filter by a 3' column range - for reversed helices (c > d)
 				// the actual partners may extend beyond the reported range end.
 				const hp = ri5All
 					.filter(r => _partnerMap.has(r))
@@ -4171,22 +4049,24 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const pkGlowPairs = helixAnnotations.flatMap(a => a.pkPairs);
 			if (pkGlowPairs.length) this._rna.pseudoHelixCovAnnotations = pkGlowPairs;
 			this._rna.isCovAnnot = true;
-			if (this._constructorConfig?.showPairAnnotations !== false) {
-				this._showPairAnnotations = true;
-				if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-			}
+			this._rememberCov(text);
+			this._enablePairAnnotToggle();
 			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, true);
 			// Sync trimmed-index annotations back to _base so _rebuildCurrentLayout
 			// always has the canonical unshifted source regardless of ssEnds state.
 			this._syncBaseAnnotations();
 			this._render();
 		}
+		// Covariation texts applied since the last load, with their structure, for reset()
+		_rememberCov(text) {
+			this._lastCovTexts = [...(this._lastCovTexts || []), { idx: this._currentStructIdx, text }];
+		}
 		// Fit the structure to fill the canvas
 		fit() {
 			if (!this._rna) return;
 			const pw = this._canvas.clientWidth,
 				ph = this._canvas.clientHeight;
-			// Canvas not yet laid out — retry on next frame
+			// Canvas not yet laid out - retry on next frame
 			if (!pw || !ph) {
 				requestAnimationFrame(() => this.fit());
 				return;
@@ -4218,16 +4098,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!this._lastConfig) return;
 			const savedIdx = this._currentStructIdx;
 			const savedCovs = this._lastCovTexts ?? [];
+			// Outline domains live on the structure records, which load() rebuilds: carry them over
+			const savedDomains = (this._structures || []).map(s => s.outlineDomains ? s.outlineDomains.map(d => ({ ...d })) : null);
+			this._outlinePick = null;
 			this.load(this._lastConfig);
-			// Re-apply annotations loaded via loadCov() (not captured in _lastConfig)
-			for (const cov of savedCovs) this.loadCov(cov);
-			if (savedIdx > 0 && savedIdx < this._structLayouts.length) {
-				this._currentStructIdx = savedIdx;
-				this._rna = this._structLayouts[savedIdx];
-				this._buildStructSwitcher();
-				this._render();
-				this.fit();
+			this._structures.forEach((s, i) => { if (savedDomains[i]) s.outlineDomains = savedDomains[i]; });
+			// Re-apply annotations loaded via loadCov() (not captured in _lastConfig) to their structure
+			for (const { idx, text } of savedCovs) {
+				this._selectStructure(idx);
+				try { this.loadCov(text); } catch (e) { console.warn('reset: covariation not re-applied:', e.message); }
 			}
+			this._selectStructure(savedIdx >= 0 && savedIdx < this._structLayouts.length ? savedIdx : 0);
+			if (this._outlineMode) this._outlineChanged();
+			this.fit();
 		}
 		// Show or hide base-position index labels
 		setShowIndices(val) {
@@ -4276,15 +4159,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const valid = ['auto', 'naview', 'radiate'];
 			if (!valid.includes(algo)) throw new Error(`Unknown layout algorithm "${algo}". Use: ${valid.join(', ')}`);
 			this._layoutAlgo = algo;
-			if (this._rna) {
-				const wasCovCanon = this._covCanonMode;
-				this.load(this._lastConfig);
-				if (wasCovCanon && this._rna?.pairCanonPct) {
-					this._covCanonMode = true;
-					if (this._chkCovCanon) this._chkCovCanon.classList.add('rv--active');
-					this._applyCovCanonColoring();
-				}
-			}
+			this._syncLayoutBtn(algo === 'auto' ? (this._rna?._algo || 'radiate') : algo);
+			if (!this._rna || !this._lastConfig) return;
+			// Re-layout every structure in place: annotations, toggles and the current structure stay
+			this._cancelAnimation(true);
+			const n = this._structLayouts?.length || 0;
+			for (let i = 0; i < n; i++) this._relayoutStructure(i);
+			this._rna = n ? this._structLayouts[this._currentStructIdx] : (this._relayoutStructure(-1) || this._rna);
+			this._refreshView();
 		}
 		//
 		// Returns a discrete SHAPE-reactivity colormap that adapts to the current
@@ -4392,29 +4274,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const _layout = this._structLayouts[this._currentStructIdx];
 			const _base = _layout?._base;
 			if (!_base || _base === _layout) return;
-			const _shift = _base.ssEnds?.trimS || 0;
-			const _unshift = (arr, keys) => arr?.map(p => {
-				const r = {
-					...p
-				};
-				for (const k of keys)
-					if (r[k] != null) r[k] -= _shift;
-				return r;
-			});
-			_base.pairAnnotations = _unshift(this._rna.pairAnnotations, ['i', 'j']) || _base.pairAnnotations;
-			_base.pairAnnotColorMap = this._rna.pairAnnotColorMap || _base.pairAnnotColorMap;
-			_base.helixAnnotations = this._rna.helixAnnotations?.map(h => ({
-				...h,
-				subHelices: h.subHelices.map(sh => ({
-					pos5p: sh.pos5p.map(p => p - _shift),
-					pos3p: sh.pos3p.map(p => p - _shift),
-				}))
-			})) || _base.helixAnnotations;
-			_base.pseudoHelixCovAnnotations = _unshift(this._rna.pseudoHelixCovAnnotations, ['i', 'j']) || _base.pseudoHelixCovAnnotations;
-			_base.pseudoCovAnnotations = _unshift(this._rna.pseudoCovAnnotations, ['i', 'j']) || _base.pseudoCovAnnotations;
+			const d = -(_layout._shift || 0); // offset the live layout was built with
+			_base.pairAnnotations = shiftIdx(this._rna.pairAnnotations, d) || _base.pairAnnotations;
+			_base.pairAnnotColorMap = this._origPairAnnotColorMap(this._rna) || _base.pairAnnotColorMap;
+			_base.helixAnnotations = shiftHelixAnnots(this._rna.helixAnnotations, d) || _base.helixAnnotations;
+			_base.pseudoHelixCovAnnotations = shiftIdx(this._rna.pseudoHelixCovAnnotations, d) || _base.pseudoHelixCovAnnotations;
+			_base.pseudoCovAnnotations = shiftIdx(this._rna.pseudoCovAnnotations, d) || _base.pseudoCovAnnotations;
 			_base.isCovAnnot = this._rna.isCovAnnot;
 			_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
-			_base.pairCanonPct = this._rna.pairCanonPct || _base.pairCanonPct;
+			// pairCanonPct is not synced: it lives on the structure record (s / s.ssEnds)
 		}
 		// Returns true if b1/b2 form a canonical Watson-Crick or wobble pair.
 		_isCanonPair(b1, b2) {
@@ -4442,7 +4310,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			for (const p of props)
 				if (src[p]) dst[p] = src[p];
 			// pairAnnotColorMap and pairAnnotations are passed directly to _computeLayout,
-			// but covRawPairs/_savedPairAnnotColorMap are runtime-only — copy them here.
+			// but covRawPairs/_savedPairAnnotColorMap are runtime-only - copy them here.
 		}
 
 		// Creates an SVG line element. cls is optional. Does not append it.
@@ -4522,7 +4390,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 		//
 		// Pair-annotation rectangle centred between two base positions.
-		// Works for any angle — used in both main structure and insets.
+		// Works for any angle - used in both main structure and insets.
 		//
 		_mkPairAnnotRect(x1, y1, x2, y2, color, opa, sw, pad, baseR) {
 			const dist = Math.hypot(x2 - x1, y2 - y1);
@@ -4546,49 +4414,84 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return rect;
 		}
 
+		// Display label of each pseudoknot stem in insets / arcs: the SS_cons_* pair feature it comes
+		// from, else the SS_cons_* feature covering it (5' arm first), else PK1, PK2, …
+		_pkStemLabels(stems, featureName = null) {
+			if (featureName) return stems.map(() => featureName);
+			const posToName = new Map();
+			for (const [name, positions] of Object.entries(this._rna.ssConsFeatures || {}))
+				for (const p of positions) posToName.set(p, name);
+			return stems.map((stem, si) => {
+				for (const p of stem.map(ps => ps.i)) if (posToName.has(p)) return posToName.get(p);
+				for (const p of stem.map(ps => ps.j)) if (posToName.has(p)) return posToName.get(p);
+				return `PK${si + 1}`;
+			});
+		}
+		// SVG-export inset panels: ONE panel per distinct name, stacking every stem that carries it
+		// (an SS_cons_* feature can be split into hundreds of 1–2 bp pieces sharing one name).
+		// Stems come from the pseudoknot pairs (named as on screen) and the SS_cons_* pair features,
+		// in first-seen order. [{label, stems}]
+		_insetGroups() {
+			const byName = new Map();
+			const add = (label, stems) => {
+				if (!byName.has(label)) byName.set(label, []);
+				byName.get(label).push(...stems);
+			};
+			if (this._rna.pseudoPairs?.length) {
+				const stems = groupPkStems(this._rna.pseudoPairs);
+				const labels = this._pkStemLabels(stems);
+				stems.forEach((stem, si) => add(labels[si], [stem]));
+			}
+			for (const [fn, featPairs] of Object.entries(this._rna.ssConsPkPairs || {}))
+				if (featPairs.length) add(fn.replace(/^SS_cons_/, ''), groupPkStems(featPairs));
+			return [...byName].map(([label, stems]) => ({ label, stems }));
+		}
+		// Pair-annotation, covariation and % canonical boxes of one inset panel (same for screen and
+		// SVG export). allPairs: the panel's pairs; inPairs: position > partner within the panel.
+		// An annotation given by one position (or matching only one end) uses that base's panel pair.
+		// Returns [{i, j, color, opacity, strokeWidth, padding}] (undefined > default style).
+		_insetAnnotBoxes(allPairs, inPairs) {
+			const boxes = [];
+			if (!this._showPairAnnotations) return boxes;
+			const has = (a, b) => allPairs.some(p => (p.i === a && p.j === b) || (p.i === b && p.j === a));
+			for (const ann of (this._rna.pairAnnotations || [])) {
+				let ai = ann.i, aj = ann.j;
+				if (ai != null && aj != null) {
+					if (!has(ai, aj)) {
+						if (inPairs[ai] != null) aj = inPairs[ai];
+						else if (inPairs[aj] != null) ai = inPairs[aj];
+						else continue;
+					}
+				} else if (ai != null) {
+					aj = inPairs[ai];
+					if (aj == null) continue;
+				} else if (aj != null) {
+					ai = inPairs[aj];
+					if (ai == null) continue;
+				} else continue;
+				let color = ann.color;
+				if (!color && ann.key != null) color = this._rna.pairAnnotColorMap?.find(e => e.key === ann.key)?.color;
+				boxes.push({ i: ai, j: aj, color: color || '#ffffff', opacity: ann.opacity, strokeWidth: ann.strokeWidth, padding: ann.padding });
+			}
+			for (const { i, j, color } of (this._rna.pseudoCovAnnotations || []))
+				if (has(i, j)) boxes.push({ i, j, color });
+			if (this._covCanonMode)
+				for (const ann of [...(this._rna._canonAnnotations || []), ...(this._rna._canonPkAnnotations || [])])
+					if (inPairs[ann.i] != null && inPairs[ann.j] != null) boxes.push({ i: ann.i, j: ann.j, color: ann.color });
+			return boxes;
+		}
 		_renderPkStockholm(gLines, gLabels, coords, n, pseudoPairs, pairs, sequence, cs, skipArcs = false, featureName = null, stemIdxOffset = 0) {
 			if (!pseudoPairs?.length || !this._pkPanelsEl) return 0;
 
 			// Group pseudoknot pairs into stems
-			const sorted = [...pseudoPairs].sort((a, b) => a.i - b.i);
-			const stems = [];
-			let cur = null;
-			for (const ps of sorted) {
-				if (cur) {
-					const last = cur[cur.length - 1];
-					if (ps.i === last.i + 1 &&
-						(ps.j === last.j - 1 || ps.j === last.j + 1)) {
-						cur.push(ps);
-						continue;
-					}
-				}
-				if (cur) stems.push(cur);
-				cur = [ps];
-			}
-			if (cur) stems.push(cur);
+			const stems = groupPkStems(pseudoPairs);
 
-			// Build R3D coverage map: pos → feature name
-			// Used to: (a) avoid double-labelling PK positions already in R3D,
-			// and (b) adopt the R3D feature name as the inset label for that stem.
-			const r3dPosToName = new Map(); // residue index → R3D feature name
-			if (this._rna.ssConsFeatures) {
-				for (const [name, positions] of Object.entries(this._rna.ssConsFeatures))
-					for (const p of positions) r3dPosToName.set(p, name);
-			}
-			// For each stem, resolve the display label:
-			// - If R3D is ON and covers >= 1 position of the 5' arm, use that R3D feature name.
-			// - Otherwise use the generated 'PK1', 'PK2', ... name.
-			// Store resolved labels so the inset panels use the same names.
-			// Label: always use the R3D feature name when the SS_cons covers this stem,
-			// regardless of whether the R3D toggle is currently on or off.
-			const stemLabels = stems.map((stem, si) => {
-				if (featureName) return featureName;
-				for (const p of stem.map(ps => ps.i))
-					if (r3dPosToName.has(p)) return r3dPosToName.get(p);
-				for (const p of stem.map(ps => ps.j))
-					if (r3dPosToName.has(p)) return r3dPosToName.get(p);
-				return `PK${si + 1}`;
-			});
+			// R3D coverage (positions already labelled by an SS_cons_* feature are not labelled again)
+			const r3dPosToName = new Map(); // residue index > R3D feature name
+			for (const [name, positions] of Object.entries(this._rna.ssConsFeatures || {}))
+				for (const p of positions) r3dPosToName.set(p, name);
+			// Display label of each stem (same names as the inset panels and the SVG export)
+			const stemLabels = this._pkStemLabels(stems, featureName);
 
 			// R3D-style arcs on main structure (non-skip path)
 			stems.forEach((stem, si) => {
@@ -4608,7 +4511,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			});
 
 			// CSS vars 
-			const baseR = 11; // fixed in insets — not affected by the base size settings slider
+			const baseR = 11; // fixed in insets - not affected by the base size settings slider
 			const bpW = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
 			const bbW = parseFloat(cs.getPropertyValue('--rv-backbone-width')) || 2;
 			const bbCol = cs.getPropertyValue('--rv-backbone').trim() || '#1f2328';
@@ -4617,7 +4520,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const bgCol = cs.getPropertyValue('--rv-bg').trim() || '#ffffff';
 			const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
 			const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
-			const helixPad = baseR * 1.7; // fixed in insets, not affected by settings slider
 			const pAnnotOpa = parseFloat(cs.getPropertyValue('--rv-pair-annot-opacity')) || 0.5;
 			const pAnnotSW = parseFloat(cs.getPropertyValue('--rv-pair-annot-stroke-width')) || 1.5;
 			const pAnnotPad = parseFloat(cs.getPropertyValue('--rv-pair-annot-padding')) || 5;
@@ -4641,7 +4543,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const stemGroups = featureName ? [stems.map((stem, si) => ({
 					stem,
 					si
-				}))] // all stems → one group
+				}))] // all stems > one group
 				:
 				stems.map((stem, si) => [{
 					stem,
@@ -4651,6 +4553,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const betweenStemGap = rowStep * 0.8;
 
 			stemGroups.forEach(group => {
+				if (this._keepInsets) return; // panels kept from the previous render (see _render)
 				// Build combined inCoords / inPairs for all stems in this group
 				const inCoords = {};
 				const inPairs = {};
@@ -4675,7 +4578,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const svgH = curY - rowStep + baseR * 2 + baseR * 0.8;
 				const label = stemLabels[group[0].si];
 				const si = group[0].si; // representative si for this group
-				const nbp = group[0].stem.length; // for single-stem compat
 
 				const panel = document.createElement('div');
 				panel.className = 'rv-pk-panel';
@@ -4702,14 +4604,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				].join('');
 				svg.appendChild(style);
 
-				// SVG layer groups — order (bottom to top):
-				// backbone → eraser circles → helix boxes → pair annot boxes → bases → bonds
+				// SVG layer groups - order (bottom to top):
+				// backbone > eraser circles > helix boxes > pair annot boxes > bases > bonds
 				const ins_bb = document.createElementNS(NS, 'g'); // backbone
 				const ins_era = document.createElementNS(NS, 'g'); // white eraser circles
 				const ins_hbox = document.createElementNS(NS, 'g'); // helix annotation boxes
 				const ins_abox = document.createElementNS(NS, 'g'); // pair annotation boxes
 				const ins_base = document.createElementNS(NS, 'g'); // base letters / fill circles
-				const ins_bp = document.createElementNS(NS, 'g'); // bonds (base-pair lines) — topmost
+				const ins_bp = document.createElementNS(NS, 'g'); // bonds (base-pair lines) - topmost
 				svg.append(ins_bb, ins_era, ins_hbox, ins_abox, ins_base, ins_bp);
 
 				// Rendering order:
@@ -4718,7 +4620,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// 3. helix annotation boxes
 				// 4. pair annotation boxes
 				// 5. bases (letters / fill circles)
-				// 6. bonds (base-pair lines) — on top so they aren't hidden by annotation boxes
+				// 6. bonds (base-pair lines) - on top so they aren't hidden by annotation boxes
 
 				// All pairs in this panel (across all runs)
 				const allPairs = group.flatMap(({
@@ -4796,71 +4698,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				}
 
-				// Annotation boxes
-				if (this._showPairAnnotations) {
-					for (const ann of (this._rna.pairAnnotations || [])) {
-						let ai = ann.i,
-							aj = ann.j;
-						if (ai != null && aj != null) {
-							if (allPairs.some(p => (p.i === ai && p.j === aj) || (p.i === aj && p.j === ai))) {
-								// exact match
-							} else if (inPairs[ai] != null && inCoords[ai]) {
-								aj = inPairs[ai];
-							} else if (inPairs[aj] != null && inCoords[aj]) {
-								ai = inPairs[aj];
-							} else continue;
-						} else if (ai != null) {
-							aj = inPairs[ai];
-							if (aj == null) continue;
-						} else if (aj != null) {
-							ai = inPairs[aj];
-							if (ai == null) continue;
-						} else continue;
-						const ic5 = inCoords[ai],
-							ic3 = inCoords[aj];
-						if (!ic5 || !ic3) continue;
-						let color = ann.color;
-						if (!color && ann.key != null && this._rna.pairAnnotColorMap) {
-							const e2 = this._rna.pairAnnotColorMap.find(e => e.key === ann.key);
-							if (e2) color = e2.color;
-						}
-						ins_abox.appendChild(this._mkPairAnnotRect(
-							ic5.x, ic5.y, ic3.x, ic3.y,
-							color || '#ffffff', ann.opacity ?? pAnnotOpa, ann.strokeWidth ?? pAnnotSW, ann.padding ?? pAnnotPad, baseR));
-					}
-					for (const {
-							i,
-							j,
-							color
-						}
-						of(this._rna.pseudoCovAnnotations || [])) {
-						if (!allPairs.some(p => (p.i === i && p.j === j) || (p.i === j && p.j === i))) continue;
-						const ic5 = inCoords[i],
-							ic3 = inCoords[j];
-						if (!ic5 || !ic3) continue;
-						ins_abox.appendChild(this._mkPairAnnotRect(
-							ic5.x, ic5.y, ic3.x, ic3.y,
-							color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
-					}
-				}
-				// Canon % annotation boxes (gated on pair annotation toggle)
-				if (this._covCanonMode && this._showPairAnnotations) {
-					for (const ann of (this._rna._canonAnnotations || [])) {
-						const ic5 = inCoords[ann.i],
-							ic3 = inCoords[ann.j];
-						if (!ic5 || !ic3) continue;
-						ins_abox.appendChild(this._mkPairAnnotRect(
-							ic5.x, ic5.y, ic3.x, ic3.y,
-							ann.color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
-					}
-					for (const ann of (this._rna._canonPkAnnotations || [])) {
-						const ic5 = inCoords[ann.i],
-							ic3 = inCoords[ann.j];
-						if (!ic5 || !ic3) continue;
-						ins_abox.appendChild(this._mkPairAnnotRect(
-							ic5.x, ic5.y, ic3.x, ic3.y,
-							ann.color, pAnnotOpa, pAnnotSW, pAnnotPad, baseR));
-					}
+				// Pair annotation / covariation / % canonical boxes
+				for (const b of this._insetAnnotBoxes(allPairs, inPairs)) {
+					const ic5 = inCoords[b.i], ic3 = inCoords[b.j];
+					if (!ic5 || !ic3) continue;
+					ins_abox.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
+						b.color, b.opacity ?? pAnnotOpa, b.strokeWidth ?? pAnnotSW, b.padding ?? pAnnotPad, baseR));
 				}
 				// Base letters / fill circles
 				allPairs.forEach(ps => {
@@ -4912,9 +4755,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._pkPanelsEl.appendChild(panel);
 			});
 
-			this._pkPanelsEl.style.display = 'flex';
+			if (!this._keepInsets) this._pkPanelsEl.style.display = this._alnActive ? 'none' : 'flex';
 
-			// Resize panels + multi-column layout
+			return stemGroups.length;
+		}
+
+		// Size the inset panels and spread them over columns when they don't fit the canvas height.
+		// Runs once per render (after all panels were built), over two animation frames.
+		_schedulePkPanelLayout() {
 			requestAnimationFrame(() => {
 				const container = this._pkPanelsEl;
 				if (!container) return;
@@ -4928,10 +4776,22 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 				// Step 2: multi-column layout (needs a fresh rAF so browser reflects new sizes)
 				requestAnimationFrame(() => {
+					if (!container.isConnected || panels.some(p => p.parentNode !== container)) return; // re-rendered meanwhile
+					// Measure from a clean state: an earlier _scaleOverlays() may have fixed the container's
+					// height (flex items would shrink to fit) and scaled it (getBoundingClientRect is scaled).
+					container.style.transform = '';
+					container.style.width = '';
+					container.style.height = '';
+					for (const p of panels) {
+						p.style.position = '';
+						p.style.left = '';
+						p.style.top = '';
+					}
 					const canvasH = this._canvas?.clientHeight || container.parentElement?.clientHeight || 600;
 					const available = canvasH - 52 - 16 - 16;
 					const gap = 8;
-					const heights = panels.map(p => p.getBoundingClientRect().height || p.offsetHeight);
+					const heights = panels.map(p => p.offsetHeight);
+					const colW = Math.max(panelW, ...panels.map(p => p.offsetWidth));
 
 					const cols = [
 						[]
@@ -4946,33 +4806,32 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						cols[cols.length - 1].push(i);
 						colH += (cols[cols.length - 1].length > 1 ? gap : 0) + heights[i];
 					}
-					if (cols.length === 1) return;
-					cols.forEach((col, ci) => {
-						let y = 0;
-						col.forEach(i => {
-							panels[i].style.position = 'absolute';
-							panels[i].style.left = (ci * (panelW + gap)) + 'px';
-							panels[i].style.top = y + 'px';
-							y += heights[i] + gap;
+					if (cols.length > 1) {
+						cols.forEach((col, ci) => {
+							let y = 0;
+							col.forEach(i => {
+								panels[i].style.position = 'absolute';
+								panels[i].style.left = (ci * (colW + gap)) + 'px';
+								panels[i].style.top = y + 'px';
+								y += heights[i] + gap;
+							});
 						});
-					});
-					container.style.width = (cols.length * (panelW + gap) - gap) + 'px';
-					container.style.height = Math.max(...cols.map(col =>
-						col.reduce((s, i) => s + heights[i] + gap, 0) - gap
-					)) + 'px';
+						container.style.width = (cols.length * (colW + gap) - gap) + 'px';
+						container.style.height = Math.max(...cols.map(col =>
+							col.reduce((s, i) => s + heights[i] + gap, 0) - gap
+						)) + 'px';
+					}
+					// Scale the overlays only once the panels are placed
+					this._scaleOverlays();
 				});
 			});
-			// Scale overlays after render
-			requestAnimationFrame(() => requestAnimationFrame(() => this._scaleOverlays()));
-			return stemGroups.length;
 		}
-
 		_renderSsConsAnnotations(gLines, gLabels, coords, n, features, pairs, pseudoPairs, cs) {
 			const cx = coords.reduce((s, c) => s + c.x, 0) / n;
 			const cy = coords.reduce((s, c) => s + c.y, 0) / n;
 
 			// Compute signed area of backbone polygon to determine winding order.
-			// Positive = counterclockwise (SVG y-down: clockwise visually) → outside is LEFT of forward direction.
+			// Positive = counterclockwise (SVG y-down: clockwise visually) > outside is LEFT of forward direction.
 			// We use this to flip normals globally so they always point outside.
 			let signedArea = 0;
 			for (let i = 0; i < n; i++) {
@@ -5050,7 +4909,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			// Pre-fill occupancy with index label boxes AND base circle footprints
 			for (let i = 0; i < n; i++) {
-				// Base circle — prevents labels landing on the structure
+				// Base circle - prevents labels landing on the structure
 				addOccupied(coords[i].x, coords[i].y, baseR * 2 + lSz * 0.8, baseR * 2 + lSz * 0.8);
 				if (i === 0 || (i + 1) % 10 === 0 || i === n - 1) {
 					const pi = Math.max(0, i - 1),
@@ -5064,7 +4923,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						inx = -inx;
 						iny = -iny;
 					}
-					// Unpaired (loop) bases: index is placed INWARD — flip direction
+					// Unpaired (loop) bases: index is placed INWARD - flip direction
 					const inLoop = pairs[i] < 0 && !pkPartner.has(i);
 					if (inLoop) {
 						inx = -inx;
@@ -5076,7 +4935,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 
-			// Register helix annotation boxes (rotated rects — use axis-aligned bounding box)
+			// Register helix annotation boxes (rotated rects - use axis-aligned bounding box)
 			if (this._showPairAnnotations && !this._covCanonMode && this._rna?.helixAnnotations?.length) {
 				const hPad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || baseR * 1.7;
 				for (const ann of this._rna.helixAnnotations) {
@@ -5159,7 +5018,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 			// Merge labels that share a start position
 			const edgeGap = lSz * 3.5;
-			// posDirection: ri → 'open' (5' arm) | 'close' (3' arm)
+			// posDirection: ri > 'open' (5' arm) | 'close' (3' arm)
 			// Built from ssConsPkPairs so arm boundaries are known exactly.
 			const posDirection = new Map();
 			if (this._rna.ssConsPkPairs)
@@ -5174,7 +5033,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				posDirection.set(ps.j, 'close');
 			}
 			const toRuns = (positions) => {
-				// Split on direction change (5'→3' arm boundary) or gap > 3 within same arm.
+				// Split on direction change (5'>3' arm boundary) or gap > 3 within same arm.
 				const runs = [];
 				let run = [positions[0]];
 				for (let k = 1; k < positions.length; k++) {
@@ -5220,14 +5079,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const isNaview = this._rna?._algo === 'naview';
 					// For helix-arm groups, expand to include all positions between
 					// first and last so the line passes through every base in the arm.
-					// Skip in naview — helix arms aren't linear there.
+					// Skip in naview - helix arms aren't linear there.
 					const expandedGroup = (!isNaview && group.some(i => helixPos.has(i))) ?
 						Array.from({
 							length: group[group.length - 1] - group[0] + 1
 						}, (_, k) => group[0] + k) :
 						group;
 					const activeGroup = expandedGroup;
-					// Per-position offset points — always outside via outwardSign
+					// Per-position offset points - always outside via outwardSign
 					const allLoop = !isNaview && activeGroup.every(i => !helixPos.has(i));
 
 					const pts = activeGroup.map(i => {
@@ -5251,7 +5110,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					let d;
 					const bezSegs = []; // { p0,c1,c2,p1 } per segment
 					if (pts.length < 2) {
-						// Single-point annotation — no line to draw
+						// Single-point annotation - no line to draw
 					} else if (pts.length < 3 || !allLoop) {
 						d = `M ${pts[0].x} ${pts[0].y}`;
 						for (let k = 1; k < pts.length; k++) {
@@ -5332,7 +5191,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					};
 					const path = document.createElementNS(NS, 'path');
 					if (!d) {
-						// pts.length < 2 — no path to draw, skip
+						// pts.length < 2 - no path to draw, skip
 					} else {
 						path.setAttribute('d', d);
 						path.setAttribute('class', 'rv-ss-cons-line');
@@ -5341,7 +5200,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						gLines.appendChild(path);
 					}
 
-					// Pre-compute segment bounding boxes — added AFTER label placement
+					// Pre-compute segment bounding boxes - added AFTER label placement
 					const segM = bbW / 2 + lSz * 0.5;
 					const segBoxes = [];
 					for (let k = 0; k < pts.length - 1; k++) {
@@ -5580,7 +5439,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Three-pass DOM rendering: leader lines, then bg+text groups (so text is on top of leader).
 			const bgPad = lSz * 0.35;
 
-			// Pass 1: leader lines — stored by index so drag can update x1/y1
+			// Pass 1: leader lines - stored by index so drag can update x1/y1
 			const leaderEls = [];
 			for (const {
 					layout,
@@ -5635,7 +5494,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				g.appendChild(txt);
 				gLabels.appendChild(g);
 
-				// Drag handling — SVG coordinate space
+				// Drag handling - SVG coordinate space
 				const leader = leaderEls[idx];
 				let dragging = false,
 					startMx = 0,
@@ -5716,48 +5575,33 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			} else {
 				const url = `https://rfview.incarnatolab.com/rfam-proxy.php?id=${rfamId.toUpperCase()}`;
 				const resp = await fetch(url);
-				if (!resp.ok) throw new Error(`HTTP ${resp.status} — could not retrieve ${rfamId}`);
+				if (!resp.ok) throw new Error(`HTTP ${resp.status} - could not retrieve ${rfamId}`);
 				text = await resp.text();
 			}
 			const incoming = RFviewJS.parseStockholmFile(text, rfamId.toUpperCase());
 			if (this._structLayouts?.length) {
-				const existing = this._structLayouts.map((s, i) => ({
-					label: this._structures?.[i]?.label || s.label,
-					sequence: s.sequence,
-					structure: s.structure,
-					values: s.values,
-					colorMap: s.colorMap,
-					pairAnnotations: s.pairAnnotations,
-					pairAnnotColorMap: s.pairAnnotColorMap,
-					helixAnnotations: s.helixAnnotations,
-					pseudoCovAnnotations: s.pseudoCovAnnotations,
-					pseudoHelixCovAnnotations: s.pseudoHelixCovAnnotations,
-					isCovAnnot: s.isCovAnnot,
-					ssConsFeatures: s.ssConsFeatures,
-					ssConsPkPairs: s.ssConsPkPairs,
-					baseDisplay: s.baseDisplay,
-					positionLabels: s.positionLabels,
-					pairCanonPct: s.pairCanonPct,
-					alnSeqs: s.alnSeqs,
-					alnStruct: s.alnStruct,
-					alnLen: s.alnLen,
-					ssEnds: s.ssEnds,
-				}));
-				const newIdx = existing.length + incoming.length - 1;
+				const existing = this._snapshotStructures();
+				// Show the last added structure right away (no extra switch / animation)
 				this.load({
 					structures: [...existing, ...incoming],
-					showColors: this._showColors
+					showColors: this._showColors,
+					_startIdx: existing.length + incoming.length - 1,
 				});
-				// Switch to the newly added structure and focus its pill
-				this.switchToStructure(newIdx);
 			} else {
 				this.load({
 					structures: incoming,
 					showColors: this._showColors
 				});
-				// Single new structure — switch to it (index 0)
-				this.switchToStructure(0);
 			}
+		}
+		// Settings row: text label + colour input; onInput(value) runs on every change.
+		_makeColorRow(label, value, onInput) {
+			const row = document.createElement('div');
+			row.className = 'rv-setting-row';
+			row.innerHTML = `<span class="rv-setting-label">${escHtml(label)}</span>` +
+				`<input type="color" value="${escHtml(value)}" style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
+			row.querySelector('input[type=color]').addEventListener('input', e => onInput(e.target.value));
+			return row;
 		}
 		_openSettings() {
 			this._aboutPanel?.classList.remove('rv-visible');
@@ -5841,6 +5685,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			this._refreshStopsList();
 			this._settingsPanel.classList.add('rv-visible');
+			// Outline tab (outline mode only)
+			const ow = parseFloat(_gv('--rv-outline-width')) || 25;
+			q('.rv-set-outline-w').value = ow;
+			q('.rv-val-outline-w').textContent = ow;
+			this._syncOutlineTab();
 			// Pair annotation section
 			const paTab = this._settingsPanel.querySelector('.rv-tab-pannot');
 			const paPane = this._settingsPanel.querySelector('.rv-settings-pane[data-pane="pannot"]');
@@ -5876,10 +5725,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const cur = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
 					const hexMatch = cur.match(/#[0-9a-f]{6}/i);
 					haColorPicker.value = hexMatch ? hexMatch[0] : '#064e3b';
-					haColorPicker.addEventListener('input', () => {
+					haColorPicker.oninput = () => { // property: the panel is reopened many times
 						this._root.style.setProperty('--rv-helix-annot-color', haColorPicker.value);
-						this._render();
-					});
+						this._renderSoon();
+					};
 				}
 				// Build category  color pickers
 				const paColorDiv = this._settingsPanel.querySelector('.rv-pa-colors');
@@ -5908,18 +5757,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							prop,
 							def
 						}) => {
-							const row = document.createElement('div');
-							row.className = 'rv-setting-row';
-							row.innerHTML = `<span class="rv-setting-label">${key}</span>` +
-								`<input type="color" value="${this[prop] || def}" ` +
-								`style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
-							const picker = row.querySelector('input[type=color]');
-							picker.addEventListener('input', () => {
-								this[prop] = picker.value;
+							paColorDiv.appendChild(this._makeColorRow(key, this[prop] || def, v => {
+								this[prop] = v;
 								this._applyCovCanonColoring();
 								this._buildPairAnnotLegend(null, true);
-							});
-							paColorDiv.appendChild(row);
+							}));
 						});
 					} else {
 						const cm = this._rna.pairAnnotColorMap;
@@ -5928,12 +5770,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								key,
 								color
 							}) => {
-								const row = document.createElement('div');
-								row.className = 'rv-setting-row';
-								row.innerHTML = `<span class="rv-setting-label">${key || ANNOT_MISSING_KEY}</span>` + `<input type="color" value="${color}" ` + `style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
-								const picker = row.querySelector('input[type=color]');
-								picker.addEventListener('input', () => {
-									const newColor = picker.value;
+								paColorDiv.appendChild(this._makeColorRow(key || ANNOT_MISSING_KEY, color, newColor => {
 									// Update all annotation objects with this key on current + layout
 									const updateAnns = anns => {
 										if (anns)
@@ -5952,28 +5789,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 									updateCM(this._rna?.pairAnnotColorMap);
 									updateCM(this._structLayouts?.[this._currentStructIdx]?.pairAnnotColorMap);
 									this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, this._rna?.isCovAnnot);
-									this._render();
-								});
-								paColorDiv.appendChild(row);
+									this._renderSoon();
+								}));
 							});
 						} else {
 							// No  color map (single  color), so show one picker using first annotation's  color
 							const defaultColor = pAnnots[0]?.color || ANNOT_DEFAULT_COLOR;
-							const row = document.createElement('div');
-							row.className = 'rv-setting-row';
-							row.innerHTML = `<span class="rv-setting-label">Annotation color</span>` + `<input type="color" value="${defaultColor}" ` + `style="width:44px;height:24px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;cursor:pointer;padding:1px 2px">`;
-							const picker = row.querySelector('input[type=color]');
-							picker.addEventListener('input', () => {
-								const c = picker.value;
+							paColorDiv.appendChild(this._makeColorRow('Annotation color', defaultColor, c => {
 								const updateAnns = anns => {
 									if (anns)
 										for (const a of anns) a.color = c;
 								};
 								updateAnns(this._rna?.pairAnnotations);
 								updateAnns(this._structLayouts?.[this._currentStructIdx]?.pairAnnotations);
-								this._render();
-							});
-							paColorDiv.appendChild(row);
+								this._renderSoon();
+							}));
 						}
 					} // end else (non-canon mode)
 				}
@@ -6025,6 +5855,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			bindRange('.rv-set-pa-pad', '--rv-pair-annot-padding', '.rv-val-pa-pad', '', true);
 			bindRange('.rv-set-ha-opac', '--rv-helix-annot-opacity', '.rv-val-ha-opac', '', true);
 			bindRange('.rv-set-ha-pad', '--rv-helix-annot-padding', '.rv-val-ha-pad', '', true);
+			bindRange('.rv-set-outline-w', '--rv-outline-width', '.rv-val-outline-w', '', true);
+			q('.rv-outline-add').addEventListener('click', () => this.addOutlineDomain());
 
 			// General tab: relaxed sequence checkbox
 			const relaxedChk = q('.rv-set-relaxed-seq');
@@ -6045,6 +5877,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				'--rv-pair-annot-padding': ['16', '.rv-set-pa-pad', '.rv-val-pa-pad', ''],
 				'--rv-helix-annot-opacity': ['0.5', '.rv-set-ha-opac', '.rv-val-ha-opac', ''],
 				'--rv-helix-annot-padding': ['25', '.rv-set-ha-pad', '.rv-val-ha-pad', ''],
+				'--rv-outline-width': ['25', '.rv-set-outline-w', '.rv-val-outline-w', ''],
 			};
 			const resetBtn = this._settingsPanel?.querySelector('.rv-settings-reset');
 			if (resetBtn) {
@@ -6096,8 +5929,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const stops = p._cmStops;
 				const last = stops[stops.length - 1];
 				stops.push({
-					value: last ? Math.min(last.value + 0.1, last.value + 1) : 1,
-					color: '#ff0000de'
+					value: last ? last.value + 0.1 : 1,
+					color: '#ff0000'
 				});
 				this._refreshStopsList();
 				this._applySettingsCM();
@@ -6146,7 +5979,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					nanColor: nan,
 				},
 			});
-			// Apply only to the current structure — colormaps are per-structure
+			// Apply only to the current structure - colormaps are per-structure
 			const idx = this._currentStructIdx ?? 0;
 			if (this._structLayouts?.[idx]) this._structLayouts[idx].colorMap = cm;
 			if (this._rna) this._rna.colorMap = cm;
@@ -6156,82 +5989,54 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			this._render();
 		}
-		_showUploadPanel() {
-			if (!this._uploadPanel) return;
-			this._upFileDb.value = '';
-			this._upFileXml.value = '';
-			if (this._upDbNames) this._upDbNames.textContent = '';
-			if (this._upXmlNames) this._upXmlNames.textContent = '';
-			this._upStatus.textContent = '';
-			this._upStatus.className = 'rv-upload-status';
-			this._upLoadBtn.disabled = true;
+		// Forget every file picked / parsed for loading (upload panel open/close, canvas drop, clear()).
+		_resetPendingLoadState() {
 			this._pendingStructures = [];
 			this._pendingXmlData = [];
+			this._pendingAnnotData = [];
 			this._accumulatedDbFiles = [];
 			this._accumulatedXmlFiles = [];
 			this._accumulatedAnnotFiles = [];
-			this._pendingAnnotData = [];
+			this._loadedStructsOrder = [];
+			this._dbPreviewed = new Set(); // db file names already parsed into _pendingStructures
+			this._previewGen = (this._previewGen || 0) + 1; // previews still running are discarded
+		}
+		_showUploadPanel() {
+			if (!this._uploadPanel) return;
+			this._resetPendingLoadState();
+			this._upStatus.textContent = '';
+			this._upStatus.className = 'rv-upload-status';
+			this._upLoadBtn.disabled = true;
 			// Clear browser file-input selections so stale picks from a previous
 			// dialog session don't silently re-trigger on the next open
-			if (this._upFileDb) this._upFileDb.value = '';
-			if (this._upFileXml) this._upFileXml.value = '';
-			if (this._upFileAnnot) this._upFileAnnot.value = '';
-			if (this._upStructOrder) this._upStructOrder.style.display = 'none';
-			if (this._upStructOrderList) this._upStructOrderList.innerHTML = '';
-			if (this._upLoadedStructWrap) this._upLoadedStructWrap.style.display = 'none';
-			if (this._upLoadedStructList) this._upLoadedStructList.innerHTML = '';
-			this._loadedStructsOrder = [];
-			if (this._upXmlOrder) this._upXmlOrder.style.display = 'none';
-			if (this._upXmlOrderList) this._upXmlOrderList.innerHTML = '';
-			if (this._upXmlTargetSection) this._upXmlTargetSection.style.display = 'none';
-			if (this._upXmlTargetList) this._upXmlTargetList.innerHTML = '';
-			this._accumulatedAnnotFiles = [];
-			this._pendingAnnotData = [];
-			if (this._upAnnotNames)
-				if (this._upAnnotNames) this._upAnnotNames.textContent = '';
-			if (this._upAnnotTargetSection) this._upAnnotTargetSection.style.display = 'none';
-			if (this._upAnnotTargetList) this._upAnnotTargetList.innerHTML = '';
+			for (const inp of [this._upFileDb, this._upFileXml, this._upFileAnnot]) if (inp) inp.value = '';
+			for (const el of [this._upStructOrder, this._upLoadedStructWrap, this._upXmlOrder, this._upXmlTargetSection, this._upAnnotTargetSection])
+				if (el) el.style.display = 'none';
+			for (const el of [this._upStructOrderList, this._upLoadedStructList, this._upXmlOrderList, this._upXmlTargetList, this._upAnnotTargetList])
+				if (el) el.innerHTML = '';
 			this._uploadPanel.classList.add('rv-visible');
 		}
 		_hideUploadPanel() {
 			this._uploadPanel?.classList.remove('rv-visible');
 			// Clear all pending state so stale data never carries over to the next session
-			this._pendingStructures = [];
-			this._pendingXmlData = [];
-			this._pendingAnnotData = [];
-			this._accumulatedDbFiles = [];
-			this._accumulatedXmlFiles = [];
-			this._accumulatedAnnotFiles = [];
-			this._loadedStructsOrder = [];
+			this._resetPendingLoadState();
 		}
-		_updateUploadNames() {
-			const fmt = files => Array.from(files).map(f => f.name).join(', ') || '';
-			if (this._upDbNames) this._upDbNames.textContent = fmt(this._upFileDb.files);
-			if (this._upXmlNames) this._upXmlNames.textContent = fmt(this._upFileXml.files);
+		// A file input of the upload panel changed (picker or drop): add its files to the list for
+		// that kind and preview only that kind. The input is cleared afterwards so a later change of
+		// another input doesn't re-process these files (which used to undo reordering / removals).
+		_onUploadInput(kind) {
+			const [input, key, preview] = {
+				db: [this._upFileDb, '_accumulatedDbFiles', () => this._previewDbFiles()],
+				xml: [this._upFileXml, '_accumulatedXmlFiles', () => this._previewXmlFiles()],
+				annot: [this._upFileAnnot, '_accumulatedAnnotFiles', () => this._previewAnnotFiles()],
+			}[kind] || [];
+			if (!input?.files?.length) return;
 			this._upLoadBtn.disabled = true; // re-enabled after preview completes
 			this._upStatus.textContent = '';
 			this._upStatus.className = 'rv-upload-status';
-			// Accumulate db files across multiple selections (avoid replacing previous picks)
-			if (this._upFileDb.files.length > 0) {
-				for (const f of this._upFileDb.files) {
-					if (!this._accumulatedDbFiles.some(e => e.name === f.name)) this._accumulatedDbFiles.push(f);
-				}
-				if (this._upDbNames) this._upDbNames.textContent = this._accumulatedDbFiles.map(f => f.name).join(', ');
-				this._previewDbFiles();
-			}
-			if (this._upFileAnnot?.files.length > 0) {
-				for (const f of this._upFileAnnot.files)
-					if (!this._accumulatedAnnotFiles.some(e => e.name === f.name)) this._accumulatedAnnotFiles.push(f);
-				if (this._upAnnotNames) this._upAnnotNames.textContent = this._accumulatedAnnotFiles.map(f => f.name).join(', ');
-				this._previewAnnotFiles();
-			}
-			if (this._upFileXml.files.length > 0) {
-				for (const f of this._upFileXml.files) {
-					if (!this._accumulatedXmlFiles.some(e => e.name === f.name)) this._accumulatedXmlFiles.push(f);
-				}
-				if (this._upXmlNames) this._upXmlNames.textContent = this._accumulatedXmlFiles.map(f => f.name).join(', ');
-				this._previewXmlFiles();
-			}
+			for (const f of input.files) if (!this[key].some(e => e.name === f.name)) this[key].push(f);
+			input.value = '';
+			preview();
 		}
 		// Parse db files immediately so user can review and reorder before loading
 		async _previewDbFiles() {
@@ -6241,14 +6046,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const parseFileChunked = (file, onLine) => new Promise((res, rej) => {
 				let leftover = '';
 				let offset = 0;
+				// Streaming decoder: a multi-byte UTF-8 character split across two chunks is kept intact
+				const dec = new TextDecoder();
 				const readNext = () => {
 					if (offset >= file.size) {
-						if (leftover) onLine(leftover); // final incomplete line
+						leftover += dec.decode();
+						if (leftover) onLine(leftover.replace(/\r$/, '')); // final incomplete line
 						return res();
 					}
 					const r = new FileReader();
 					r.onload = () => {
-						const text = leftover + r.result;
+						const text = leftover + dec.decode(r.result, { stream: true });
 						const lines = text.split('\n');
 						leftover = lines.pop(); // last element may be incomplete
 						for (const line of lines) onLine(line.replace(/\r$/, ''));
@@ -6256,15 +6064,20 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						readNext();
 					};
 					r.onerror = () => rej(r.error);
-					r.readAsText(file.slice(offset, offset + CHUNK));
+					r.readAsArrayBuffer(file.slice(offset, offset + CHUNK));
 				};
 				readNext();
 			});
 			const readText = f => this._readFileText(f);
-			this._pendingStructures = [];
+			const gen = this._previewGen;
+			if (!this._dbPreviewed) this._dbPreviewed = new Set();
+			// Files parsed earlier keep their records (and the user's ordering / removals) in
+			// _pendingStructures; only newly added files are parsed and appended.
 			const errors = [];
-			const validFiles = [];
+			const failed = new Set();
 			for (const file of this._accumulatedDbFiles) {
+				if (this._dbPreviewed.has(file.name)) continue;
+				this._dbPreviewed.add(file.name);
 				try {
 					const isStockholm = /\.sto(?:ckholm)?$/i.test(file.name);
 					const showLoad = msg => {
@@ -6276,19 +6089,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						? await parseStockholmFileChunked(file, file.name, parseFileChunked, false, showLoad)
 						: parseDbFile(await readText(file), file.name);
 					hideLoad();
+					if (gen !== this._previewGen) return []; // panel was reset meanwhile
 					if (!recs.length) throw new Error('no records found');
 					this._pendingStructures.push(...recs.map(s => ({
 						...s,
 						_src: file.name
 					})));
-					validFiles.push(file);
 				} catch (e) {
 					if (this._loadingEl) this._loadingEl.classList.remove('rv-visible');
+					if (gen !== this._previewGen) return [];
+					failed.add(file.name);
+					this._dbPreviewed.delete(file.name);
 					errors.push(`${file.name}: ${e.message || 'malformed dot-bracket file'}`);
 				}
 			}
-			this._accumulatedDbFiles = validFiles;
-			if (this._upDbNames) this._upDbNames.textContent = validFiles.map(f => f.name).join(', ');
+			this._accumulatedDbFiles = this._accumulatedDbFiles.filter(f => !failed.has(f.name));
 			this._renderStructOrder();
 			this._upLoadBtn.disabled = this._pendingStructures.length === 0;
 			if (this._upStatus) {
@@ -6315,7 +6130,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			structs.forEach((s, idx) => {
 				const row = document.createElement('div');
 				row.className = 'rv-struct-order-row';
-				row.innerHTML = `<span class="rv-struct-order-idx">${idx + 1}</span>` + `<span class="rv-struct-order-lbl" title="${s.label}">${s.label}</span>` + `<div class="rv-struct-order-btns">` + `<button class="rv-struct-order-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>` + `<button class="rv-struct-order-btn" ${idx === structs.length - 1 ? 'disabled' : ''}>▼</button>` + `<button class="rv-struct-order-btn" title="Remove">✕</button>` + `</div>`;
+				row.innerHTML = `<span class="rv-struct-order-idx">${idx + 1}</span>` + `<span class="rv-struct-order-lbl" title="${escHtml(s.label)}">${escHtml(s.label)}</span>` + `<div class="rv-struct-order-btns">` + `<button class="rv-struct-order-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>` + `<button class="rv-struct-order-btn" ${idx === structs.length - 1 ? 'disabled' : ''}>▼</button>` + `<button class="rv-struct-order-btn" title="Remove">✕</button>` + `</div>`;
 				const [upBtn, dnBtn, rmBtn] = row.querySelectorAll('.rv-struct-order-btn');
 				upBtn.addEventListener('click', () => {
 					if (idx > 0) {
@@ -6344,7 +6159,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			structs.forEach((s, idx) => {
 				const row = document.createElement('div');
 				row.className = 'rv-struct-order-row';
-				row.innerHTML = `<span class="rv-struct-order-idx">${idx + 1}</span>` + `<span class="rv-struct-order-lbl" title="${s.label}">${s.label}</span>` + `<span class="rv-struct-order-src">${s._src}</span>` + `<div class="rv-struct-order-btns">` + `<button class="rv-struct-order-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>` + `<button class="rv-struct-order-btn" ${idx === structs.length - 1 ? 'disabled' : ''}>▼</button>` + `<button class="rv-struct-order-btn" title="Remove">✕</button>` + `</div>`;
+				row.innerHTML = `<span class="rv-struct-order-idx">${idx + 1}</span>` + `<span class="rv-struct-order-lbl" title="${escHtml(s.label)}">${escHtml(s.label)}</span>` + `<span class="rv-struct-order-src">${escHtml(s._src)}</span>` + `<div class="rv-struct-order-btns">` + `<button class="rv-struct-order-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>` + `<button class="rv-struct-order-btn" ${idx === structs.length - 1 ? 'disabled' : ''}>▼</button>` + `<button class="rv-struct-order-btn" title="Remove">✕</button>` + `</div>`;
 				const [upBtn, dnBtn, rmBtn] = row.querySelectorAll('.rv-struct-order-btn');
 				upBtn.addEventListener('click', () => {
 					if (idx > 0) {
@@ -6363,7 +6178,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					// Also remove source file from accumulated list if no remaining structs from it
 					const srcStillUsed = structs.some(s2 => s2._src === s._src);
 					if (!srcStillUsed) this._accumulatedDbFiles = this._accumulatedDbFiles.filter(f => f.name !== s._src);
-					if (this._upDbNames) this._upDbNames.textContent = this._accumulatedDbFiles.map(f => f.name).join(', ') || '';
 					this._upLoadBtn.disabled = structs.length === 0;
 					this._renderStructOrder();
 				});
@@ -6372,6 +6186,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		// Remove all loaded structures and reset to an empty state
 		clear() {
+			this._cancelAnimation();
 			this._exitAlnView();
 			this._rna = null;
 			this._structures = [];
@@ -6386,24 +6201,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._structWrap?.classList.remove('rv-visible');
 			this._legend.style.display = 'none';
 			this._palLegend.style.display = 'none';
+			this._outlinePick = null;
+			if (this._chkOutline) this._chkOutline.style.display = 'none';
+			this._updateOutlineBar();
+			this._updateOutlineLegend();
 			this._errEl.style.display = 'none';
 			if (this._sbSeq) this._sbSeq.textContent = '';
 			if (this._sbPairs) this._sbPairs.textContent = '';
 			if (this._alnLegend) this._alnLegend.classList.remove('rv-visible');
 			// Reset all pending/accumulated load state so a fresh load after clear()
 			// is never blocked by stale reactivity, annotation, or file data.
-			this._pendingStructures = [];
-			this._pendingXmlData = [];
-			this._pendingAnnotData = [];
-			this._accumulatedDbFiles = [];
-			this._accumulatedXmlFiles = [];
-			this._accumulatedAnnotFiles = [];
+			this._resetPendingLoadState();
 		}
 		// Remove only the currently displayed structure; keep all others.
 		_openManualDialog() {
 			const panel = this._manualPanel;
 			if (!panel) return;
-			// Always query fresh — guarantees we have live elements even after DOM tweaks
+			// Always query fresh - guarantees we have live elements even after DOM tweaks
 			const seqEl = panel.querySelector('.rv-manual-seq');
 			const strEl = panel.querySelector('.rv-manual-struct');
 			const nameEl = panel.querySelector('.rv-manual-name');
@@ -6528,7 +6342,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._upLoadBtn.disabled = false;
 				this._upStatus.textContent = '';
 				this._upStatus.className = 'rv-upload-status';
-				// Always use the reorderable list — never the checkbox target section.
+				// Always use the reorderable list - never the checkbox target section.
 				// Populate _loadedStructsOrder with matching structures (if not already
 				// set by the canvas-drop handler which may have called us).
 				if (!this._loadedStructsOrder?.length) {
@@ -6575,7 +6389,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 			this._accumulatedAnnotFiles = validFiles;
-			if (this._upAnnotNames) this._upAnnotNames.textContent = validFiles.map(f => f.name).join(', ');
 			if (this._upStatus) {
 				if (errors.length) {
 					this._upStatus.textContent = errors.join(' · ');
@@ -6610,7 +6423,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				row.className = 'rv-annot-target-row';
 				// .cov: never pre-select; .tab: pre-select the current structure
 				const checked = !hasCov && origIdx === this._currentStructIdx ? ' checked' : '';
-				row.innerHTML = `<input type="radio" name="rv-annot-target" value="${origIdx}"${checked}>` + `<span class="rv-annot-target-idx">${origIdx + 1}</span>` + `<span class="rv-annot-target-lbl" title="${s.label}">${s.label}</span>`;
+				row.innerHTML = `<input type="radio" name="rv-annot-target" value="${origIdx}"${checked}>` + `<span class="rv-annot-target-idx">${origIdx + 1}</span>` + `<span class="rv-annot-target-lbl" title="${escHtml(s.label)}">${escHtml(s.label)}</span>`;
 				this._upAnnotTargetList.appendChild(row);
 			});
 			this._upAnnotTargetSection.style.display = structs.length > 0 ? 'block' : 'none';
@@ -6623,7 +6436,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			recs.forEach((r, idx) => {
 				const row = document.createElement('div');
 				row.className = 'rv-struct-order-row';
-				row.innerHTML = `<span class="rv-struct-order-idx">${idx + 1}</span>` + `<span class="rv-struct-order-lbl" title="${r.id}">${r.id}</span>` + `<span class="rv-struct-order-src">${r._src}</span>` + `<div class="rv-struct-order-btns">` + `<button class="rv-struct-order-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>` + `<button class="rv-struct-order-btn" ${idx === recs.length - 1 ? 'disabled' : ''}>▼</button>` + `<button class="rv-struct-order-btn" title="Remove">✕</button>` + `</div>`;
+				row.innerHTML = `<span class="rv-struct-order-idx">${idx + 1}</span>` + `<span class="rv-struct-order-lbl" title="${escHtml(r.id)}">${escHtml(r.id)}</span>` + `<span class="rv-struct-order-src">${escHtml(r._src)}</span>` + `<div class="rv-struct-order-btns">` + `<button class="rv-struct-order-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>` + `<button class="rv-struct-order-btn" ${idx === recs.length - 1 ? 'disabled' : ''}>▼</button>` + `<button class="rv-struct-order-btn" title="Remove">✕</button>` + `</div>`;
 				const [upBtn, dnBtn, rmBtn] = row.querySelectorAll('.rv-struct-order-btn');
 				upBtn.addEventListener('click', () => {
 					if (idx > 0) {
@@ -6641,7 +6454,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					recs.splice(idx, 1);
 					const srcStillUsed = recs.some(r2 => r2._src === r._src);
 					if (!srcStillUsed) this._accumulatedXmlFiles = this._accumulatedXmlFiles.filter(f => f.name !== r._src);
-					if (this._upXmlNames) this._upXmlNames.textContent = this._accumulatedXmlFiles.map(f => f.name).join(', ') || '';
 					this._renderXmlOrder();
 				});
 				this._upXmlOrderList.appendChild(row);
@@ -6667,23 +6479,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const nStructs = this._loadedStructsOrder.length;
 						if (nStructs !== nFiles) {
 							const diff = Math.abs(nStructs - nFiles);
-							throw new Error(`${nFiles} annotation file${nFiles !== 1 ? 's' : ''} but ` + `${nStructs} structure${nStructs !== 1 ? 's' : ''} selected — ` + `remove ${diff} ${nFiles > nStructs ? 'annotation file' : 'structure'}${diff !== 1 ? 's' : ''} from the list above before loading.`);
+							throw new Error(`${nFiles} annotation file${nFiles !== 1 ? 's' : ''} but ` + `${nStructs} structure${nStructs !== 1 ? 's' : ''} selected - ` + `remove ${diff} ${nFiles > nStructs ? 'annotation file' : 'structure'}${diff !== 1 ? 's' : ''} from the list above before loading.`);
 						}
 					}
 					// Validate and apply each annotation file
 					let _lastAnnotLabel = 'structure';
+					const _annotWarnings = [];
 					for (let annotFileIdx = 0; annotFileIdx < this._pendingAnnotData.length; annotFileIdx++) {
-						const {
-							filename,
-							rawText,
-							pairs,
-							isCov,
-							isHelixCov,
-							helices
-						} = this._pendingAnnotData[annotFileIdx];
 						// Determine target structure:
-						// • positional mode (canvas drop): file[i] → _loadedStructsOrder[i]
-						// • radio mode (upload panel): all files → radio-selected structure
+						// • positional mode (canvas drop): file[i] > _loadedStructsOrder[i]
+						// • radio mode (upload panel): all files > radio-selected structure
 						let targetIdx;
 						if (this._loadedStructsOrder?.length > 0) {
 							const orderedStruct = this._loadedStructsOrder[annotFileIdx];
@@ -6695,63 +6500,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						}
 						const layout = layouts[targetIdx];
 						if (!layout) throw new Error('Selected structure not found.');
-						_lastAnnotLabel = layout.label || 'structure';
-						// .cov and .helixcov: route through the canonical load methods
-						if (isCov || isHelixCov) {
-							this._currentStructIdx = targetIdx;
-							this._rna = layout;
-							this.loadCov(rawText);
-							this._buildStructSwitcher();
-							this.fit();
-							continue;
-						}
-						// Generic pair annotation file (inline path)
-						const structPairs = getStructurePairSet(layout.structure || '');
-						// Generic pair annotation file
-						const remappedPairs = remapAnnotPairs(pairs, layout.positionLabels);
-						const pkSetAnnot = this._buildPkSet(layout);
-						const nestedStructPairs = new Set([...structPairs].filter(k => !pkSetAnnot.has(k)));
-						const nestedAnnotPairs = remappedPairs.filter(({
-							i,
-							j
-						}) => nestedStructPairs.has(pairKey(i, j)));
-						const pkAnnotPairs = remappedPairs.filter(({
-							i,
-							j
-						}) => pkSetAnnot.has(pairKey(i, j)));
-						if (!nestedAnnotPairs.length && !pkAnnotPairs.length)
-							buildAnnotationArrays(remappedPairs, structPairs, filename, layout.label); // throws
-						let pairAnnotColorMap = null;
-						if (nestedAnnotPairs.length) {
-							const res = buildAnnotationArrays(nestedAnnotPairs, nestedStructPairs, filename, layout.label);
-							layout.pairAnnotations = res.annotArr;
-							pairAnnotColorMap = res.pairAnnotColorMap;
-						}
-						if (pkAnnotPairs.length) {
-							const pkColorMap = buildAnnotColorMapAuto(pkAnnotPairs);
-							layout.pseudoCovAnnotations = pkAnnotPairs.map(({
-								i,
-								j,
-								category
-							}) => ({
-								i,
-								j,
-								color: pkColorMap ? (pkColorMap[category ?? ANNOT_MISSING_KEY] ?? ANNOT_DEFAULT_COLOR) : ANNOT_DEFAULT_COLOR,
-							}));
-						}
-						layout.pairAnnotColorMap = pairAnnotColorMap;
-						this._currentStructIdx = targetIdx;
-						this._rna = layout;
-						if (this._constructorConfig?.showPairAnnotations !== false) {
-							this._showPairAnnotations = true;
-							if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-						}
-						this._buildPairAnnotLegend(pairAnnotColorMap, false);
-						this._buildStructSwitcher();
-						this._render();
-						this.fit();
+						_lastAnnotLabel = this._structures?.[targetIdx]?.label || layout.label || 'structure';
+						const warn = this._applyAnnotFile(targetIdx, this._pendingAnnotData[annotFileIdx]);
+						if (warn) _annotWarnings.push(warn);
 					}
-					setStatus(`Annotation applied to "${_lastAnnotLabel}".`, 'rv--ok');
+					this._buildStructSwitcher();
+					this._render();
+					this.fit();
+					setStatus([`Annotation applied to "${_lastAnnotLabel}".`, ..._annotWarnings].join(' · '), 'rv--ok');
 					this._hideUploadPanel();
 					return;
 				}
@@ -6766,27 +6522,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (isXmlOnly) {
 					if (this._pendingXmlData.length === 0 || !this._rna) throw new Error('No structure records found');
 					// Carry values + annotations from structLayouts (raw _structures[] doesn't have them).
-					// Do NOT carry colorMap — let the top-level SHAPE default be applied correctly.
-					const allExisting = this._structures?.length ? this._structures.map((s, i) => ({
-						...s,
-						values: this._structLayouts?.[i]?.values,
-						pairAnnotations: this._structLayouts?.[i]?.pairAnnotations || s.pairAnnotations || null,
-						pairAnnotColorMap: this._structLayouts?.[i]?.pairAnnotColorMap || s.pairAnnotColorMap || null,
-					})) : [{
-						label: this._rna._label || 'Structure',
-						sequence: this._rna.sequence,
-						structure: this._rna.structure,
-						values: this._rna.values,
-						colorMap: this._rna.colorMap
-					}];
+					// Do NOT carry colorMap - let the top-level SHAPE default be applied correctly.
+					const allExisting = this._snapshotStructures().map(s => ({ ...s, colorMap: undefined }));
 					if (this._loadedStructsOrder?.length > 0) {
-						// Canvas-drop positional mode: user reordered both lists — match by position.
+						// Canvas-drop positional mode: user reordered both lists - match by position.
 						// Both lists must be the same length before loading.
 						const nXml = this._pendingXmlData.length;
 						const nStructs = this._loadedStructsOrder.length;
 						if (nStructs !== nXml) {
 							const diff = Math.abs(nStructs - nXml);
-							throw new Error(`${nXml} reactivity file${nXml !== 1 ? 's' : ''} but ` + `${nStructs} structure${nStructs !== 1 ? 's' : ''} selected — ` + `remove ${diff} ${nXml > nStructs ? 'reactivity file' : 'structure'}${diff !== 1 ? 's' : ''} from the list above before loading.`);
+							throw new Error(`${nXml} reactivity file${nXml !== 1 ? 's' : ''} but ` + `${nStructs} structure${nStructs !== 1 ? 's' : ''} selected - ` + `remove ${diff} ${nXml > nStructs ? 'reactivity file' : 'structure'}${diff !== 1 ? 's' : ''} from the list above before loading.`);
 						}
 						const orderedIdxs = this._loadedStructsOrder.map(s => (this._structures || []).indexOf(s)).filter(i => i >= 0);
 						xmlOnlyTargetIdxs = new Set(orderedIdxs);
@@ -6803,7 +6548,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						if (nSel !== nXml) {
 							const diff = Math.abs(nSel - nXml);
 							const verb = nSel > nXml ? 'Deselect' : 'Select';
-							throw new Error(`${nXml} reactivity files but ${nSel} structure${nSel !== 1 ? 's' : ''} selected — ` + `${verb} ${diff} structure${diff !== 1 ? 's' : ''} to match.`);
+							throw new Error(`${nXml} reactivity files but ${nSel} structure${nSel !== 1 ? 's' : ''} selected - ` + `${verb} ${diff} structure${diff !== 1 ? 's' : ''} to match.`);
 						}
 						xmlOnlyTargetIdxs = checkedIdxs.size > 0 ? checkedIdxs : new Set(allExisting.map((_, i) => i));
 						newStructures = allExisting;
@@ -6813,7 +6558,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (this._pendingXmlData.length > 0) {
 					const xmlRecs = this._pendingXmlData;
 					if (xmlRecs.length === newStructures.length) {
-						// Positional match — user explicitly ordered both lists
+						// Positional match - user explicitly ordered both lists
 						for (let i = 0; i < newStructures.length; i++) {
 							const s = newStructures[i];
 							const rec = xmlRecs[i];
@@ -6823,10 +6568,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							s.values = rec.values;
 						}
 					} else {
-						// Counts don't match — refuse to guess which file goes to which structure
+						// Counts don't match - refuse to guess which file goes to which structure
 						const diff = Math.abs(xmlRecs.length - newStructures.length);
 						const verb = newStructures.length > xmlRecs.length ? 'Remove' : 'Add';
-						throw new Error(`${xmlRecs.length} reactivity file${xmlRecs.length !== 1 ? 's' : ''} but ` + `${newStructures.length} structure${newStructures.length !== 1 ? 's' : ''} — ` + `${verb} ${diff} ${diff !== 1 ? 'entries' : 'entry'} so the counts match.`);
+						throw new Error(`${xmlRecs.length} reactivity file${xmlRecs.length !== 1 ? 's' : ''} but ` + `${newStructures.length} structure${newStructures.length !== 1 ? 's' : ''} - ` + `${verb} ${diff} ${diff !== 1 ? 'entries' : 'entry'} so the counts match.`);
 					}
 				}
 				// For XML-only: restore pre-load values on non-targeted structures.
@@ -6851,36 +6596,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const curSeq = this._rna ? normalizeSeq(this._rna.sequence) : null;
 					const doAppend = curSeq !== null; // allow any sequences to coexist as tabs
 					if (doAppend) {
-						const existing = this._structures?.length ? this._structures.map((s, i) => ({
-							...s,
-							// Recover the actual used sequence from the layout, structure
-							// objects loaded via the public API may not carry .sequence when
-							// config.sequence was used as a shared value.
-							sequence: s.sequence || this._structLayouts?.[i]?.sequence || '',
-							layout: this._structLayouts?.[i]?._toggleState?.layoutAlgo || this._structLayouts?.[i]?._algo || s.layout,
-							pairAnnotations: this._structLayouts?.[i]?.pairAnnotations || s.pairAnnotations || null,
-							pairAnnotColorMap: this._structLayouts?.[i]?.pairAnnotColorMap || s.pairAnnotColorMap || null,
-							helixAnnotations: this._structLayouts?.[i]?.helixAnnotations || s.helixAnnotations || null,
-							pseudoCovAnnotations: this._structLayouts?.[i]?.pseudoCovAnnotations || s.pseudoCovAnnotations || null,
-							pseudoHelixCovAnnotations: this._structLayouts?.[i]?.pseudoHelixCovAnnotations || s.pseudoHelixCovAnnotations || null,
-							isCovAnnot: this._structLayouts?.[i]?.isCovAnnot || s.isCovAnnot || false,
-							ssConsFeatures: this._structLayouts?.[i]?.ssConsFeatures || s.ssConsFeatures || null,
-							ssConsPkPairs: this._structLayouts?.[i]?.ssConsPkPairs || s.ssConsPkPairs || null,
-						})) : [{
-							label: this._rna._label || 'Structure 1',
-							sequence: this._rna.sequence,
-							structure: this._rna.structure,
-							values: this._rna.values,
-							colorMap: this._rna.colorMap,
-							pairAnnotations: this._rna.pairAnnotations || null,
-							pairAnnotColorMap: this._rna.pairAnnotColorMap || null,
-							helixAnnotations: this._rna.helixAnnotations || null,
-							pseudoCovAnnotations: this._rna.pseudoCovAnnotations || null,
-							pseudoHelixCovAnnotations: this._rna.pseudoHelixCovAnnotations || null,
-							isCovAnnot: this._rna.isCovAnnot || false,
-							ssConsFeatures: this._rna.ssConsFeatures || null,
-							ssConsPkPairs: this._rna.ssConsPkPairs || null,
-						}];
+						const existing = this._snapshotStructures();
 						allStructures = [...existing, ...newStructures];
 						startIdx = existing.length; // jump to first newly added structure
 					} else {
@@ -6894,6 +6610,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					colorMap: hasReact ? this._getDefaultShapeColorMap() : undefined,
 					_startIdx: startIdx,
 				};
+				const prevStructCount = this._structures?.length || 0; // for the "(appended)" status
 				this.load(cfg);
 				this._pendingStructures = [];
 				this._accumulatedDbFiles = [];
@@ -6911,49 +6628,24 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 					this._render();
 				}
-				// Apply pair annotations (combined DB+annotation load)
+				// Apply annotation files loaded together with the structures (same path as annotation-only
+				// loads, so .cov / .helixcov keep their covariation semantics)
+				const annotWarnings = [];
 				if (this._pendingAnnotData.length) {
-					const layouts = this._structLayouts?.length ? this._structLayouts : (this._rna ? [this._rna] : []);
-					for (const {
-							filename,
-							pairs,
-							isCov
-						}
-						of this._pendingAnnotData) {
-						const checkedRadio = this._upAnnotTargetList?.querySelector('input[type=radio]:checked');
-						const tIdx = checkedRadio ? parseInt(checkedRadio.value) : startIdx;
-						const layout = layouts[tIdx] || layouts[startIdx] || layouts[0];
-						if (!layout) continue;
-						const structPairs = getStructurePairSet(layout.structure || '');
-						// Stockholm remapping, same logic as annotation-only path
-						const remappedPairs = remapAnnotPairs(pairs, layout.positionLabels);
-						const {
-							invalid,
-							annotArr,
-							pairAnnotColorMap
-						} = buildAnnotationArrays(remappedPairs, structPairs, filename, layout.label);
-						if (invalid.length) setStatus(`Warning: "${filename}", ${invalid.length} pair${invalid.length > 1 ? 's' : ''} not in structure were skipped`);
-						layout.pairAnnotations = annotArr;
-						layout.pairAnnotColorMap = pairAnnotColorMap;
-						layout.isCovAnnot = !!isCov;
-						if (tIdx === this._currentStructIdx || layouts.length === 1) {
-							this._rna.pairAnnotations = annotArr;
-							this._rna.pairAnnotColorMap = pairAnnotColorMap;
-							this._rna.isCovAnnot = !!isCov;
-							if (this._constructorConfig?.showPairAnnotations !== false) {
-								this._showPairAnnotations = true;
-								if (this._chkPAnnot) this._chkPAnnot.classList.add('rv--active');
-							}
-							this._buildPairAnnotLegend(pairAnnotColorMap, isCov);
-						}
+					const checkedRadio = this._upAnnotTargetList?.querySelector('input[type=radio]:checked');
+					const tIdx = checkedRadio ? parseInt(checkedRadio.value) : startIdx;
+					const target = this._structLayouts?.[tIdx] ? tIdx : startIdx;
+					for (const data of this._pendingAnnotData) {
+						const warn = this._applyAnnotFile(target, data);
+						if (warn) annotWarnings.push(warn);
 					}
 					this._render();
 				}
 				const parts = [`${allStructures.length} structure${allStructures.length > 1 ? 's' : ''} loaded`,
-					isXmlOnly ? '(reactivity added)' : (allStructures.length > (this._structures?.length || (this._rna ? 1 : 0)) ? '(appended)' : ''),
-					hasReact ? `· reactivity matched` : '',
+					isXmlOnly ? '(reactivity added)' : (prevStructCount > 0 && allStructures.length > prevStructCount ? '(appended)' : ''),
+					hasReact && this._pendingXmlData.length ? `· reactivity matched` : '',
 				].filter(Boolean);
-				setStatus(parts.join(' '), 'rv--ok');
+				setStatus([parts.join(' '), ...annotWarnings].join(' · '), 'rv--ok');
 				this._hideUploadPanel();
 			} catch (err) {
 				setStatus(err.message, 'rv--err');
@@ -6964,7 +6656,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 		}
 		_canonPctToColor(pct) {
-			// User-adjustable stops: low (0%) → mid (50%) → high (100%)
+			// User-adjustable stops: low (0%) > mid (50%) > high (100%)
 			const lo = this._covCanonLow || '#d73027';
 			const mi = this._covCanonMid || '#fee090';
 			const hi = this._covCanonHigh || '#1a9850';
@@ -7018,7 +6710,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								canonPct: pairCanonPct[ps.i]
 							});
 					}
-					// Store in dedicated canon fields — never touch pairAnnotations
+					// Store in dedicated canon fields - never touch pairAnnotations
 					if (nestedPairs.length) {
 						const res = buildAnnotationArrays(nestedPairs, nestedStructPairs, 'canon', this._rna.label);
 						for (const ann of res.annotArr)
@@ -7031,7 +6723,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						color: this._canonPctToColor(p.canonPct)
 					}));
 				}
-				this._rna._savedPairAnnotColorMap = this._rna.pairAnnotColorMap;
+				// Park the real pair colour map once; repeated calls must not overwrite it with null
+				if (this._rna._savedPairAnnotColorMap == null) this._rna._savedPairAnnotColorMap = this._rna.pairAnnotColorMap;
 				this._rna.pairAnnotColorMap = null;
 				this._buildPairAnnotLegend(null, true);
 			} else {
@@ -7043,6 +6736,48 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._buildPairAnnotLegend(restored, !!restored);
 			}
 			this._render();
+		}
+		// Pair-annotation colour map of a layout as it is without % canonical colouring.
+		_origPairAnnotColorMap(l) {
+			return l?._savedPairAnnotColorMap ?? l?.pairAnnotColorMap ?? null;
+		}
+		// Drop the % canonical colouring state from a layout, restoring its real pair colour map.
+		_clearCanonState(l) {
+			if (!l) return;
+			l.pairAnnotColorMap = this._origPairAnnotColorMap(l);
+			l._savedPairAnnotColorMap = null;
+			l._canonAnnotations = null;
+			l._canonPkAnnotations = null;
+		}
+		// Draw the current layout: % canonical colouring (which renders) or pair legend + render.
+		_drawCurrent(fit = true) {
+			const rna = this._rna;
+			if (!rna) return;
+			if (this._covCanonMode && (rna.pairCanonPct || rna.covRawPairs)) this._applyCovCanonColoring();
+			else {
+				this._buildPairAnnotLegend(rna.pairAnnotColorMap, rna.isCovAnnot);
+				this._render();
+			}
+			if (fit) this.fit();
+		}
+		// Bring the drawing in line with the toggle state: rebuild when the SS-ends toggle and the
+		// live layout (trimmed vs full) disagree, otherwise just draw.
+		_refreshView({ fit = true } = {}) {
+			const rna = this._rna;
+			if (!rna) return;
+			const ends = this._structures?.[this._currentStructIdx]?.ssEnds;
+			if (ends && this._showSsEnds !== (rna.n === ends.fullStruct.length)) this._rebuildCurrentLayout();
+			else this._drawCurrent(fit);
+		}
+		// Make `rna` the visible structure: per-structure toggles (indices, W, SS-ends), status bar,
+		// value legend, then draw.
+		_activateLayout(rna, { fit = true } = {}) {
+			this._rna = rna;
+			this._applyStructIndices(rna, this._lastConfig);
+			this._updateStatusBar();
+			if (rna.values) this._updateLegend(rna.colorMap);
+			this._updateLegendVisibility();
+			this._refreshView({ fit });
 		}
 		_buildPairAnnotLegend(colorMap, isCov = false) {
 			if (!this._palLegend) return;
@@ -7067,7 +6802,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const rows = (colorMap || []).map(({
 				key,
 				color
-			}) => `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${color};border-color:${color}"></span>` + `<span class="rv-pal-key">${key}</span>` + `</div>`).join('');
+			}) => `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${escHtml(color)};border-color:${escHtml(color)}"></span>` + `<span class="rv-pal-key">${escHtml(key)}</span>` + `</div>`).join('');
 			const _helixAnnotCol = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
 			const helixRow = hasHelix ? `<div class="rv-pal-entry">` + `<span class="rv-pal-swatch" style="background:${_helixAnnotCol};opacity:0.35;border-color:${_helixAnnotCol}"></span>` + `<span class="rv-pal-key">Helix-level</span></div>` : '';
 			const legendTitle = isCov ? 'Covarying pairs' : 'Pair annotations';
@@ -7085,62 +6820,37 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const current = this._layoutAlgo === 'auto' ? _curAlgo : this._layoutAlgo;
 			this._layoutAlgo = current === 'naview' ? 'radiate' : 'naview';
 			this._syncLayoutBtn(this._layoutAlgo);
-			if (this._lastConfig) {
-				const savedIdx = this._currentStructIdx;
-				if (this._structures.length > 0) {
-					const cfg = this._lastConfig;
-					// Prefer structLayouts as source of truth, they carry user-applied
-					// values, colorMaps and pairAnnotations that may not be in _structures[]
-					const s = this._structures[savedIdx];
-					const existing = this._structLayouts[savedIdx];
-					const vals = existing?.values ?? s.values ?? cfg.values ?? null;
-					const cm = existing?.colorMap ?? (s.colorMap != null ? normalizeColorMap({
-						colorMap: s.colorMap
-					}) : normalizeColorMap(cfg));
-					const pa = existing?.pairAnnotations || s.pairAnnotations || cfg.pairAnnotations || null;
-					const pacm = existing?.pairAnnotColorMap || normalizePairAnnotColorMap(s.pairAnnotColorMap || cfg.pairAnnotColorMap);
-					const ha = existing?.helixAnnotations || s.helixAnnotations || null;
-					this._structLayouts[savedIdx] = this._computeLayout(s.sequence, s.structure, vals, cm, pa, pacm, ha, s.baseDisplay || null, s.positionLabels || null, s.alnSeqs || null, s.alnStruct || null, s.alnLen || 0);
-					this._copyLayoutAnnotations(existing, this._structLayouts[savedIdx]);
-					// Clear stale position-dependent annotations so _render rebuilds them
-					this._structLayouts[savedIdx]._canonAnnotations = null;
-					this._structLayouts[savedIdx]._canonPkAnnotations = null;
-					this._structLayouts[savedIdx]._savedPairAnnotColorMap = null;
-					this._currentStructIdx = savedIdx;
-					this._rna = this._structLayouts[savedIdx];
-					if (this._showSsEnds && this._rna.ssEnds) {
-						// _rebuildCurrentLayout reads from _base for stable source;
-						// set _base now so it uses the pre-ssEnds trimmed layout as source
-						if (!this._rna._base) this._rna._base = existing._base || existing;
-						this._rebuildCurrentLayout();
-					} else if (this._covCanonMode && this._rna.pairCanonPct) {
-						this._applyCovCanonColoring();
-					} else {
-						this._render();
-					}
-					if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
-					this.fit();
-				} else {
-					// Single-structure: recompute preserving all current runtime state
-					const prev = this._rna;
-					const rna = this._computeLayout(prev.sequence, prev.structure, prev.values, prev.colorMap, prev.pairAnnotations, prev.pairAnnotColorMap, prev.baseDisplay, prev.positionLabels);
-					this._copyLayoutAnnotations(prev, rna);
-					rna._canonAnnotations = null;
-					rna._canonPkAnnotations = null;
-					rna._savedPairAnnotColorMap = null;
-					this._rna = rna;
-					if (this._showSsEnds && this._rna.ssEnds) {
-						if (!this._rna._base) this._rna._base = prev._base || prev;
-						this._rebuildCurrentLayout();
-					} else if (this._covCanonMode && this._rna.pairCanonPct) {
-						this._applyCovCanonColoring();
-					} else {
-						this._render();
-					}
-					if (this._alnActive && this._pkPanelsEl) this._pkPanelsEl.style.display = 'none';
-					this.fit();
-				}
-			}
+			if (!this._lastConfig || !this._rna) return;
+			this._cancelAnimation(true);
+			const rna = this._relayoutStructure(this._currentStructIdx);
+			if (rna) this._rna = rna;
+			this._refreshView(); // rebuilds the full layout when SS-ends are shown
+		}
+		// Recompute the coordinates of structure idx with the current layout algorithm, keeping
+		// its data, annotations and runtime state. The live layout is the source of truth (it
+		// carries user-applied values, colour maps and pair annotations that may not be in
+		// _structures[]); with SS-ends shown it is in full-index space, so its trimmed-index base
+		// is used instead. The result is trimmed-index; _refreshView() rebuilds the full layout.
+		_relayoutStructure(idx) {
+			const cfg = this._lastConfig || {};
+			const s = this._structures?.[idx];
+			const existing = this._structLayouts?.[idx] || this._rna;
+			if (!existing) return null;
+			const src = existing._base || existing;
+			const rec = s || src;
+			const vals = src.values ?? rec.values ?? cfg.values ?? null;
+			const cm = src.colorMap ?? (rec.colorMap != null ? normalizeColorMap({ colorMap: rec.colorMap }) : normalizeColorMap(cfg));
+			const pa = src.pairAnnotations || rec.pairAnnotations || cfg.pairAnnotations || null;
+			const pacm = this._origPairAnnotColorMap(src) || normalizePairAnnotColorMap(rec.pairAnnotColorMap || cfg.pairAnnotColorMap);
+			const ha = src.helixAnnotations || rec.helixAnnotations || null;
+			const rna = this._computeLayout(rec.sequence, rec.structure, vals, cm, pa, pacm, ha,
+				rec.baseDisplay || null, rec.positionLabels || null, rec.alnSeqs || null, rec.alnStruct || null, rec.alnLen || 0);
+			this._copyLayoutAnnotations(src, rna);
+			this._clearCanonState(rna); // position-dependent canon caches are rebuilt on draw
+			rna.pairAnnotColorMap = pacm;
+			if (existing._toggleState) rna._toggleState = { ...existing._toggleState, layoutAlgo: rna._algo };
+			if (s) this._structLayouts[idx] = rna;
+			return rna;
 		}
 		//
 		// Sync the layout button label and  color to `algo` ('radiate' or 'naview').
@@ -7150,7 +6860,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_syncLayoutBtn(algo) {
 			if (!this._layoutBtn) return;
 			// The button always shows the TARGET (where clicking takes you),
-			// not the current state: NAView active → show "R" / Radiate; Radiate active → show "N" / NAView
+			// not the current state: NAView active > show "R" / Radiate; Radiate active > show "N" / NAView
 			const goingTo = (algo === 'naview') ? 'radiate' : 'naview';
 			const letter = this._layoutBtn.querySelector('.rv-layout-letter');
 			const lbl = this._layoutBtn.querySelector('.rv-layout-lbl');
@@ -7246,13 +6956,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const pad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || (baseR * 1.7);
 			const helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
 			const helixOpacity = parseFloat(cs.getPropertyValue('--rv-helix-annot-opacity')) || 0.5;
-			// Parse hex → rgba with opacity
-			const _hm = helixColor.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-			const _hr = _hm ? parseInt(_hm[1], 16) : 239,
-				_hg = _hm ? parseInt(_hm[2], 16) : 68,
-				_hb = _hm ? parseInt(_hm[3], 16) : 68;
-			const _hexColor = `#${_hr.toString(16).padStart(2,'0')}${_hg.toString(16).padStart(2,'0')}${_hb.toString(16).padStart(2,'0')}`;
-			const _helixHex = _hexColor; // kept for SVG legend
+			const _helixHex = helixColor;
 			for (const ann of anns) {
 				const annPad = ann.padding ?? pad;
 				for (const sh of (ann.subHelices || [])) {
@@ -7314,7 +7018,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			for (const ann of annotations) {
 				let i = ann.i,
 					j = ann.j;
-				// Resolve i/j silently — already validated at load time
+				// Resolve i/j silently - already validated at load time
 				if (i != null && j != null) {
 					if (pairs[i] !== j || pairs[j] !== i) continue;
 				} else if (i != null) {
@@ -7410,6 +7114,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			window.removeEventListener('mousemove', this._boundMove);
 			window.removeEventListener('mouseup', this._boundUp);
 			window.removeEventListener('keydown', this._boundKeyDown);
+			this._cancelAnimation();
+			_liveViewers.delete(this);
+			this._resizeObserver?.disconnect();
 			this._root.remove();
 		}
 		// Legend
@@ -7487,10 +7194,470 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				y: (ey - rect.top - this._vy) / this._vscale
 			};
 		}
+		// Everything the inset panels are built from (never the layout coordinates): when none of it
+		// changed since the last render - e.g. while a helix is dragged or rotated - the panels are
+		// kept as they are instead of being rebuilt and laid out again (they stay still, like legends).
+		_insetsUnchanged() {
+			const r = this._rna;
+			const cssText = (this._root?.style.cssText || '').replace(/--rv-inset-max-width:[^;]*;?/, '');
+			const deps = [
+				r, r.sequence, r.baseDisplay, r.pseudoPairs, r.ssConsPkPairs, r.ssConsFeatures, r.pairCanonPct,
+				r.pairAnnotations, r.pairAnnotations?.length, r.pseudoCovAnnotations, r.pseudoHelixCovAnnotations,
+				r.helixAnnotations, r._canonAnnotations, r._canonPkAnnotations, JSON.stringify(r.pairAnnotColorMap || null),
+				this._showPairAnnotations, this._covCanonMode, this._useWeighting, this._showR3dInsets, this._showR3dLabels,
+				this._root?.className, cssText, this._canvas?.clientWidth, this._canvas?.clientHeight,
+			];
+			const last = this._insetDeps;
+			this._insetDeps = deps;
+			return !!(last && this._pkPanelsEl?.children.length && deps.every((d, i) => d === last[i]));
+		}
+		// ─────────────────────────────────────────────────────────────────────────
+		// Outline mode: the backbone alone as one thick line, with coloured "domains" over it.
+		// Domains live on the structure record (s.outlineDomains = [{name, start, end, color}]) so
+		// they survive toggling the mode, structure switches and re-layouts. start/end are base
+		// numbers as shown by the index labels (alignment columns for Stockholm, 1..n otherwise),
+		// inclusive. They can be added by clicking two points on the backbone or from the Outline
+		// tab of the settings window.
+		// ─────────────────────────────────────────────────────────────────────────
+		setOutlineMode(on) {
+			on = !!on;
+			if (on === this._outlineMode) return;
+			this._outlineMode = on;
+			this._outlinePick = null;
+			if (this._chkOutline) this._chkOutline.classList.toggle('rv--active', on);
+			this._root.classList.toggle('rv--outline', on);
+			if (this._tooltip) this._tooltip.style.display = 'none';
+			if (on) this._syncOutlineColorInput();
+			this._updateOutlineBar();
+			this._updateOutlineLegend();
+			if (!this._alnActive) this._render();
+			this._syncOutlineTab();
+		}
+		getOutlineMode() { return this._outlineMode; }
+		// Domains of the current structure: [{name, start, end, color}] (copies)
+		getOutlineDomains() { return this._outlineDomains(false).map(d => ({ ...d })); }
+		// Replace the current structure's domains
+		setOutlineDomains(list) {
+			const s = this._structures?.[this._currentStructIdx];
+			if (!s) return;
+			s.outlineDomains = [];
+			for (const d of list || []) this.addOutlineDomain(d, false);
+			this._outlineChanged();
+		}
+		clearOutlineDomains() { this.setOutlineDomains([]); }
+		// Add a domain; missing fields get defaults (name "Domain #k", colour black, from the end of
+		// the previous domain to the end of the RNA). Positions are clamped to the RNA.
+		// Returns the stored domain (null without a structure).
+		addOutlineDomain(d = {}, refresh = true) {
+			const s = this._structures?.[this._currentStructIdx];
+			if (!s) return null;
+			const doms = this._outlineDomains(true);
+			const b = this._outlineBounds();
+			const prevEnd = doms.length ? doms[doms.length - 1].end : null;
+			const dom = {
+				name: d.name != null && String(d.name).trim() !== '' ? String(d.name) : `Domain #${doms.length + 1}`,
+				start: Number.isFinite(+d.start) && d.start !== null && d.start !== '' ? +d.start : (prevEnd != null && prevEnd < b.max ? prevEnd + 1 : b.min),
+				end: Number.isFinite(+d.end) && d.end !== null && d.end !== '' ? +d.end : b.max,
+				color: /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color.toLowerCase() : '#000000',
+			};
+			this._clampOutlineDomain(dom);
+			doms.push(dom);
+			if (refresh) this._outlineChanged();
+			return dom;
+		}
+		removeOutlineDomain(i) {
+			const doms = this._outlineDomains(false);
+			if (i < 0 || i >= doms.length) return;
+			doms.splice(i, 1);
+			this._outlineChanged();
+		}
+		_outlineDomains(create) {
+			const s = this._structures?.[this._currentStructIdx];
+			if (!s) return [];
+			if (!s.outlineDomains && create) s.outlineDomains = [];
+			return s.outlineDomains || [];
+		}
+		// Base numbers of the drawn bases (as the index labels show them)
+		_outlineLabels() {
+			const r = this._rna;
+			return r?.positionLabels || Array.from({ length: r?.n || 0 }, (_, i) => i + 1);
+		}
+		// Numbering limits of the whole RNA (the untrimmed one when single-stranded ends exist)
+		_outlineBounds() {
+			const s = this._structures?.[this._currentStructIdx];
+			const full = s?.ssEnds?.fullPositionLabels || s?.positionLabels;
+			if (full?.length) return { min: full[0], max: full[full.length - 1] };
+			const n = s?.ssEnds?.fullStruct?.length || s?.structure?.length || this._rna?.n || 1;
+			return { min: 1, max: n };
+		}
+		_clampOutlineDomain(dom) {
+			const b = this._outlineBounds();
+			dom.start = Math.min(b.max, Math.max(b.min, Math.round(dom.start)));
+			dom.end = Math.min(b.max, Math.max(b.min, Math.round(dom.end)));
+			if (dom.end < dom.start) [dom.start, dom.end] = [dom.end, dom.start];
+		}
+		// Drawn index range [i0, i1] covered by a domain in the current view, or null
+		_outlineRange(dom) {
+			const labels = this._outlineLabels();
+			let i0 = -1, i1 = -1;
+			for (let i = 0; i < labels.length; i++) {
+				if (labels[i] >= dom.start && i0 < 0) i0 = i;
+				if (labels[i] <= dom.end) i1 = i;
+			}
+			return i0 >= 0 && i1 >= i0 ? [i0, i1] : null;
+		}
+		// Palette for domains made by clicking (the Outline tab defaults to black)
+		static get OUTLINE_PALETTE() {
+			return ['#e6194b', '#4363d8', '#3cb44b', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#9a6324',
+				'#469990', '#bfef45', '#800000', '#000075', '#808000', '#fabed4', '#dcbeff', '#aaffc3'];
+		}
+		_outlineColor() { return this._outlineColorIn?.value || RFviewJS.OUTLINE_PALETTE[0]; }
+		_syncOutlineColorInput() {
+			if (this._outlineColorIn) this._outlineColorIn.value = RFviewJS.OUTLINE_PALETTE[this._outlineColorIdx % RFviewJS.OUTLINE_PALETTE.length];
+		}
+		_updateOutlineBar() {
+			if (!this._outlineBar) return;
+			this._outlineBar.classList.toggle('rv-visible', this._outlineMode && !!this._rna && !this._alnActive);
+			const hint = this._outlineBar.querySelector('.rv-outline-hint');
+			if (hint) hint.textContent = this._outlinePick ? 'Click to select the end of the domain (Esc to cancel)' : 'Click to select the start of the domain';
+			const undo = this._outlineBar.querySelector('.rv-outline-undo');
+			if (undo) undo.disabled = !this._outlineDomains(false).length;
+		}
+		_syncOutlineTab() {
+			const p = this._settingsPanel;
+			if (!p) return;
+			const tab = p.querySelector('.rv-tab-outline');
+			if (tab) tab.style.display = this._outlineMode ? '' : 'none';
+			if (!this._outlineMode && tab?.classList.contains('rv--active')) p.querySelector('.rv-settings-tab[data-tab="appearance"]')?.click();
+			if (this._outlineMode) this._refreshOutlineList();
+		}
+		// Everything that follows a change of the domain list
+		_outlineChanged() {
+			this._refreshOutlineList();
+			this._updateOutlineLegend();
+			this._updateOutlineBar();
+			if (this._outlineMode && !this._alnActive) this._renderSoon();
+		}
+		_cancelOutlinePick() {
+			if (!this._outlinePick) return;
+			this._outlinePick = null;
+			this._updateOutlineBar();
+			if (!this._alnActive) this._render();
+		}
+		_nearestBase(sx, sy) {
+			const { coords, n, baseDisplay } = this._rna;
+			let best = -1, bd = Infinity;
+			for (let i = 0; i < n; i++) {
+				if (baseDisplay?.[i]?.skip) continue;
+				const d = (coords[i].x - sx) ** 2 + (coords[i].y - sy) ** 2;
+				if (d < bd) { bd = d; best = i; }
+			}
+			return best;
+		}
+		// Click on the backbone (handled on mouseup: a helix drag re-renders before 'click' would fire):
+		// first click sets the start base, second the end base
+		_onOutlineClick(e) {
+			if (!this._outlineMode || !this._rna || e.button !== 0) return;
+			if (!this._mouseDownPt || Math.hypot(e.clientX - this._mouseDownPt.x, e.clientY - this._mouseDownPt.y) > 4) return; // a drag (pan / helix rotation)
+			this._mouseDownPt = null;
+			const p = this._clientToScene(e.clientX, e.clientY);
+			const idx = this._nearestBase(p.x, p.y);
+			if (idx < 0) return;
+			if (!this._outlinePick) {
+				this._outlinePick = { idx };
+				this._updateOutlineBar();
+				this._render();
+				return;
+			}
+			const labels = this._outlineLabels();
+			const a = this._outlinePick.idx;
+			this._outlinePick = null;
+			this.addOutlineDomain({ start: labels[Math.min(a, idx)], end: labels[Math.max(a, idx)], color: this._outlineColor() });
+			this._outlineColorIdx++;
+			this._syncOutlineColorInput();
+		}
+		// Hovered base in outline mode: marker on it and its index in the tooltip (idx -1 hides both)
+		_outlineHover(idx, e) {
+			const el = this._outlineHoverEl;
+			if (!this._rna || !el) return;
+			if (idx < 0 || this._rotState || this._flipState || this._panStart) {
+				el.style.display = 'none';
+				this._tooltip.style.display = 'none';
+				return;
+			}
+			const { coords, pairs, pseudoPairs, positionLabels } = this._rna;
+			el.setAttribute('cx', coords[idx].x);
+			el.setAttribute('cy', coords[idx].y);
+			el.style.display = '';
+			const lab = i => positionLabels?.[i] ?? (i + 1);
+			let html = `<b>${lab(idx)}`;
+			if (pairs[idx] !== -1) html += ` ↔ ${lab(pairs[idx])}`;
+			const ps = pseudoPairs.find(p => p.i === idx || p.j === idx);
+			if (ps) html += ` ↔ ${lab(ps.i === idx ? ps.j : ps.i)} (pk)`;
+			html += '</b>';
+			this._tooltip.innerHTML = html;
+			this._tooltip.style.display = 'block';
+			if (e) this._positionTooltip(e.clientX, e.clientY);
+		}
+		// While picking the end base: preview of the domain from the start base to the hovered base
+		_refreshOutlinePreview(e) {
+			const pv = this._outlinePreview;
+			if (!pv || !this._outlinePick || !this._rna) return;
+			pv.setAttribute('stroke', this._outlineColor());
+			this._scene.querySelector('.rv-outline-marker')?.setAttribute('fill', this._outlineColor());
+			if (!e) return;
+			const p = this._clientToScene(e.clientX, e.clientY);
+			const idx = this._nearestBase(p.x, p.y);
+			if (idx < 0) return;
+			const a = this._outlinePick.idx;
+			pv.setAttribute('d', this._outlinePathD(Math.min(a, idx), Math.max(a, idx)));
+		}
+		// SVG path through the base centres a..b (broken at skipped alignment positions)
+		_outlinePathD(a, b) {
+			const { coords, baseDisplay } = this._rna;
+			const skip = i => !!baseDisplay?.[i]?.skip;
+			const f = v => +v.toFixed(2);
+			let d = '', open = false, pts = 0, last = null;
+			const move = (x, y) => { d += `M${f(x)} ${f(y)}`; open = true; pts = 1; last = [x, y]; };
+			const line = (x, y) => { d += `L${f(x)} ${f(y)}`; pts++; last = [x, y]; };
+			for (let i = a; i <= b; i++) {
+				if (skip(i)) { open = false; continue; }
+				if (open) line(coords[i].x, coords[i].y); else move(coords[i].x, coords[i].y);
+			}
+			if (pts === 1 && last) line(last[0], last[1]); // a single base: a dot (round caps)
+			return d;
+		}
+		// Paths of the domains in the current view: each runs exactly from the centre of its first
+		// base to the centre of its last base (later domains are drawn on top). [{d, color}]
+		_outlineDomainPaths() {
+			const out = [];
+			for (const dom of this._outlineDomains(false)) {
+				const r = this._outlineRange(dom);
+				if (r) out.push({ d: this._outlinePathD(r[0], r[1]), color: dom.color });
+			}
+			return out;
+		}
+		_outlineStyle() {
+			const cs = getComputedStyle(this._root);
+			return {
+				width: parseFloat(cs.getPropertyValue('--rv-outline-width')) || 25,
+				color: cs.getPropertyValue('--rv-outline-color').trim() || '#000000',
+			};
+		}
+		_mkOutlinePath(d, stroke, width, cls) {
+			const p = document.createElementNS(NS, 'path');
+			p.setAttribute('class', cls);
+			p.setAttribute('d', d);
+			p.setAttribute('fill', 'none');
+			p.setAttribute('stroke', stroke);
+			p.setAttribute('stroke-width', width);
+			p.setAttribute('stroke-linecap', 'round');
+			p.setAttribute('stroke-linejoin', 'round');
+			return p;
+		}
+		_renderOutline() {
+			const { coords, n } = this._rna;
+			const { width, color } = this._outlineStyle();
+			const bg = this._gv('--rv-bg') || '#ffffff'; // markers: theme background against the outline colour
+			if (this._rotState || this._flipState) this._tooltip.style.display = 'none'; // redraw during a helix drag
+			const g = document.createElementNS(NS, 'g');
+			g.setAttribute('class', 'rv-outline');
+			this._scene.appendChild(g);
+			this._outlinePreview = null;
+			if (n) {
+				g.appendChild(this._mkOutlinePath(this._outlinePathD(0, n - 1), color, width, 'rv-outline-bb'));
+				for (const { d, color: c } of this._outlineDomainPaths()) g.appendChild(this._mkOutlinePath(d, c, width, 'rv-outline-dom'));
+				// Domain being picked: preview path (updated on mouse move) and start marker
+				this._outlinePreview = this._mkOutlinePath('', this._outlineColor(), width, 'rv-outline-preview');
+				this._outlinePreview.setAttribute('stroke-opacity', '0.55');
+				this._outlinePreview.style.pointerEvents = 'none';
+				g.appendChild(this._outlinePreview);
+				if (this._outlinePick) {
+					const c = coords[this._outlinePick.idx];
+					const m = document.createElementNS(NS, 'circle');
+					m.setAttribute('class', 'rv-outline-marker');
+					m.setAttribute('cx', c.x);
+					m.setAttribute('cy', c.y);
+					m.setAttribute('r', width * 1.4);
+					m.setAttribute('fill', this._outlineColor());
+					m.setAttribute('stroke', bg);
+					m.setAttribute('stroke-width', Math.max(1.5, width * 0.25));
+					m.style.pointerEvents = 'none';
+					g.appendChild(m);
+				}
+				// Wide invisible stroke over the backbone that takes the clicks
+				const hit = this._mkOutlinePath(this._outlinePathD(0, n - 1), '#000', Math.max(width * 3, 24), 'rv-outline-hit');
+				hit.setAttribute('stroke-opacity', '0');
+				hit.style.pointerEvents = 'stroke';
+				hit.addEventListener('mouseup', e => this._onOutlineClick(e));
+				hit.addEventListener('mousemove', e => { const q = this._clientToScene(e.clientX, e.clientY); this._outlineHover(this._nearestBase(q.x, q.y), e); });
+				hit.addEventListener('mouseleave', () => this._outlineHover(-1));
+				g.appendChild(hit);
+				// Marker of the hovered base (what a click would pick), with its index in the tooltip
+				this._outlineHoverEl = document.createElementNS(NS, 'circle');
+				this._outlineHoverEl.setAttribute('class', 'rv-outline-hover');
+				this._outlineHoverEl.setAttribute('r', width * 1.1);
+				this._outlineHoverEl.setAttribute('fill', bg);
+				this._outlineHoverEl.setAttribute('stroke', color);
+				this._outlineHoverEl.setAttribute('stroke-width', Math.max(1.5, width * 0.3));
+				this._outlineHoverEl.style.pointerEvents = 'none';
+				this._outlineHoverEl.style.display = 'none';
+				g.appendChild(this._outlineHoverEl);
+				// Invisible circle on every base: hovering shows the base, dragging a paired base rotates
+				// or flips its helix (same handlers as in normal mode, via data-idx), a click picks it
+				const hr = this._gvn('--rv-base-radius', BASE_R); // base-sized, so neighbouring circles don't overlap
+				const { pairs } = this._rna;
+				const hoverNearest = e => { const q = this._clientToScene(e.clientX, e.clientY); this._outlineHover(this._nearestBase(q.x, q.y), e); };
+				for (let i = 0; i < n; i++) {
+					if (this._rna.baseDisplay?.[i]?.skip) continue;
+					const c = document.createElementNS(NS, 'circle');
+					c.setAttribute('class', 'rv-outline-base');
+					c.setAttribute('data-idx', i);
+					c.setAttribute('cx', coords[i].x);
+					c.setAttribute('cy', coords[i].y);
+					c.setAttribute('r', hr);
+					c.setAttribute('fill', '#000');
+					c.setAttribute('fill-opacity', '0');
+					c.style.cursor = pairs[i] !== -1 ? 'grab' : 'crosshair';
+					c.addEventListener('mouseup', e => this._onOutlineClick(e));
+					c.addEventListener('mouseenter', hoverNearest);
+					c.addEventListener('mousemove', hoverNearest);
+					c.addEventListener('mouseleave', () => this._outlineHover(-1));
+					g.appendChild(c);
+				}
+			}
+			this._updateOutlineLegend();
+			this._updateOutlineBar();
+			requestAnimationFrame(() => this._scaleOverlays());
+		}
+		// Legend (upper right): colour box + name of each domain
+		_updateOutlineLegend() {
+			const el = this._outlineLegend;
+			if (!el) return;
+			const doms = (this._outlineMode && this._rna && !this._alnActive) ? this._outlineDomains(false) : [];
+			if (!doms.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+			el.innerHTML = doms.map(d => `<div class="rv-outline-entry"><span class="rv-outline-swatch" style="background:${escHtml(d.color)}"></span><span class="rv-pal-key">${escHtml(d.name)}</span></div>`).join('');
+			el.style.display = 'block';
+		}
+		// Outline tab of the settings window: one editable row per domain
+		_refreshOutlineList() {
+			const list = this._settingsPanel?.querySelector('.rv-outline-list');
+			if (!list) return;
+			list.innerHTML = '';
+			const doms = this._outlineDomains(false);
+			const b = this._outlineBounds();
+			if (!doms.length) {
+				const p = document.createElement('div');
+				p.className = 'rv-outline-empty';
+				p.textContent = `No domains yet. Click two points on the backbone, or add one here (bases ${b.min}–${b.max}).`;
+				list.appendChild(p);
+				return;
+			}
+			doms.forEach((dom, i) => {
+				const row = document.createElement('div');
+				row.className = 'rv-outline-row';
+				const name = document.createElement('input');
+				name.type = 'text'; name.className = 'rv-outline-name'; name.value = dom.name; name.title = 'Domain name';
+				name.addEventListener('input', () => { dom.name = name.value; this._updateOutlineLegend(); });
+				let start, end;
+				const num = (key, title) => {
+					const inp = document.createElement('input');
+					inp.type = 'number'; inp.className = 'rv-stop-val'; inp.min = b.min; inp.max = b.max; inp.step = 1;
+					inp.value = dom[key]; inp.title = `${title} base (${b.min}–${b.max})`;
+					inp.addEventListener('input', () => { // live, keeps the other end in place while typing
+						const v = parseInt(inp.value, 10);
+						if (!Number.isFinite(v)) return;
+						dom[key] = Math.min(b.max, Math.max(b.min, v));
+						if (this._outlineMode && !this._alnActive) this._renderSoon();
+					});
+					inp.addEventListener('change', () => { // settle: clamp, order start ≤ end, show the stored values
+						const v = parseInt(inp.value, 10);
+						dom[key] = Number.isFinite(v) ? v : dom[key];
+						this._clampOutlineDomain(dom);
+						start.value = dom.start; end.value = dom.end;
+						if (this._outlineMode && !this._alnActive) this._renderSoon();
+					});
+					return inp;
+				};
+				start = num('start', 'Start'); end = num('end', 'End');
+				const col = document.createElement('input');
+				col.type = 'color'; col.value = dom.color; col.title = 'Domain colour';
+				col.addEventListener('input', () => { dom.color = col.value; this._updateOutlineLegend(); if (this._outlineMode && !this._alnActive) this._renderSoon(); });
+				const del = document.createElement('button');
+				del.className = 'rv-stop-del'; del.title = 'Remove this domain'; del.textContent = '−';
+				del.addEventListener('click', () => this.removeOutlineDomain(i));
+				row.append(name, start, end, col, del);
+				list.appendChild(row);
+			});
+		}
+		// SVG export of the outline view: backbone, domains and the domain legend
+		_saveOutlineSVG(returnString) {
+			const { coords, n } = this._rna;
+			const { width, color } = this._outlineStyle();
+			let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+			for (let i = 0; i < n; i++) {
+				minX = Math.min(minX, coords[i].x); minY = Math.min(minY, coords[i].y);
+				maxX = Math.max(maxX, coords[i].x); maxY = Math.max(maxY, coords[i].y);
+			}
+			if (!n) { minX = minY = 0; maxX = maxY = 1; }
+			const pad = 40 + width;
+			let vbX = minX - pad, vbY = minY - pad, vbW = maxX - minX + 2 * pad, vbH = maxY - minY + 2 * pad;
+			const exp = document.createElementNS(NS, 'svg');
+			exp.setAttribute('xmlns', NS);
+			const g = document.createElementNS(NS, 'g');
+			g.setAttribute('class', 'rv-outline');
+			exp.appendChild(g);
+			if (n) g.appendChild(this._mkOutlinePath(this._outlinePathD(0, n - 1), color, width, 'rv-outline-bb'));
+			const doms = this._outlineDomains(false);
+			if (n) for (const { d, color: c } of this._outlineDomainPaths()) g.appendChild(this._mkOutlinePath(d, c, width, 'rv-outline-dom'));
+			// Legend to the right of the structure, top aligned (same scale rule as the other legends)
+			if (doms.length && !this._noLegend) {
+				const LS = Math.max(1.0, Math.min(4, Math.max(Math.min(vbW, vbH) / 200, Math.max(vbW, vbH) / 800))) * 0.9;
+				const LROW = 16 * LS, LSWW = 20 * LS, LSWH = 10 * LS, LFONT = 9 * LS, LPAD = 8 * LS;
+				const longest = Math.max(...doms.map(d => d.name.length));
+				const legW = LPAD + LSWW + 6 * LS + longest * LFONT * 0.62 + LPAD;
+				const legX = maxX + pad, legY = minY;
+				const lg = document.createElementNS(NS, 'g');
+				lg.setAttribute('class', 'rv-outline-legend');
+				doms.forEach((d, k) => {
+					const y = legY + k * LROW;
+					const rc = document.createElementNS(NS, 'rect');
+					rc.setAttribute('x', legX + LPAD); rc.setAttribute('y', y);
+					rc.setAttribute('width', LSWW); rc.setAttribute('height', LSWH);
+					rc.setAttribute('rx', 2 * LS); rc.setAttribute('fill', d.color);
+					rc.setAttribute('stroke', 'rgba(0,0,0,0.15)'); rc.setAttribute('stroke-width', LS * 0.5);
+					const t = document.createElementNS(NS, 'text');
+					t.setAttribute('x', legX + LPAD + LSWW + 6 * LS); t.setAttribute('y', y + LSWH / 2);
+					t.setAttribute('dy', '0.35em'); t.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
+					t.setAttribute('font-size', LFONT); t.setAttribute('fill', '#1f2328');
+					t.textContent = d.name;
+					lg.append(rc, t);
+				});
+				exp.appendChild(lg);
+				vbW = Math.max(vbW, legX + legW - vbX);
+				vbH = Math.max(vbH, legY + doms.length * LROW + pad - vbY);
+			}
+			exp.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+			const scale = Math.min(1, 4000 / Math.max(vbW, vbH));
+			exp.setAttribute('width', Math.round(vbW * scale));
+			exp.setAttribute('height', Math.round(vbH * scale));
+			const exportId = this._id || this._structures?.[this._currentStructIdx]?.label || this._rna?._label || 'RF_structure';
+			const svgString = new XMLSerializer().serializeToString(exp);
+			if (returnString) return svgString;
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(new Blob([svgString], { type: 'image/svg+xml' }));
+			a.download = exportId.replace(/[^a-zA-Z0-9_\-\.]/g, '_') + '_outline.svg';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+		}
 		_render() {
 			if (!this._rna) return;
 			this._scene.innerHTML = '';
-			if (this._pkPanelsEl) {
+			// Keep the inset panels when nothing they show has changed
+			const keepInsets = this._keepInsets = this._insetsUnchanged();
+			if (this._pkPanelsEl && !keepInsets) {
 				this._pkPanelsEl.innerHTML = '';
 				this._pkPanelsEl.style.display = 'none';
 				this._pkPanelsEl.style.width = '';
@@ -7514,432 +7681,323 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const g_base = document.createElementNS(NS, 'g');
 			const g_pk = document.createElementNS(NS, 'g'); // PK lines, above non-endpoint bases
 			const g_pk_top = document.createElementNS(NS, 'g'); // PK endpoint bases, above PK lines
-			const g_ss_labels = document.createElementNS(NS, 'g'); // SS_cons labels, topmost
+			const g_ss_labels = document.createElementNS(NS, 'g'); // SS_cons labels
+			const g_end_labels = document.createElementNS(NS, 'g'); // 5'/3' labels, topmost
 			// Stockholm structures use a different PK visualization (R3D arcs + mini panels)
 			const isStockholm = !!(this._rna?.baseDisplay);
 			// Layer order differs: Stockholm bonds go ABOVE bases; standard bonds go BELOW bases
 			if (isStockholm) {
-				this._scene.append(g_bb, g_bg, g_helix, g_annot, g_base, g_bp, g_pk, g_pk_top, g_ss_labels);
+				this._scene.append(g_bb, g_bg, g_helix, g_annot, g_base, g_bp, g_pk, g_pk_top, g_ss_labels, g_end_labels);
 			} else {
-				this._scene.append(g_bb, g_bg, g_helix, g_annot, g_bp, g_base, g_pk, g_pk_top, g_ss_labels);
+				this._scene.append(g_bb, g_bg, g_helix, g_annot, g_bp, g_base, g_pk, g_pk_top, g_ss_labels, g_end_labels);
 			}
 			// Collect PK endpoint indices so their bases render on top of PK lines (non-Stockholm only)
 			const pkEndpts = isStockholm ? new Set() : new Set(pseudoPairs.flatMap(ps => [ps.i, ps.j]));
-			// Read configurable geometry from CSS variables
-			const cs = getComputedStyle(this._root);
-			const baseR = parseFloat(cs.getPropertyValue('--rv-base-radius')) || BASE_R;
-			const idxOff = parseFloat(cs.getPropertyValue('--rv-base-index-offset')) || 26;
-			const bgColor = cs.getPropertyValue('--rv-bg').trim() || '#ffffff';
-			// Helix cov bounding boxes (behind everything)
-			this._renderHelixAnnotations(g_helix, coords, n, baseR);
-			// Pair annotation boxes
-			if (this._showPairAnnotations) {
-				if (this._rna.pairAnnotations?.length)
-					this._renderPairAnnotations(g_annot, coords, pairs, this._rna.pairAnnotations, this._rna.pairAnnotColorMap, baseR);
-				if (this._covCanonMode && this._rna._canonAnnotations?.length)
-					this._renderPairAnnotations(g_annot, coords, pairs, this._rna._canonAnnotations, null, baseR);
-			}
-			// Precompute centroid + bounding radius
-			// Used by both pseudoknot routing and index-label placement
-			let cxS = 0,
-				cyS = 0;
-			for (let i = 0; i < n; i++) {
-				cxS += coords[i].x;
-				cyS += coords[i].y;
-			}
-			const centX = cxS / n,
-				centY = cyS / n;
-			let R = 0;
-			for (let i = 0; i < n; i++) {
-				R = Math.max(R, Math.hypot(coords[i].x - centX, coords[i].y - centY));
-			}
-			// Backbone, skip segments where either endpoint is a skipped alignment position
-			for (let i = 0; i < n - 1; i++) {
-				const bd = this._rna?.baseDisplay;
-				if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
-				const l = document.createElementNS(NS, 'line');
-				l.setAttribute('class', 'rv-backbone');
-				l.setAttribute('x1', coords[i].x);
-				l.setAttribute('y1', coords[i].y);
-				l.setAttribute('x2', coords[i + 1].x);
-				l.setAttribute('y2', coords[i + 1].y);
-				g_bb.appendChild(l);
-			}
-			// Helper to make a line element
-			const dotR = this._gvn('--rv-noncanon-dot-r', 4.5);
-			const mkLine = (x1, y1, x2, y2, cls) => this._mkSvgLine(x1, y1, x2, y2, cls);
-			// Canonical base pairs (from bracket notation)
-			// AU: single line
-			// GC: two parallel lines (offset perpendicular to pair axis)
-			// GU: single line + filled dot at midpoint
-			// other: filled dot at midpoint
-			const BP_OFFSET = 2.8; // scene units between GC double-line centres
-			for (let i = 0; i < n; i++) {
-				if (pairs[i] <= i) continue;
-				const j = pairs[i];
-				const x1 = coords[i].x,
-					y1 = coords[i].y;
-				const x2 = coords[j].x,
-					y2 = coords[j].y;
-				const dx = x2 - x1,
-					dy = y2 - y1;
-				const len = Math.hypot(dx, dy) || 1;
-				const nx = -dy / len,
-					ny = dx / len; // unit normal to pair axis
-				const b1 = sequence[i].toUpperCase(),
-					b2 = sequence[j].toUpperCase();
-				const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
-				const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
-				const isCanon = this._isCanonPair(b1, b2);
-				if (isStockholm) {
-					// Stockholm: canonical majority (by alignment) draws a line, non-canonical a dot
-					const canonPct = this._rna.pairCanonPct?.[i] ?? null;
-					this._mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR, canonPct)
-						.forEach(el => g_bp.appendChild(el));
-				} else if (!isCanon) {
-					if (this._relaxedSequence) {
-						// Non-standard bases — render as single line instead of dot
-						g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
-					} else {
-						// Non-canonical, dot only at midpoint
-						const ndot = document.createElementNS(NS, 'circle');
-						ndot.setAttribute('class', 'rv-bp-noncanon');
-						ndot.setAttribute('cx', (x1 + x2) / 2);
-						ndot.setAttribute('cy', (y1 + y2) / 2);
-						ndot.setAttribute('r', dotR);
-						g_bp.appendChild(ndot);
-					}
-				} else if (isGC) {
-					g_bp.appendChild(mkLine(x1 + nx * BP_OFFSET, y1 + ny * BP_OFFSET, x2 + nx * BP_OFFSET, y2 + ny * BP_OFFSET, 'rv-basepair'));
-					g_bp.appendChild(mkLine(x1 - nx * BP_OFFSET, y1 - ny * BP_OFFSET, x2 - nx * BP_OFFSET, y2 - ny * BP_OFFSET, 'rv-basepair'));
-				} else if (isGU) {
-					g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
-					const dot = document.createElementNS(NS, 'circle');
-					dot.setAttribute('class', 'rv-bp-dot');
-					dot.setAttribute('cx', (x1 + x2) / 2);
-					dot.setAttribute('cy', (y1 + y2) / 2);
-					dot.setAttribute('r', dotR);
-					g_bp.appendChild(dot);
-				} else {
-					// AU: single line
-					g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+			if (this._outlineMode) {
+				// Outline mode: nothing but the backbone (and the coloured domains along it)
+				this._renderOutline();
+			} else {
+				// Read configurable geometry from CSS variables
+				const cs = getComputedStyle(this._root);
+				const baseR = parseFloat(cs.getPropertyValue('--rv-base-radius')) || BASE_R;
+				const idxOff = parseFloat(cs.getPropertyValue('--rv-base-index-offset')) || 26;
+				const bgColor = cs.getPropertyValue('--rv-bg').trim() || '#ffffff';
+				// Helix cov bounding boxes (behind everything)
+				this._renderHelixAnnotations(g_helix, coords, n, baseR);
+				// Pair annotation boxes
+				if (this._showPairAnnotations) {
+					if (this._rna.pairAnnotations?.length)
+						this._renderPairAnnotations(g_annot, coords, pairs, this._rna.pairAnnotations, this._rna.pairAnnotColorMap, baseR);
+					if (this._covCanonMode && this._rna._canonAnnotations?.length)
+						this._renderPairAnnotations(g_annot, coords, pairs, this._rna._canonAnnotations, null, baseR);
 				}
-			}
-			// Per-base highlight boxes for covarying pseudoknot pairs
-			// Gated on both pair-annotations AND pseudoknots toggles
-			if (this._showPairAnnotations && this._showPseudoknots !== false && !isStockholm && this._rna.pseudoCovAnnotations?.length) {
-				const s = baseR * 2.4;
-				for (const {
-						i,
-						j,
-						color
-					}
-					of this._rna.pseudoCovAnnotations) {
-					for (const pos of [i, j]) {
-						const box = document.createElementNS(NS, 'rect');
-						box.setAttribute('x', coords[pos].x - s / 2);
-						box.setAttribute('y', coords[pos].y - s / 2);
-						box.setAttribute('width', s);
-						box.setAttribute('height', s);
-						box.setAttribute('rx', s * 0.2);
-						box.setAttribute('ry', s * 0.2);
-						box.setAttribute('fill', color);
-						box.setAttribute('fill-opacity', '0.25');
-						box.setAttribute('stroke', color);
-						box.setAttribute('stroke-width', '2');
-						box.setAttribute('stroke-opacity', '0.8');
-						g_annot.appendChild(box);
-					}
+				// Precompute centroid + bounding radius
+				// Used by both pseudoknot routing and index-label placement
+				let cxS = 0,
+					cyS = 0;
+				for (let i = 0; i < n; i++) {
+					cxS += coords[i].x;
+					cyS += coords[i].y;
 				}
-			}
-			// Pseudoknot pairs — curved dashed arcs (non-Stockholm only; Stockholm uses mini helix panels)
-			if (this._showPseudoknots !== false && !isStockholm) {
-				const _showAnnot = this._showPairAnnotations;
-				const pkCovMap = _showAnnot ?
-					new Map((this._rna.pseudoCovAnnotations || []).map(({
-						i,
-						j,
-						color
-					}) => [pairKey(i, j), color])) :
-					new Map();
-				const pkHelixGlowSet = _showAnnot ?
-					new Set((this._rna.pseudoHelixCovAnnotations || []).map(({
-						i,
-						j
-					}) => pairKey(i, j))) :
-					new Set();
-				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
-				const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
-				const pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
-
-				// Group pseudoPairs into helices (consecutive i,j pairs)
-				const pkHelices = [];
-				const pkSorted = [...pseudoPairs].sort((a, b) => a.i - b.i);
-				let curHelix = null;
-				for (const ps of pkSorted) {
-					if (curHelix) {
-						const last = curHelix[curHelix.length - 1];
-						if (ps.i === last.i + 1 && (ps.j === last.j - 1 || ps.j === last.j + 1)) {
-							curHelix.push(ps);
-							continue;
-						}
-					}
-					if (curHelix) pkHelices.push(curHelix);
-					curHelix = [ps];
+				const centX = cxS / n,
+					centY = cyS / n;
+				let R = 0;
+				for (let i = 0; i < n; i++) {
+					R = Math.max(R, Math.hypot(coords[i].x - centX, coords[i].y - centY));
 				}
-				if (curHelix) pkHelices.push(curHelix);
-
-				// Palette of distinct colors for multiple helices
-				const PK_PALETTE = ['#e05c3a', '#3a7fe0', '#2ab56e', '#b83ab5', '#e0a53a', '#3ab5b5', '#8c5ae0', '#b5a03a'];
-				const helixColorMap = new Map();
-				pkHelices.forEach((helix, hi) => {
-					const col = pkHelices.length > 1 ? PK_PALETTE[hi % PK_PALETTE.length] : pkColor;
-					helix.forEach(ps => helixColorMap.set(pairKey(ps.i, ps.j), col));
-				});
-
-				// Build occupancy grid from all base coords to guide arc direction.
-				const GRID = 30;
-				let minGX = Infinity,
-					maxGX = -Infinity,
-					minGY = Infinity,
-					maxGY = -Infinity;
-				for (let k = 0; k < n; k++) {
-					if (coords[k].x < minGX) minGX = coords[k].x;
-					if (coords[k].x > maxGX) maxGX = coords[k].x;
-					if (coords[k].y < minGY) minGY = coords[k].y;
-					if (coords[k].y > maxGY) maxGY = coords[k].y;
+				// Backbone, skip segments where either endpoint is a skipped alignment position
+				for (let i = 0; i < n - 1; i++) {
+					const bd = this._rna?.baseDisplay;
+					if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
+					const l = document.createElementNS(NS, 'line');
+					l.setAttribute('class', 'rv-backbone');
+					l.setAttribute('x1', coords[i].x);
+					l.setAttribute('y1', coords[i].y);
+					l.setAttribute('x2', coords[i + 1].x);
+					l.setAttribute('y2', coords[i + 1].y);
+					g_bb.appendChild(l);
 				}
-				// Uniform cell size based on smaller dimension to avoid aspect-ratio bias
-				const _span = Math.max(maxGX - minGX, maxGY - minGY, 1);
-				const cellSize = _span / GRID;
-				const occupancy = new Uint8Array((GRID + 2) * (GRID + 2));
-				const markCell = (gx, gy) => {
-					if (gx >= 0 && gx <= GRID && gy >= 0 && gy <= GRID)
-						occupancy[gy * (GRID + 2) + gx] = 1;
-				};
-				for (let k = 0; k < n; k++) {
-					const gx = Math.min(GRID, Math.floor((coords[k].x - minGX) / cellSize));
-					const gy = Math.min(GRID, Math.floor((coords[k].y - minGY) / cellSize));
-					// Mark the cell and its immediate neighbours for a soft radius
-					for (let dy = -1; dy <= 1; dy++)
-						for (let dx = -1; dx <= 1; dx++)
-							markCell(gx + dx, gy + dy);
-				}
-				const sampleOcc = (px, py) => {
-					if (px < minGX || px > maxGX || py < minGY || py > maxGY) return 0;
-					const gx = Math.min(GRID, Math.max(0, Math.floor((px - minGX) / cellSize)));
-					const gy = Math.min(GRID, Math.max(0, Math.floor((py - minGY) / cellSize)));
-					return occupancy[gy * (GRID + 2) + gx];
-				};
-				const arcOcc = (ax, ay, cpx, cpy, bx, by) => {
-					let sum = 0;
-					for (let s = 1; s < 8; s++) {
-						const t = s / 8;
-						const px = (1 - t) * (1 - t) * ax + 2 * (1 - t) * t * cpx + t * t * bx;
-						const py = (1 - t) * (1 - t) * ay + 2 * (1 - t) * t * cpy + t * t * by;
-						sum += sampleOcc(px, py);
-					}
-					return sum;
-				};
-				for (const ps of pseudoPairs) {
-					const key = pairKey(ps.i, ps.j);
-					const arcColor = pkCovMap.get(key) ?? helixColorMap.get(key) ?? pkColor;
-					const strokeW = pkCovMap.has(key) ? pkWidth * 1.5 : pkWidth;
-					const ax = coords[ps.i].x,
-						ay = coords[ps.i].y;
-					const bx = coords[ps.j].x,
-						by = coords[ps.j].y;
-					const mx = (ax + bx) / 2,
-						my = (ay + by) / 2;
-					const len = Math.hypot(bx - ax, by - ay) || 1;
-					const nx = -(by - ay) / len,
-						ny = (bx - ax) / len;
-					const off = len * 0.35;
-					const cp1x = mx + nx * off,
-						cp1y = my + ny * off;
-					const cp2x = mx - nx * off,
-						cp2y = my - ny * off;
-					const sign = arcOcc(ax, ay, cp1x, cp1y, bx, by) <= arcOcc(ax, ay, cp2x, cp2y, bx, by) ? 1 : -1;
-					const arcD = `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`;
-					if (pkHelixGlowSet.has(key)) {
-						const glow = document.createElementNS(NS, 'path');
-						glow.setAttribute('d', arcD);
-						glow.style.cssText = `stroke:${_helixColor};stroke-width:${pkWidth * 5};fill:none;stroke-linecap:round;opacity:0.25`;
-						g_pk.appendChild(glow);
-					}
-					const arc = document.createElementNS(NS, 'path');
-					arc.setAttribute('d', arcD);
-					arc.style.cssText = `stroke:${arcColor};stroke-width:${strokeW};fill:none;stroke-linecap:round;stroke-dasharray:5 3`;
-					g_pk.appendChild(arc);
-				}
-			}
-			// SS_cons_ feature annotations (gated on Labels toggle)
-			if (isStockholm && this._showR3dLabels !== false && this._rna.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length)
-				this._renderSsConsAnnotations(g_annot, g_ss_labels, coords, n, this._rna.ssConsFeatures, pairs, pseudoPairs, cs);
-			// Stockholm PK visualization: R3D-style arcs + mini helix panels
-			// Insets gated by I button, labels gated by L button independently
-			if (isStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
-				// Dedicated group for SS_cons arcs so L-button hiding doesn't affect pair annot boxes
-				const g_ss_arcs = document.createElementNS(NS, 'g');
-				this._scene.appendChild(g_ss_arcs);
-				let stemOffset = 0;
-				if (pseudoPairs?.length)
-					stemOffset += this._renderPkStockholm(g_ss_arcs, g_ss_labels, coords, n, pseudoPairs, pairs, sequence, cs, false, null, stemOffset);
-				if (this._rna.ssConsPkPairs)
-					for (const [fn, featPairs] of Object.entries(this._rna.ssConsPkPairs))
-						if (featPairs.length) {
-							const label = fn.replace(/^SS_cons_/, '');
-							stemOffset += this._renderPkStockholm(g_ss_arcs, g_ss_labels, coords, n, featPairs, pairs, sequence, cs, true, label, stemOffset);
-						}
-				// Hide insets panel if I button is off
-				if (this._showR3dInsets === false && this._pkPanelsEl)
-					this._pkPanelsEl.style.display = 'none';
-				// Hide SS_cons arcs + labels if L button is off
-				if (this._showR3dLabels === false) {
-					g_ss_arcs.style.display = 'none';
-					g_ss_labels.style.display = 'none';
-				}
-			}
-			// Bases
-			for (let i = 0; i < n; i++) {
-				const grp = document.createElementNS(NS, 'g');
-				grp.setAttribute('data-idx', i);
-				const bd = this._rna.baseDisplay?.[i];
-				const fillColor = (this._showColors && values && colorMap?.stops?.length) ? valueToColor(values[i], colorMap) : null;
-				if (!bd?.skip) {
-					const circ = document.createElementNS(NS, 'circle');
-					circ.setAttribute('class', 'rv-base-circle');
-					circ.setAttribute('cx', coords[i].x);
-					circ.setAttribute('cy', coords[i].y);
-					circ.setAttribute('r', baseR);
-					const lbl = document.createElementNS(NS, 'text');
-					lbl.setAttribute('class', 'rv-base-label');
-					lbl.setAttribute('x', coords[i].x);
-					lbl.setAttribute('y', coords[i].y);
-					if (fillColor) {
-						circ.style.fill = fillColor;
-						circ.style.stroke = 'rgba(0,0,0,0.18)';
-						lbl.textContent = bd?.letter ?? (this._rna.sequence[i] || '?');
-						lbl.style.fill = getContrastTextColor(fillColor);
-						grp.append(circ, lbl);
-					} else if (bd) {
-						if (bd.letter !== null) {
-							// Letter-only (Stockholm), white eraser goes to g_bg (behind annotations),
-							// letter goes to g_base (in front of annotations)
-							const er = this._mkEraserCircle(coords[i].x, coords[i].y, baseR, bgColor);
-							er.setAttribute('class', 'rv-base-circle rv-eraser');
-							er.style.pointerEvents = 'none';
-							g_bg.appendChild(er); // eraser behind annotation boxes
-							// Invisible hit-target in g_base so _onMouseDown finds the base
-							const hit = document.createElementNS(NS, 'circle');
-							hit.setAttribute('class', 'rv-hit');
-							hit.setAttribute('cx', coords[i].x);
-							hit.setAttribute('cy', coords[i].y);
-							hit.setAttribute('r', baseR * 1.5);
-							hit.style.fill = 'transparent';
-							hit.style.stroke = 'none';
-							lbl.textContent = bd.letter;
-							lbl.style.fill = bd.textColor;
-							lbl.style.fontSize = (baseR * 3) + 'px';
-							lbl.style.fontWeight = 'bold';
-							grp.append(hit, lbl); // hit-target + letter in front of annotation boxes
+				// Helper to make a line element
+				const dotR = this._gvn('--rv-noncanon-dot-r', 4.5);
+				const mkLine = (x1, y1, x2, y2, cls) => this._mkSvgLine(x1, y1, x2, y2, cls);
+				// Canonical base pairs (from bracket notation)
+				// AU: single line
+				// GC: two parallel lines (offset perpendicular to pair axis)
+				// GU: single line + filled dot at midpoint
+				// other: filled dot at midpoint
+				const BP_OFFSET = 2.8; // scene units between GC double-line centres
+				for (let i = 0; i < n; i++) {
+					if (pairs[i] <= i) continue;
+					const j = pairs[i];
+					const x1 = coords[i].x,
+						y1 = coords[i].y;
+					const x2 = coords[j].x,
+						y2 = coords[j].y;
+					const dx = x2 - x1,
+						dy = y2 - y1;
+					const len = Math.hypot(dx, dy) || 1;
+					const nx = -dy / len,
+						ny = dx / len; // unit normal to pair axis
+					const b1 = sequence[i].toUpperCase(),
+						b2 = sequence[j].toUpperCase();
+					const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
+					const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
+					const isCanon = this._isCanonPair(b1, b2);
+					if (isStockholm) {
+						// Stockholm: canonical majority (by alignment) draws a line, non-canonical a dot
+						const canonPct = this._rna.pairCanonPct?.[i] ?? null;
+						this._mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR, canonPct)
+							.forEach(el => g_bp.appendChild(el));
+					} else if (!isCanon) {
+						if (this._relaxedSequence) {
+							// Non-standard bases - render as single line instead of dot
+							g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
 						} else {
-							// Circle only, no letter
-							circ.style.fill = bd.fillColor;
-							circ.style.stroke = '#111111';
-							lbl.textContent = '';
+							// Non-canonical, dot only at midpoint
+							const ndot = document.createElementNS(NS, 'circle');
+							ndot.setAttribute('class', 'rv-bp-noncanon');
+							ndot.setAttribute('cx', (x1 + x2) / 2);
+							ndot.setAttribute('cy', (y1 + y2) / 2);
+							ndot.setAttribute('r', dotR);
+							g_bp.appendChild(ndot);
+						}
+					} else if (isGC) {
+						g_bp.appendChild(mkLine(x1 + nx * BP_OFFSET, y1 + ny * BP_OFFSET, x2 + nx * BP_OFFSET, y2 + ny * BP_OFFSET, 'rv-basepair'));
+						g_bp.appendChild(mkLine(x1 - nx * BP_OFFSET, y1 - ny * BP_OFFSET, x2 - nx * BP_OFFSET, y2 - ny * BP_OFFSET, 'rv-basepair'));
+					} else if (isGU) {
+						g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+						const dot = document.createElementNS(NS, 'circle');
+						dot.setAttribute('class', 'rv-bp-dot');
+						dot.setAttribute('cx', (x1 + x2) / 2);
+						dot.setAttribute('cy', (y1 + y2) / 2);
+						dot.setAttribute('r', dotR);
+						g_bp.appendChild(dot);
+					} else {
+						// AU: single line
+						g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+					}
+				}
+				// Per-base highlight boxes for covarying pseudoknot pairs
+				// Gated on both pair-annotations AND pseudoknots toggles
+				if (this._showPairAnnotations && this._showPseudoknots !== false && !isStockholm && this._rna.pseudoCovAnnotations?.length) {
+					const s = baseR * 2.4;
+					for (const {
+							i,
+							j,
+							color
+						}
+						of this._rna.pseudoCovAnnotations) {
+						for (const pos of [i, j]) {
+							const box = document.createElementNS(NS, 'rect');
+							box.setAttribute('x', coords[pos].x - s / 2);
+							box.setAttribute('y', coords[pos].y - s / 2);
+							box.setAttribute('width', s);
+							box.setAttribute('height', s);
+							box.setAttribute('rx', s * 0.2);
+							box.setAttribute('ry', s * 0.2);
+							box.setAttribute('fill', color);
+							box.setAttribute('fill-opacity', '0.25');
+							box.setAttribute('stroke', color);
+							box.setAttribute('stroke-width', '2');
+							box.setAttribute('stroke-opacity', '0.8');
+							g_annot.appendChild(box);
+						}
+					}
+				}
+				// Pseudoknot pairs - curved dashed arcs (non-Stockholm only; Stockholm uses mini helix panels)
+				if (this._showPseudoknots !== false && !isStockholm) {
+					this._drawPkArcs(g_pk, coords, pseudoPairs, cs);
+				}
+				// SS_cons_ feature annotations (gated on Labels toggle)
+				if (isStockholm && this._showR3dLabels !== false && this._rna.ssConsFeatures && Object.keys(this._rna.ssConsFeatures).length)
+					this._renderSsConsAnnotations(g_annot, g_ss_labels, coords, n, this._rna.ssConsFeatures, pairs, pseudoPairs, cs);
+				// Stockholm PK visualization: R3D-style arcs + mini helix panels
+				// Insets gated by I button, labels gated by L button independently
+				if (isStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
+					// Dedicated group for SS_cons arcs so L-button hiding doesn't affect pair annot boxes
+					const g_ss_arcs = document.createElementNS(NS, 'g');
+					this._scene.appendChild(g_ss_arcs);
+					let stemOffset = 0;
+					if (pseudoPairs?.length)
+						stemOffset += this._renderPkStockholm(g_ss_arcs, g_ss_labels, coords, n, pseudoPairs, pairs, sequence, cs, false, null, stemOffset);
+					if (this._rna.ssConsPkPairs)
+						for (const [fn, featPairs] of Object.entries(this._rna.ssConsPkPairs))
+							if (featPairs.length) {
+								const label = fn.replace(/^SS_cons_/, '');
+								stemOffset += this._renderPkStockholm(g_ss_arcs, g_ss_labels, coords, n, featPairs, pairs, sequence, cs, true, label, stemOffset);
+							}
+					if (keepInsets) this._pkPanelsEl.style.display = this._alnActive ? 'none' : 'flex';
+					else if (stemOffset) this._schedulePkPanelLayout();
+					// Hide insets panel if I button is off
+					if (this._showR3dInsets === false && this._pkPanelsEl)
+						this._pkPanelsEl.style.display = 'none';
+					// Hide SS_cons arcs + labels if L button is off
+					if (this._showR3dLabels === false) {
+						g_ss_arcs.style.display = 'none';
+						g_ss_labels.style.display = 'none';
+					}
+				}
+				// Bases
+				for (let i = 0; i < n; i++) {
+					const grp = document.createElementNS(NS, 'g');
+					grp.setAttribute('data-idx', i);
+					const bd = this._rna.baseDisplay?.[i];
+					const fillColor = (this._showColors && values && colorMap?.stops?.length) ? valueToColor(values[i], colorMap) : null;
+					if (!bd?.skip) {
+						const circ = document.createElementNS(NS, 'circle');
+						circ.setAttribute('class', 'rv-base-circle');
+						circ.setAttribute('cx', coords[i].x);
+						circ.setAttribute('cy', coords[i].y);
+						circ.setAttribute('r', baseR);
+						const lbl = document.createElementNS(NS, 'text');
+						lbl.setAttribute('class', 'rv-base-label');
+						lbl.setAttribute('x', coords[i].x);
+						lbl.setAttribute('y', coords[i].y);
+						if (fillColor) {
+							circ.style.fill = fillColor;
+							circ.style.stroke = 'rgba(0,0,0,0.18)';
+							lbl.textContent = bd?.letter ?? (this._rna.sequence[i] || '?');
+							lbl.style.fill = getContrastTextColor(fillColor);
+							grp.append(circ, lbl);
+						} else if (bd) {
+							if (bd.letter !== null) {
+								// Letter-only (Stockholm), white eraser goes to g_bg (behind annotations),
+								// letter goes to g_base (in front of annotations)
+								const er = this._mkEraserCircle(coords[i].x, coords[i].y, baseR, bgColor);
+								er.setAttribute('class', 'rv-base-circle rv-eraser');
+								er.style.pointerEvents = 'none';
+								g_bg.appendChild(er); // eraser behind annotation boxes
+								// Invisible hit-target in g_base so _onMouseDown finds the base
+								const hit = document.createElementNS(NS, 'circle');
+								hit.setAttribute('class', 'rv-hit');
+								hit.setAttribute('cx', coords[i].x);
+								hit.setAttribute('cy', coords[i].y);
+								hit.setAttribute('r', baseR * 1.5);
+								hit.style.fill = 'transparent';
+								hit.style.stroke = 'none';
+								lbl.textContent = bd.letter;
+								lbl.style.fill = bd.textColor;
+								lbl.style.fontSize = (baseR * 3) + 'px';
+								lbl.style.fontWeight = 'bold';
+								grp.append(hit, lbl); // hit-target + letter in front of annotation boxes
+							} else {
+								// Circle only, no letter
+								circ.style.fill = bd.fillColor;
+								circ.style.stroke = '#111111';
+								lbl.textContent = '';
+								grp.append(circ, lbl);
+							}
+						} else {
+							lbl.textContent = this._rna.sequence[i] || '?';
 							grp.append(circ, lbl);
 						}
-					} else {
-						lbl.textContent = this._rna.sequence[i] || '?';
-						grp.append(circ, lbl);
 					}
-				}
-				// Position index shown even for skipped positions (keeps numbering aligned)
-				if (this._showIndices && (i === 0 || (i + 1) % 10 === 0 || i === n - 1)) {
-					// Outward direction = perpendicular to the local backbone tangent,
-					// on the side AWAY from the WC partner (paired) or centroid (unpaired).
-					// This is always truly outside the helix/loop regardless of orientation.
-					const prev = i > 0 ? coords[i - 1] : coords[i];
-					const next = i < n - 1 ? coords[i + 1] : coords[i];
-					const tx = next.x - prev.x;
-					const ty = next.y - prev.y;
-					let dx, dy;
-					if (Math.hypot(tx, ty) < 0.5) {
-						// Degenerate tangent, fall back to centroid direction
-						dx = coords[i].x - centX;
-						dy = coords[i].y - centY;
-					} else {
-						// Two perpendiculars to the backbone tangent
-						const p1x = -ty,
-							p1y = tx; // 90° CCW
-						const p2x = ty,
-							p2y = -tx; // 90° CW
-						const partner = pairs[i];
-						if (partner !== -1) {
-							// Paired base: go to the side AWAY from the WC partner
-							const vpx = coords[partner].x - coords[i].x;
-							const vpy = coords[partner].y - coords[i].y;
-							const useP1 = (p1x * vpx + p1y * vpy) < 0;
-							dx = useP1 ? p1x : p2x;
-							dy = useP1 ? p1y : p2y;
+					// Position index shown even for skipped positions (keeps numbering aligned)
+					if (this._showIndices && (i === 0 || (i + 1) % 10 === 0 || i === n - 1)) {
+						// Outward direction = perpendicular to the local backbone tangent,
+						// on the side AWAY from the WC partner (paired) or centroid (unpaired).
+						// This is always truly outside the helix/loop regardless of orientation.
+						const prev = i > 0 ? coords[i - 1] : coords[i];
+						const next = i < n - 1 ? coords[i + 1] : coords[i];
+						const tx = next.x - prev.x;
+						const ty = next.y - prev.y;
+						let dx, dy;
+						if (Math.hypot(tx, ty) < 0.5) {
+							// Degenerate tangent, fall back to centroid direction
+							dx = coords[i].x - centX;
+							dy = coords[i].y - centY;
 						} else {
-							// Unpaired base, go to the side AWAY from the structure centroid
-							const vcx = centX - coords[i].x;
-							const vcy = centY - coords[i].y;
-							const useP1 = (p1x * vcx + p1y * vcy) < 0;
-							dx = useP1 ? p1x : p2x;
-							dy = useP1 ? p1y : p2y;
+							// Two perpendiculars to the backbone tangent
+							const p1x = -ty,
+								p1y = tx; // 90° CCW
+							const p2x = ty,
+								p2y = -tx; // 90° CW
+							const partner = pairs[i];
+							if (partner !== -1) {
+								// Paired base: go to the side AWAY from the WC partner
+								const vpx = coords[partner].x - coords[i].x;
+								const vpy = coords[partner].y - coords[i].y;
+								const useP1 = (p1x * vpx + p1y * vpy) < 0;
+								dx = useP1 ? p1x : p2x;
+								dy = useP1 ? p1y : p2y;
+							} else {
+								// Unpaired base, go to the side AWAY from the structure centroid
+								const vcx = centX - coords[i].x;
+								const vcy = centY - coords[i].y;
+								const useP1 = (p1x * vcx + p1y * vcy) < 0;
+								dx = useP1 ? p1x : p2x;
+								dy = useP1 ? p1y : p2y;
+							}
 						}
+						const d = Math.hypot(dx, dy) || 1;
+						const idx = document.createElementNS(NS, 'text');
+						idx.setAttribute('class', 'rv-base-index');
+						idx.setAttribute('x', coords[i].x + (dx / d) * (baseR + idxOff));
+						idx.setAttribute('y', coords[i].y + (dy / d) * (baseR + idxOff));
+						idx.textContent = this._rna?.positionLabels?.[i] ?? (i + 1);
+						grp.appendChild(idx);
 					}
-					const d = Math.hypot(dx, dy) || 1;
-					const idx = document.createElementNS(NS, 'text');
-					idx.setAttribute('class', 'rv-base-index');
-					idx.setAttribute('x', coords[i].x + (dx / d) * (baseR + idxOff));
-					idx.setAttribute('y', coords[i].y + (dy / d) * (baseR + idxOff));
-					idx.textContent = this._rna?.positionLabels?.[i] ?? (i + 1);
-					grp.appendChild(idx);
+					grp.addEventListener('mouseenter', e => this._onBaseEnter(e, i));
+					grp.addEventListener('mouseleave', () => {
+						this._tooltip.style.display = 'none';
+					});
+					// PK endpoint bases go above PK lines; all others behind them
+					(pkEndpts.has(i) ? g_pk_top : g_base).appendChild(grp);
 				}
-				grp.addEventListener('mouseenter', e => this._onBaseEnter(e, i));
-				grp.addEventListener('mouseleave', () => {
-					this._tooltip.style.display = 'none';
-				});
-				// PK endpoint bases go above PK lines; all others behind them
-				(pkEndpts.has(i) ? g_pk_top : g_base).appendChild(grp);
-			}
-			// 5' and 3' end labels for Stockholm structures
-			if (isStockholm && n > 0) {
-				const endFSz = baseR * 2.5;
-				const endOff = baseR + endFSz;
-				const endFSzPx = endFSz + 'px';
-				const isNaview = this._layoutAlgo === 'naview';
-				const cxMid = (coords[0].x + coords[n - 1].x) / 2;
-				const cyMid = (coords[0].y + coords[n - 1].y) / 2;
-				[[0, "5′", 1, 1.0], [n - 1, "3′", n - 2, 1.2]].forEach(([idx, lbl, neighborIdx, offMult]) => {
-					const cx = coords[idx].x, cy = coords[idx].y;
-					let dx, dy;
-					if (isNaview) {
-						// NAView: offset away from adjacent base — reliable in radial layouts
-						const nx = coords[neighborIdx]?.x ?? cx;
-						const ny = coords[neighborIdx]?.y ?? cy;
-						dx = cx - nx; dy = cy - ny;
-					} else {
-						// Radiate: offset away from midpoint between the two ends
-						dx = cx - cxMid; dy = cy - cyMid;
-					}
-					const dist = Math.hypot(dx, dy) || 1;
-					const t = document.createElementNS(NS, 'text');
-					t.setAttribute('class', 'rv-base-label');
-					t.setAttribute('x', cx + (dx / dist) * endOff * offMult);
-					t.setAttribute('y', cy + (dy / dist) * endOff * offMult);
-					t.setAttribute('dy', '0.35em');
-					t.setAttribute('text-anchor', 'middle');
-					t.setAttribute('font-weight', 'bold');
-					t.style.fontSize = endFSzPx;
-					t.style.fontWeight = 'bold';
-					t.textContent = lbl;
-					g_ss_labels.appendChild(t);
-				});
+				// 5' and 3' end labels for Stockholm structures
+				if (isStockholm && n > 0) {
+					const endFSz = baseR * 2.5;
+					const endOff = baseR + endFSz;
+					const endFSzPx = endFSz + 'px';
+					const isNaview = (this._rna._algo || this._layoutAlgo) === 'naview';
+					const cxMid = (coords[0].x + coords[n - 1].x) / 2;
+					const cyMid = (coords[0].y + coords[n - 1].y) / 2;
+					[[0, "5′", 1, 1.0], [n - 1, "3′", n - 2, 1.2]].forEach(([idx, lbl, neighborIdx, offMult]) => {
+						const cx = coords[idx].x, cy = coords[idx].y;
+						let dx, dy;
+						if (isNaview) {
+							// NAView: offset away from adjacent base - reliable in radial layouts
+							const nx = coords[neighborIdx]?.x ?? cx;
+							const ny = coords[neighborIdx]?.y ?? cy;
+							dx = cx - nx; dy = cy - ny;
+						} else {
+							// Radiate: offset away from midpoint between the two ends
+							dx = cx - cxMid; dy = cy - cyMid;
+						}
+						const dist = Math.hypot(dx, dy) || 1;
+						const t = document.createElementNS(NS, 'text');
+						t.setAttribute('class', 'rv-base-label');
+						t.setAttribute('x', cx + (dx / dist) * endOff * offMult);
+						t.setAttribute('y', cy + (dy / dist) * endOff * offMult);
+						t.setAttribute('dy', '0.35em');
+						t.setAttribute('text-anchor', 'middle');
+						t.setAttribute('font-weight', 'bold');
+						t.style.fontSize = endFSzPx;
+						t.style.fontWeight = 'bold';
+						t.textContent = lbl;
+						g_end_labels.appendChild(t);
+					});
+				}
 			}
 			if (this._alnBtn) {
 				const alnOk = this._rna?.baseDisplay && (this._rna?.alnLen || 0) <= 5000;
@@ -7962,17 +8020,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const hasReactivity = !isStockholm && !!(this._rna?.values);
 			if (this._chkColors) this._chkColors.style.display = hasReactivity ? '' : 'none';
 			if (this._chkSsEnds) this._chkSsEnds.style.display = this._rna?.ssEnds ? '' : 'none';
+			if (this._chkOutline) this._chkOutline.style.display = this._rna ? '' : 'none';
 			if (this._alnLegend) {
 				this._alnLegend.classList.toggle('rv-visible', !!this._rna?.baseDisplay && !this._alnActive);
 				requestAnimationFrame(() => this._scaleOverlays());
 			}
 			// XML upload section: hide for Stockholm
-			const xmlSection = this._root?.querySelector('.rv-upload-section:has(.rv-upload-drop-xml)') ??
-				this._root?.querySelector('.rv-upload-drop-xml')?.closest('.rv-upload-section');
+			const xmlSection = this._root?.querySelector('.rv-upload-drop-xml')?.closest('.rv-upload-section');
 			if (xmlSection) xmlSection.style.display = isStockholm ? 'none' : '';
 		}
 		_saveSVG(returnString = false) {
 			if (!this._rna) return returnString ? null : undefined;
+			if (this._outlineMode) return this._saveOutlineSVG(returnString);
 			const {
 				coords,
 				n,
@@ -8001,7 +8060,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const cyMid = (coords[0].y + coords[n - 1].y) / 2;
 				[[0, 1.0], [n - 1, 1.2]].forEach(([idx, offMult]) => {
 					const cx = coords[idx].x, cy = coords[idx].y;
-					const isNaview = this._layoutAlgo === 'naview';
+					const isNaview = (this._rna._algo || this._layoutAlgo) === 'naview';
 					let dx, dy;
 					if (isNaview) {
 						const ni = idx === 0 ? 1 : n - 2;
@@ -8160,7 +8219,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			sc2.querySelectorAll('text').forEach(t => {
 				t.setAttribute('dy', '0.3em');
 			});
-			// ss_cons labels: rebuild inline style — no stroke halo,
+			// ss_cons labels: rebuild inline style - no stroke halo,
 			// font-size is scaled up (indexFSz = rawLSz * 1.6) for SVG resolution.
 			// We also rescale the bg rects and re-anchor the label positions to match.
 			const svgLScale = indexFSz / rawLSz; // = 1.6
@@ -8449,7 +8508,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					label
 				}, idx) => {
 					const ry = bpRow0Y + idx * LROW + alCR;
-					// left N — matches inset base letter pattern: y=ry, dy=0.35em
+					// left N - matches inset base letter pattern: y=ry, dy=0.35em
 					const nL = document.createElementNS(NS, 'text');
 					nL.setAttribute('x', bpNcL);
 					nL.setAttribute('y', ry);
@@ -8594,64 +8653,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Mirrors _render() which handles both pseudoPairs and ssConsPkPairs
 			const expIsStockholm = !!this._rna?.baseDisplay;
 			if (expIsStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
-				// Collect all pair sources exactly as _render() does
-				const expPairSources = []; // [{pairs, featureName}]
-				if (this._rna.pseudoPairs?.length)
-					expPairSources.push({
-						pairs: this._rna.pseudoPairs,
-						featureName: null
-					});
-				if (this._rna.ssConsPkPairs)
-					for (const [fn, featPairs] of Object.entries(this._rna.ssConsPkPairs))
-						if (featPairs.length)
-							expPairSources.push({
-								pairs: featPairs,
-								featureName: fn.replace(/^SS_cons_/, '')
-							});
-
-				// Collect all stems across all sources, grouped by featureName
-				const expStemsByName = new Map(); // featureName → [stem, stem, ...]
-				const expR3dPosToName = new Map();
-				if (this._rna.ssConsFeatures)
-					for (const [name, positions] of Object.entries(this._rna.ssConsFeatures))
-						for (const p of positions) expR3dPosToName.set(p, name);
-
-				for (const { pairs: srcPairs, featureName } of expPairSources) {
-					const expSorted = [...srcPairs].sort((a, b) => a.i - b.i);
-					const expStems = [];
-					let expCur = null;
-					for (const ps of expSorted) {
-						if (expCur) {
-							const last = expCur[expCur.length - 1];
-							if (ps.i === last.i + 1 && (ps.j === last.j - 1 || ps.j === last.j + 1)) {
-								expCur.push(ps);
-								continue;
-							}
-						}
-						if (expCur) expStems.push(expCur);
-						expCur = [ps];
-					}
-					if (expCur) expStems.push(expCur);
-					expStems.forEach(stem => {
-						let lbl = featureName;
-						if (!lbl) {
-							for (const p of stem.map(ps => ps.i))
-								if (expR3dPosToName.has(p)) { lbl = expR3dPosToName.get(p); break; }
-							if (!lbl)
-								for (const p of stem.map(ps => ps.j))
-									if (expR3dPosToName.has(p)) { lbl = expR3dPosToName.get(p); break; }
-							if (!lbl) lbl = `PK`;
-						}
-						if (!expStemsByName.has(lbl)) expStemsByName.set(lbl, []);
-						expStemsByName.get(lbl).push(stem);
-					});
-				}
-
-				// One panel per unique featureName (grouping stems with same name)
-				const expAllStems = [...expStemsByName.entries()].map(([featureName, stems]) => ({
-					featureName,
-					stems, // array of stems to stack vertically in one panel
-				}));
+				// One panel per distinct name (same names as on screen; same-named stems stacked in one panel)
+				const expAllStems = this._insetGroups().map(({ label, stems }) => ({ featureName: label, stems }));
 
 				if (expAllStems.length && this._showR3dInsets !== false) {
 					// Panel geometry (same proportions as interactive panels)
@@ -8721,6 +8724,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const pk_col3x_l = pk_col5x_l + pk_colSep;
 						const panelG = document.createElementNS(NS, 'g');
 						exp.appendChild(panelG);
+						// Layers as in the on-screen panels (bottom > top):
+						// backbone > erasers > helix boxes > pair / covariation / canon boxes > bases > bonds
+						const [L_bb, L_era, L_hbox, L_abox, L_base, L_bp] = Array.from({ length: 6 }, () => document.createElementNS(NS, 'g'));
 
 						// Build inCoords and inPairs2 across all stems in this panel
 						const inCoords = {}, inPairs2 = {};
@@ -8761,6 +8767,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						titleT.setAttribute('fill', C.muted);
 						titleT.textContent = lbl.toUpperCase();
 						panelG.appendChild(titleT);
+						panelG.append(L_bb, L_era, L_hbox, L_abox, L_base, L_bp);
 
 						// Per-stem rendering: backbone, erasers, helix box, bases, bonds
 						let stemY = row0y;
@@ -8774,7 +8781,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 									l.setAttribute('class', 'rv-backbone');
 									l.setAttribute('x1', cx); l.setAttribute('y1', stemY);
 									l.setAttribute('x2', cx); l.setAttribute('y2', stemY + (nbp - 1) * pk_rowStep);
-									panelG.appendChild(l);
+									L_bb.appendChild(l);
 								});
 							}
 
@@ -8788,7 +8795,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 									er.setAttribute('cx', cx); er.setAttribute('cy', ry);
 									er.setAttribute('r', pk_baseR * 1.5);
 									er.style.cssText = `fill:${bgCol2};stroke:none`;
-									panelG.appendChild(er);
+									L_era.appendChild(er);
 								});
 							});
 
@@ -8816,7 +8823,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 									r.setAttribute('stroke', ann.color ?? helixColor2);
 									r.setAttribute('stroke-opacity', '0.45');
 									r.setAttribute('stroke-width', String(ann.strokeWidth ?? 1.5));
-									panelG.appendChild(r);
+									L_hbox.appendChild(r);
 									break;
 								}
 							}
@@ -8836,13 +8843,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 										t.setAttribute('font-weight', 'bold');
 										t.setAttribute('fill', bd.textColor || C.baseText);
 										t.textContent = bd.letter;
-										panelG.appendChild(t);
+										L_base.appendChild(t);
 									} else if (bd.fillColor) {
 										const circ = document.createElementNS(NS, 'circle');
 										circ.setAttribute('cx', cx); circ.setAttribute('cy', ry);
 										circ.setAttribute('r', pk_baseR);
 										circ.style.cssText = `fill:${bd.fillColor};stroke:#111111;stroke-width:${bsW2}`;
-										panelG.appendChild(circ);
+										L_base.appendChild(circ);
 									}
 								});
 							});
@@ -8855,102 +8862,46 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								const b3 = (this._rna.sequence?.[ps.j] || '?').toUpperCase();
 								const canonPct = this._rna.pairCanonPct?.[ps.i] ?? null;
 								this._mkStockholmBond(cx5, ry, cx3, ry, b5, b3, pk_baseR, dotR2, canonPct)
-									.forEach(el => panelG.appendChild(el));
+									.forEach(el => L_bp.appendChild(el));
 							});
 
 							stemY += (stem.length - 1) * pk_rowStep + pk_baseR * 2 + pk_stemGap;
 						}); // end stems.forEach
 
-						// 4. Pair annotation boxes (across all stems)
-						if (this._showPairAnnotations) {
-							for (const ann of (this._rna.pairAnnotations || [])) {
-								let ai = ann.i, aj = ann.j;
-								if (ai != null && aj != null) {
-									if (!stems.some(stem => stem.some(p => (p.i === ai && p.j === aj) || (p.i === aj && p.j === ai)))) continue;
-								} else if (ai != null) {
-									aj = inPairs2[ai]; if (aj == null) continue;
-								} else if (aj != null) {
-									ai = inPairs2[aj]; if (ai == null) continue;
-								} else continue;
-								const ic5 = inCoords[ai], ic3 = inCoords[aj];
-								if (!ic5 || !ic3) continue;
-								let color = ann.color;
-								if (!color && ann.key != null && this._rna.pairAnnotColorMap) {
-									const e2 = this._rna.pairAnnotColorMap.find(e => e.key === ann.key);
-									if (e2) color = e2.color;
-								}
-								panelG.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
-									color || '#ffffff', ann.opacity ?? pAnnotOpa2, ann.strokeWidth ?? pAnnotSW2, ann.padding ?? pAnnotPad2, pk_baseR));
-							}
-							for (const { i, j, color } of (this._rna.pseudoCovAnnotations || [])) {
-								if (!stems.some(stem => stem.some(p => (p.i === i && p.j === j) || (p.i === j && p.j === i)))) continue;
-								const ic5 = inCoords[i], ic3 = inCoords[j];
-								if (!ic5 || !ic3) continue;
-								panelG.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
-									color, pAnnotOpa2, pAnnotSW2, pAnnotPad2, pk_baseR));
-							}
+						// 4. Pair annotation / covariation / % canonical boxes (across all stems)
+						for (const b of this._insetAnnotBoxes(stems.flat(), inPairs2)) {
+							const ic5 = inCoords[b.i], ic3 = inCoords[b.j];
+							if (!ic5 || !ic3) continue;
+							L_abox.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
+								b.color, b.opacity ?? pAnnotOpa2, b.strokeWidth ?? pAnnotSW2, b.padding ?? pAnnotPad2, pk_baseR));
 						}
 					}); // end expAllStems.forEach
 				} // end if expAllStems.length
 			}
-			// For Stockholm structures, labels can extend beyond the structure bounding box.
-			// Expand viewBox to include all SS_cons label bg rects and leader lines.
-			if (expIsStockholm && this._showR3dLabels !== false) {
-				// Read current viewBox (may have been expanded by PK inset block)
-				const curVBStr = exp.getAttribute('viewBox');
-				const curVB = curVBStr ? curVBStr.split(' ').map(Number) : [vbX, vbY, vbW, vbH];
-				let [cvX, cvY, cvW, cvH] = curVB;
-				let lMinX = cvX + cvW,
-					lMinY = cvY + cvH,
-					lMaxX = cvX,
-					lMaxY = cvY;
-				let expanded = false;
-				exp.querySelectorAll('.rv-ss-cons-bg').forEach(el => {
-					const x = parseFloat(el.getAttribute('x') || 0);
-					const y = parseFloat(el.getAttribute('y') || 0);
-					const w = parseFloat(el.getAttribute('width') || 0);
-					const h = parseFloat(el.getAttribute('height') || 0);
-					lMinX = Math.min(lMinX, x);
-					lMinY = Math.min(lMinY, y);
-					lMaxX = Math.max(lMaxX, x + w);
-					lMaxY = Math.max(lMaxY, y + h);
-					expanded = true;
-				});
-				exp.querySelectorAll('.rv-ss-cons-line').forEach(el => {
-					const d = el.getAttribute('d') || '';
-					const nums = d.match(/-?[\d.e+]+/g);
-					if (!nums || nums.length < 2) return;
-					for (let k = 0; k < nums.length - 1; k += 2) {
-						const x = parseFloat(nums[k]);
-						const y = parseFloat(nums[k + 1]);
-						if (isNaN(x) || isNaN(y)) continue;
-						lMinX = Math.min(lMinX, x);
-						lMinY = Math.min(lMinY, y);
-						lMaxX = Math.max(lMaxX, x);
-						lMaxY = Math.max(lMaxY, y);
+			// Grow the viewBox to the real bounds of everything drawn: index labels, pseudoknot arcs,
+			// annotation boxes and SS_cons labels (including dragged ones, via their transforms) can
+			// all extend beyond the base centres used above. getBBox needs the SVG in the document.
+			{
+				const host = document.createElement('div');
+				host.style.cssText = 'position:absolute;left:-100000px;top:0;visibility:hidden';
+				host.appendChild(exp);
+				document.body.appendChild(host);
+				let bb = null;
+				try { bb = exp.getBBox(); } catch (_) { /* not rendered: keep the computed viewBox */ }
+				host.remove();
+				const [cvX, cvY, cvW, cvH] = exp.getAttribute('viewBox').split(' ').map(Number);
+				if (bb && bb.width > 0 && bb.height > 0) {
+					const m = pad / 2;
+					const newX = Math.min(cvX, bb.x - m);
+					const newY = Math.min(cvY, bb.y - m);
+					const newW = Math.max(cvX + cvW, bb.x + bb.width + m) - newX;
+					const newH = Math.max(cvY + cvH, bb.y + bb.height + m) - newY;
+					if (newX < cvX || newY < cvY || newW > cvW || newH > cvH) {
+						exp.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
+						const newScale = Math.min(1, maxPx / Math.max(newW, newH));
+						exp.setAttribute('width', Math.round(newW * newScale));
+						exp.setAttribute('height', Math.round(newH * newScale));
 					}
-					expanded = true;
-				});
-				exp.querySelectorAll('.rv-ss-cons-leader').forEach(el => {
-					[1, 2].forEach(n => {
-						const x = parseFloat(el.getAttribute(`x${n}`) || 0);
-						const y = parseFloat(el.getAttribute(`y${n}`) || 0);
-						lMinX = Math.min(lMinX, x);
-						lMinY = Math.min(lMinY, y);
-						lMaxX = Math.max(lMaxX, x);
-						lMaxY = Math.max(lMaxY, y);
-					});
-					expanded = true;
-				});
-				if (expanded) {
-					const newX = Math.min(cvX, lMinX - pad);
-					const newY = Math.min(cvY, lMinY - pad);
-					const newW = Math.max(cvX + cvW, lMaxX + pad) - newX;
-					const newH = Math.max(cvY + cvH, lMaxY + pad) - newY;
-					exp.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
-					const newScale = Math.min(1, maxPx / Math.max(newW, newH));
-					exp.setAttribute('width', Math.round(newW * newScale));
-					exp.setAttribute('height', Math.round(newH * newScale));
 				}
 			}
 			const exportId = this._id || this._structures?.[this._currentStructIdx]?.label || this._rna?._label || 'RF_structure';
@@ -8966,7 +8917,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
-			URL.revokeObjectURL(a.href);
+			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 		}
 		// Return the current structure as a standalone SVG string (no download)
 		exportSVGString() {
@@ -9036,13 +8987,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._rna = null;
 			this._scene.innerHTML = '';
 			this._errEl.style.display = 'none';
-			if (this._sbSeq) this._sbSeq.textContent = '—';
-			if (this._sbPairs) this._sbPairs.textContent = '— pairs';
+			if (this._sbSeq) this._sbSeq.textContent = '-';
+			if (this._sbPairs) this._sbPairs.textContent = '- pairs';
 			if (this._errDialog && this._errDialogBody) {
 				this._errDialogBody.textContent = msg;
 				this._errDialog.classList.add('rv-visible');
 			} else {
-				this._errEl.innerHTML = `<span style="font-size:24px;">⚠</span>&nbsp; ${msg}`;
+				this._errEl.innerHTML = `<span style="font-size:24px;">⚠</span>&nbsp; ${escHtml(msg)}`;
 				this._errEl.style.display = 'block';
 			}
 		}
@@ -9125,6 +9076,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_onMouseDown(e) {
 			if (this._isAnimating) return;
 			if (e.button !== 0) return;
+			this._mouseDownPt = { x: e.clientX, y: e.clientY }; // a drag (pan) must not count as an outline click
 			const grp = e.target.closest('[data-idx]');
 			if (grp) {
 				const idx = parseInt(grp.getAttribute('data-idx'));
@@ -9154,7 +9106,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						// Interior-loop helix, rotate around the loop centre
 						const pt = this._clientToScene(e.clientX, e.clientY);
 						// For NAView the loopCenter centroid can sit geometrically between the
-						// helix arms — use the midpoint of the flanking backbone positions instead.
+						// helix arms - use the midpoint of the flanking backbone positions instead.
 						let cx = helix.loopCenter.x,
 							cy = helix.loopCenter.y;
 						let navPath = null;
@@ -9238,7 +9190,124 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			this._canvas.classList.add('grabbing');
 		}
+		// Non-Stockholm pseudoknot pairs as dashed quadratic arcs, bent towards the emptier side
+		// (coarse occupancy grid of the bases). Shared by _render and the transition frames.
+		_drawPkArcs(g_pk, coords, pseudoPairs, cs) {
+			const _showAnnot = this._showPairAnnotations;
+			const pkCovMap = _showAnnot ?
+				new Map((this._rna.pseudoCovAnnotations || []).map(({
+					i,
+					j,
+					color
+				}) => [pairKey(i, j), color])) :
+				new Map();
+			const pkHelixGlowSet = _showAnnot ?
+				new Set((this._rna.pseudoHelixCovAnnotations || []).map(({
+					i,
+					j
+				}) => pairKey(i, j))) :
+				new Set();
+			const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
+			const pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
+			const pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
+
+			// Group pseudoPairs into helices (consecutive i,j pairs)
+			const pkHelices = groupPkStems(pseudoPairs);
+
+			// Palette of distinct colors for multiple helices
+			const PK_PALETTE = ['#e05c3a', '#3a7fe0', '#2ab56e', '#b83ab5', '#e0a53a', '#3ab5b5', '#8c5ae0', '#b5a03a'];
+			const helixColorMap = new Map();
+			pkHelices.forEach((helix, hi) => {
+				const col = pkHelices.length > 1 ? PK_PALETTE[hi % PK_PALETTE.length] : pkColor;
+				helix.forEach(ps => helixColorMap.set(pairKey(ps.i, ps.j), col));
+			});
+
+			// Build occupancy grid from all base coords to guide arc direction.
+			const GRID = 30;
+			let minGX = Infinity,
+				maxGX = -Infinity,
+				minGY = Infinity,
+				maxGY = -Infinity;
+			for (let k = 0; k < coords.length; k++) {
+				if (coords[k].x < minGX) minGX = coords[k].x;
+				if (coords[k].x > maxGX) maxGX = coords[k].x;
+				if (coords[k].y < minGY) minGY = coords[k].y;
+				if (coords[k].y > maxGY) maxGY = coords[k].y;
+			}
+			// Uniform cell size based on smaller dimension to avoid aspect-ratio bias
+			const _span = Math.max(maxGX - minGX, maxGY - minGY, 1);
+			const cellSize = _span / GRID;
+			const occupancy = new Uint8Array((GRID + 2) * (GRID + 2));
+			const markCell = (gx, gy) => {
+				if (gx >= 0 && gx <= GRID && gy >= 0 && gy <= GRID)
+					occupancy[gy * (GRID + 2) + gx] = 1;
+			};
+			for (let k = 0; k < coords.length; k++) {
+				const gx = Math.min(GRID, Math.floor((coords[k].x - minGX) / cellSize));
+				const gy = Math.min(GRID, Math.floor((coords[k].y - minGY) / cellSize));
+				// Mark the cell and its immediate neighbours for a soft radius
+				for (let dy = -1; dy <= 1; dy++)
+					for (let dx = -1; dx <= 1; dx++)
+						markCell(gx + dx, gy + dy);
+			}
+			const sampleOcc = (px, py) => {
+				if (px < minGX || px > maxGX || py < minGY || py > maxGY) return 0;
+				const gx = Math.min(GRID, Math.max(0, Math.floor((px - minGX) / cellSize)));
+				const gy = Math.min(GRID, Math.max(0, Math.floor((py - minGY) / cellSize)));
+				return occupancy[gy * (GRID + 2) + gx];
+			};
+			const arcOcc = (ax, ay, cpx, cpy, bx, by) => {
+				let sum = 0;
+				for (let s = 1; s < 8; s++) {
+					const t = s / 8;
+					const px = (1 - t) * (1 - t) * ax + 2 * (1 - t) * t * cpx + t * t * bx;
+					const py = (1 - t) * (1 - t) * ay + 2 * (1 - t) * t * cpy + t * t * by;
+					sum += sampleOcc(px, py);
+				}
+				return sum;
+			};
+			for (const ps of pseudoPairs) {
+				const key = pairKey(ps.i, ps.j);
+				const arcColor = pkCovMap.get(key) ?? helixColorMap.get(key) ?? pkColor;
+				const strokeW = pkCovMap.has(key) ? pkWidth * 1.5 : pkWidth;
+				const ax = coords[ps.i].x,
+					ay = coords[ps.i].y;
+				const bx = coords[ps.j].x,
+					by = coords[ps.j].y;
+				const mx = (ax + bx) / 2,
+					my = (ay + by) / 2;
+				const len = Math.hypot(bx - ax, by - ay) || 1;
+				const nx = -(by - ay) / len,
+					ny = (bx - ax) / len;
+				const off = len * 0.35;
+				const cp1x = mx + nx * off,
+					cp1y = my + ny * off;
+				const cp2x = mx - nx * off,
+					cp2y = my - ny * off;
+				const sign = arcOcc(ax, ay, cp1x, cp1y, bx, by) <= arcOcc(ax, ay, cp2x, cp2y, bx, by) ? 1 : -1;
+				const arcD = `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`;
+				if (pkHelixGlowSet.has(key)) {
+					const glow = document.createElementNS(NS, 'path');
+					glow.setAttribute('d', arcD);
+					glow.style.cssText = `stroke:${_helixColor};stroke-width:${pkWidth * 5};fill:none;stroke-linecap:round;opacity:0.25`;
+					g_pk.appendChild(glow);
+				}
+				const arc = document.createElementNS(NS, 'path');
+				arc.setAttribute('d', arcD);
+				arc.style.cssText = `stroke:${arcColor};stroke-width:${strokeW};fill:none;stroke-linecap:round;stroke-dasharray:5 3`;
+				g_pk.appendChild(arc);
+			}
+		}
+		// Coalesce high-frequency redraws (helix drag / flip, colour pickers) into one per frame.
+		_renderSoon() {
+			if (this._renderPending) return;
+			this._renderPending = requestAnimationFrame(() => {
+				this._renderPending = 0;
+				this._render();
+			});
+		}
 		_onMouseMove(e) {
+			if (this._outlineMode && this._outlinePick && !this._panStart && !this._rotState && !this._flipState) this._refreshOutlinePreview(e);
 			if (this._flipState) {
 				const {
 					helix,
@@ -9287,7 +9356,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						h.loopCenter.y = snap.y;
 					}
 				});
-				this._render();
+				this._renderSoon(); // one redraw per animation frame while dragging
 				return;
 			}
 			if (this._rotState) {
@@ -9306,7 +9375,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}));
 				// For NAView path-sliding bypass VARNA entirely: its minDelta snap
 				// (0.25 rad) maps tiny rightward drags to delta≈maxDelta≈6.03, which
-				// after sign-conversion becomes -0.25 → helix moves backwards and
+				// after sign-conversion becomes -0.25 > helix moves backwards and
 				// snaps. Use the raw signed drag angle instead.
 				const {
 					navPath
@@ -9360,7 +9429,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						oHj = snapCoords[hj];
 					const oDx = oHj.x - oHi.x,
 						oDy = oHj.y - oHi.y;
-					// Rigid transform: rotation only, NO scale — prevents the helix
+					// Rigid transform: rotation only, NO scale - prevents the helix
 					// from compressing when the path chord shortens.
 					const origLen = Math.hypot(oDx, oDy);
 					const nHj_path = interp(nshj);
@@ -9435,7 +9504,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._rna.coords[i].x = workCoords[i].x;
 					this._rna.coords[i].y = workCoords[i].y;
 				}
-				this._render();
+				this._renderSoon(); // one redraw per animation frame while dragging
 				const r = parseFloat(this._rotCirc.getAttribute('r'));
 				this._rotLine.setAttribute('x2', cx + r * Math.cos(dragAngle));
 				this._rotLine.setAttribute('y2', cy + r * Math.sin(dragAngle));
@@ -9485,7 +9554,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const result = this._layoutAlgo === 'naview' ? this._autoRotateLayout(drawRNANAView(pairs, sequence.length)) : this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) : this._pickLayout(pairs, sequence.length);
 			const _usedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
 			// If helixAnnotations are already resolved (have subHelices/pkPairs from loadHelixCov),
-			// skip re-resolution — they're in the final format already.
+			// skip re-resolution - they're in the final format already.
 			const _alreadyResolved = helixAnnotations?.length && ('subHelices' in helixAnnotations[0] || 'pkPairs' in helixAnnotations[0]);
 			const resolvedHelixAnnotations = helixAnnotations?.length ?
 				(_alreadyResolved ? helixAnnotations : resolveHelixAnnotations(helixAnnotations, pairs, positionLabels)) :
@@ -9507,8 +9576,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				isCovAnnot: !!(pairAnnotations?.length || resolvedHelixAnnotations?.length),
 				baseDisplay: baseDisplay || null,
 				positionLabels: positionLabels || null,
-				baseDisplay: baseDisplay || null,
-				positionLabels: positionLabels || null,
 				alnSeqs: alnSeqs || null,
 				alnStruct: alnStruct || null,
 				alnLen: alnLen || 0,
@@ -9516,6 +9583,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 		}
 		_initStructures(config) {
+			this._cancelAnimation();
+			// Save existing state so a failed load can restore it when structures are already loaded
+			const prev = {
+				rna: this._rna, structures: this._structures, layouts: this._structLayouts,
+				idx: this._currentStructIdx, config: this._lastConfig, covTexts: this._lastCovTexts,
+				algo: this._layoutAlgo,
+			};
 			this._lastCovTexts = [];
 			this._lastConfig = config;
 			this._errEl.style.display = 'none';
@@ -9531,18 +9605,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._layoutAlgo = 'auto';
 			}
 			this._syncLayoutBtn(this._layoutAlgo);
-			// Save existing state so we can restore it if load fails while structures are already loaded
-			const prevRna = this._rna;
-			const prevStructures = this._structures;
-			const prevLayouts = this._structLayouts;
-			const prevIdx = this._currentStructIdx;
-			// Helper: if structures already loaded, show dialog without wiping; otherwise fatal error
+			// Helper: if structures already loaded, restore them and show a dialog; otherwise fatal error
 			const reportError = (msg) => {
-				if (prevRna) {
-					this._rna = prevRna;
-					this._structures = prevStructures;
-					this._structLayouts = prevLayouts;
-					this._currentStructIdx = prevIdx;
+				if (prev.rna) {
+					this._rna = prev.rna;
+					this._structures = prev.structures;
+					this._structLayouts = prev.layouts;
+					this._currentStructIdx = prev.idx;
+					this._lastConfig = prev.config;
+					this._lastCovTexts = prev.covTexts;
+					this._layoutAlgo = prev.algo;
+					this._syncLayoutBtn(this._layoutAlgo);
+					this._updateLegendVisibility();
 					this._showErrorDialog(msg);
 				} else {
 					this._showError(msg);
@@ -9640,22 +9714,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					pairCanonPct: s.pairCanonPct || sl?.pairCanonPct || undefined,
 				};
 			});
-			this._lastConfig = config;
 			this._buildStructSwitcher();
 			this._rna = this._structLayouts[this._currentStructIdx];
-			// Show % canonical toggle for Stockholm structures; always reset mode on new load
-			this._covCanonMode = false;
+			// Show % canonical toggle for Stockholm structures; mode starts from the showPercCanonical option
+			this._covCanonMode = !!(config.showPercCanonical ?? this._constructorConfig?.showPercCanonical) && !!this._rna.pairCanonPct;
 			if (this._chkCovCanon) {
 				this._chkCovCanon.classList.toggle('rv--active', this._covCanonMode);
 				this._chkCovCanon.style.display = this._rna.pairCanonPct ? '' : 'none';
 			}
-			if (this._covCanonMode && this._rna?.pairCanonPct) this._applyCovCanonColoring();
-			this._buildPairAnnotLegend(this._rna.pairAnnotColorMap, this._rna?.isCovAnnot);
-			this._updateStatusBar();
-			if (this._rna.values) this._updateLegend(this._rna.colorMap);
-			this._updateLegendVisibility();
-			// Auto-hide/restore indices based on whether the current structure is Stockholm.
-			this._applyStructIndices(this._rna, config);
 			// Auto-activate R3D toggle when SS_cons_ annotations are present,
 			// unless disabled via constructor config or direct instance flag (e.g. headless --noR3d).
 			if (this._rna?.baseDisplay && (
@@ -9670,13 +9736,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (this._chkR3dLabels) this._chkR3dLabels.classList.add('rv--active');
 				}
 			}
-			// If showSsEnds is true and the current structure has trimmed ends, rebuild now.
-			if (this._showSsEnds && this._rna?.ssEnds) {
-				this._rebuildCurrentLayout();
-			} else {
-				this._render();
-				this.fit();
-			}
+			// Indices / W / SS-ends state, status bar, legends, then draw (rebuilds when ends are shown)
+			this._activateLayout(this._rna);
 		}
 		// Re-layout the current structure using trimmed or full (ss-ends) data
 		// depending on this._showSsEnds. Called when the SS-ends toggle changes.
@@ -9696,107 +9757,57 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Sequence/structure: trimmed or full depending on toggle
 			const sequence = this._showSsEnds && ends ? ends.fullSeq.join('') : s.sequence;
 			const structure = this._showSsEnds && ends ? ends.fullStruct.join('') : s.structure;
+			// s / ends always hold the active weighting variant (see _applyWeighting)
 			const baseDisplay = this._showSsEnds && ends ? ends.fullBaseDisplay : s.baseDisplay || null;
 			const positionLabels = this._showSsEnds && ends ? ends.fullPositionLabels : s.positionLabels || null;
 			const pairCanonPct = this._showSsEnds && ends?.fullCanonPct ? ends.fullCanonPct : s.pairCanonPct || src.pairCanonPct || null;
-
-			const shiftPairs = (arr) => !arr || shift === 0 ? arr :
-				arr.map(p => ({
-					...p,
-					...(p.i != null ? {
-						i: p.i + shift
-					} : {}),
-					...(p.j != null ? {
-						j: p.j + shift
-					} : {}),
-				}));
-
-			const shiftHelixAnnots = (arr) => !arr || shift === 0 ? arr :
-				arr.map(h => ({
-					...h,
-					subHelices: (h.subHelices || []).map(sh => ({
-						pos5p: sh.pos5p.map(p => p + shift),
-						pos3p: sh.pos3p.map(p => p + shift),
-					})),
-				}));
 
 			const _sl = this._computeLayout(
 				sequence, structure,
 				src.values || null,
 				src.colorMap || null,
-				shiftPairs(src.pairAnnotations || null),
-				src.pairAnnotColorMap || null,
-				shiftHelixAnnots(src.helixAnnotations || null),
+				shiftIdx(src.pairAnnotations || null, shift),
+				this._origPairAnnotColorMap(src),
+				shiftHelixAnnots(src.helixAnnotations || null, shift),
 				baseDisplay, positionLabels,
 				s.alnSeqs || null,
 				s.alnStruct || null,
 				s.alnLen || 0
 			);
-
-			// ssConsFeatures
-			const rawFeatures = src.ssConsFeatures;
-			if (rawFeatures && shift > 0) {
-				const shifted = {};
-				for (const [name, positions] of Object.entries(rawFeatures))
-					shifted[name] = positions.map(p => p + shift);
-				_sl.ssConsFeatures = shifted;
-			} else {
-				_sl.ssConsFeatures = rawFeatures || undefined;
-			}
-
-			// ssConsPkPairs
-			const rawPkPairs = src.ssConsPkPairs;
-			if (rawPkPairs && shift > 0) {
-				const shifted = {};
-				for (const [name, fps] of Object.entries(rawPkPairs))
-					shifted[name] = fps.map(p => ({
-						i: p.i + shift,
-						j: p.j + shift
-					}));
-				_sl.ssConsPkPairs = shifted;
-			} else {
-				_sl.ssConsPkPairs = rawPkPairs || undefined;
-			}
-
-			// pseudoHelixCovAnnotations
-			const rawPhc = src.pseudoHelixCovAnnotations;
-			_sl.pseudoHelixCovAnnotations = rawPhc && shift > 0 ?
-				rawPhc.map(p => ({
-					i: p.i + shift,
-					j: p.j + shift
-				})) :
-				rawPhc || undefined;
-
+			// SS_cons_* features come from the file: the full view uses its own untrimmed mapping
+			const fullView = this._showSsEnds && ends;
+			_sl.ssConsFeatures = (fullView && ends.fullSsConsFeatures) || shiftFeatureMap(src.ssConsFeatures, shift) || undefined;
+			_sl.ssConsPkPairs = (fullView && ends.fullSsConsPkPairs) || shiftFeatureMap(src.ssConsPkPairs, shift) || undefined;
+			_sl.pseudoHelixCovAnnotations = shiftIdx(src.pseudoHelixCovAnnotations, shift) || undefined;
+			_sl.pseudoCovAnnotations = shiftIdx(src.pseudoCovAnnotations, shift) || undefined;
 			// Carry non-annotation data
 			_sl.ssEnds = ends || undefined;
 			_sl.isCovAnnot = src.isCovAnnot;
-			_sl.pseudoCovAnnotations = src.pseudoCovAnnotations || undefined;
 			_sl.covRawPairs = src.covRawPairs || layout.covRawPairs || undefined;
 			_sl.pairCanonPct = pairCanonPct || undefined;
-			_sl._canonAnnotations = null;
-			_sl._canonPkAnnotations = null;
-			_sl._savedPairAnnotColorMap = null;
-
-			// Store the trimmed-index base on the new layout so future rebuilds
-			// always have a stable unshifted source, even after loadCov writes onto _rna.
-			_sl._base = src._base || src;
+			// Keep the trimmed-index base (and the offset used) so later rebuilds and
+			// _syncBaseAnnotations always work from stable unshifted data.
+			_sl._base = src;
+			_sl._shift = shift;
 			this._structLayouts[idx] = _sl;
 			this._rna = _sl;
-			// Re-apply canonical pairs colouring if the toggle is active
-			if (this._covCanonMode && (_sl.pairCanonPct || _sl.covRawPairs)) this._applyCovCanonColoring();
-			this._render();
-			this.fit();
+			this._updateStatusBar();
+			this._drawCurrent(true);
 		}
 		// Update index visibility to match the given structure layout.
 		// Stockholm structures (with ssConsFeatures) hide indices; others restore them,
 		// unless the caller explicitly set showIndices:false in the config.
 		_applyStructIndices(rna, config) {
 			const isStockholm = !!(rna?.baseDisplay);
-			if (isStockholm) {
+			// switchToStructure already restored indices / SS-ends from the structure's saved state
+			const restored = !!rna?._toggleState;
+			if (restored) {
+				// keep restored values
+			} else if (isStockholm) {
 				this._showIndices = false;
 				if (this._chkIndices) this._chkIndices.classList.remove('rv--active');
 			} else {
-				// Restore indices — but only if the user hasn't explicitly disabled them.
+				// Restore indices - but only if the user hasn't explicitly disabled them.
 				// Check constructor config first (highest priority), then per-load config.
 				const constructorSaysOff = this._constructorConfig?.showIndices === false;
 				const loadSaysOff = (config ?? {}).showIndices === false;
@@ -9806,13 +9817,77 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 			// Reset ss-ends toggle to the config default when switching structures.
-			if (rna?.ssEnds) {
+			if (restored) {
+				if (!rna?.ssEnds) this._showSsEnds = false;
+			} else if (rna?.ssEnds) {
 				this._showSsEnds = this._constructorConfig?.showSsEnds === true;
 				if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
 			} else {
 				this._showSsEnds = false;
 				if (this._chkSsEnds) this._chkSsEnds.classList.remove('rv--active');
 			}
+			// Show W button only for Stockholm structures with sequence weighting available.
+			// The W state is global: apply it to the structure being shown (data only - the
+			// caller renders and re-applies canonical-pair colouring afterwards).
+			if (this._chkWeight) {
+				const idx = this._currentStructIdx >= 0 ? this._currentStructIdx : 0;
+				const s = this._structures?.[idx];
+				const hasWeighting = !!(s?._rVar);
+				this._chkWeight.style.display = hasWeighting ? '' : 'none';
+				this._chkWeight.classList.toggle('rv--active', this._useWeighting);
+				if (hasWeighting) {
+					this._updateWeightTitle();
+					this._applyWeighting(false);
+				}
+			}
+		}
+
+		// Hover text of the W button: the current state (on: GSC or PB weights over all sequences,
+		// off: unweighted frequencies).
+		_updateWeightTitle() {
+			const s = this._structures?.[this._currentStructIdx >= 0 ? this._currentStructIdx : 0];
+			if (!this._chkWeight || !s?._rVar) return;
+			const how = this._useWeighting ? (s.weighting === 'PB' ? 'position-based (PB)' : 'GSC') : 'unweighted frequencies';
+			this._chkWeight.title = `Sequence weighting ${this._useWeighting ? 'ON' : 'OFF'} (${how})`;
+		}
+
+		// Switch the current Stockholm structure between its weighted (R2R GSC/PB) and unweighted
+		// display variants. Both variants share the same columns, so only letters, colours, hover
+		// percentages and % canonical pairs change - the layout itself is untouched.
+		// The active variant is written into the structure record (s, s.ssEnds) so every later
+		// rebuild (_rebuildCurrentLayout, SS-ends toggle) picks it up automatically.
+		_applyWeighting(render = true) {
+			const idx = this._currentStructIdx;
+			const s = this._structures?.[idx];
+			if (!s?._rVar) return;
+			const v = this._useWeighting ? s._wVar : s._rVar;
+			s.sequence = v.sequence;
+			s.baseDisplay = v.baseDisplay;
+			s.pairCanonPct = v.pairCanonPct;
+			const ends = s.ssEnds;
+			if (ends?._rVar) {
+				const ev = this._useWeighting ? ends._wVar : ends._rVar;
+				ends.fullSeq = ev.fullSeq;
+				ends.fullBaseDisplay = ev.fullBaseDisplay;
+				ends.fullCanonPct = ev.fullCanonPct;
+			}
+			const layout = this._structLayouts?.[idx];
+			if (!layout) return;
+			// The live layout is either the trimmed one or the full (SS-ends) one.
+			const isFull = !!(ends && layout.sequence?.length === ends.fullStruct.length);
+			layout.sequence = isFull ? ends.fullSeq.join('') : s.sequence;
+			layout.baseDisplay = isFull ? ends.fullBaseDisplay : s.baseDisplay;
+			layout.pairCanonPct = isFull ? ends.fullCanonPct : s.pairCanonPct;
+			if (layout._base) {
+				layout._base.sequence = s.sequence;
+				layout._base.baseDisplay = s.baseDisplay;
+				layout._base.pairCanonPct = s.pairCanonPct;
+			}
+			// Canonical-pair colours depend on pairCanonPct: drop the cached colouring.
+			this._clearCanonState(layout);
+			if (!render || this._alnActive) return;
+			if (this._covCanonMode && layout.pairCanonPct) this._applyCovCanonColoring(); // renders
+			else this._render();
 		}
 		_readFileText(f) {
 			return new Promise((res, rej) => {
@@ -9857,6 +9932,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				el.style.transform = s < 1 ? `scale(${s.toFixed(4)})` : '';
 			};
 			scaleEl(this._palLegend,  'right', 'top',    0.4, 0.4);
+			scaleEl(this._outlineLegend, 'right', 'top', 0.4, 0.6);
 			scaleEl(this._legend,     'right', 'bottom', 0.4, 0.4);
 			scaleEl(this._alnLegend,  'right', 'bottom', 0.8, 0.3);
 		}
@@ -9899,9 +9975,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					setTimeout(updateArrows, 320);
 				};
 			}
-			this._structBar.addEventListener('scroll', updateArrows, {
-				passive: true
-			});
+			this._structBar.onscroll = updateArrows; // property, not addEventListener: rebuilt on every load
 			// Initial state after layout (scrollWidth not reliable until rendered)
 			requestAnimationFrame(() => {
 				// Scroll the active pill into view inside the bar
@@ -9967,43 +10041,22 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const tgtRna = this._structLayouts[idx];
 
 			// Save current toggle state onto the source layout so it's restored when switching back
-			srcRna._toggleState = {
-				showPairAnnotations: this._showPairAnnotations,
-				showColors: this._showColors,
-				showIndices: this._showIndices,
-				showPseudoknots: this._showPseudoknots,
-				showR3dInsets: this._showR3dInsets,
-				showR3dLabels: this._showR3dLabels,
-				showSsEnds: this._showSsEnds,
-				covCanonMode: this._covCanonMode,
-				layoutAlgo: srcRna._algo || this._layoutAlgo,
-			};
-			// Clear transient canon state from the source — it will be rebuilt on switch-back
-			srcRna._canonAnnotations = null;
-			srcRna._canonPkAnnotations = null;
-			srcRna._savedPairAnnotColorMap = null;
+			const T = _STRUCT_TOGGLES;
+			srcRna._toggleState = { covCanonMode: this._covCanonMode, layoutAlgo: srcRna._algo || this._layoutAlgo };
+			for (const [flag] of T) srcRna._toggleState[flag] = this[flag];
+			// Clear transient canon state from the source - it will be rebuilt on switch-back
+			this._clearCanonState(srcRna);
 			// Restore toggle state from the target layout (if previously saved)
 			if (tgtRna._toggleState) {
-				const s = tgtRna._toggleState;
-				this._showPairAnnotations = s.showPairAnnotations;
-				this._showColors = s.showColors;
-				this._showIndices = s.showIndices;
-				this._showPseudoknots = s.showPseudoknots;
-				this._showR3dInsets = s.showR3dInsets;
-				this._showR3dLabels = s.showR3dLabels;
-				this._showSsEnds = s.showSsEnds;
-				this._covCanonMode = s.covCanonMode ?? false;
-				if (s.layoutAlgo) { this._layoutAlgo = s.layoutAlgo; this._syncLayoutBtn(this._layoutAlgo); }
-				// Sync button visual states
-				if (this._chkPAnnot) this._chkPAnnot.classList.toggle('rv--active', this._showPairAnnotations);
-				if (this._chkColors) this._chkColors.classList.toggle('rv--active', this._showColors);
-				if (this._chkIndices) this._chkIndices.classList.toggle('rv--active', this._showIndices);
-				if (this._chkPk) this._chkPk.classList.toggle('rv--active', this._showPseudoknots);
-				if (this._chkR3dInsets) this._chkR3dInsets.classList.toggle('rv--active', this._showR3dInsets);
-				if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
-				if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
+				const st = tgtRna._toggleState;
+				for (const [flag, btn] of T) {
+					this[flag] = st[flag];
+					if (this[btn]) this[btn].classList.toggle('rv--active', !!this[flag]);
+				}
+				this._covCanonMode = st.covCanonMode ?? false;
+				if (st.layoutAlgo) { this._layoutAlgo = st.layoutAlgo; this._syncLayoutBtn(this._layoutAlgo); }
 			} else {
-				// No saved toggle state — restore layout algo from what was used to build this layout
+				// No saved toggle state - restore layout algo from what was used to build this layout
 				if (tgtRna._algo) { this._layoutAlgo = tgtRna._algo; this._syncLayoutBtn(this._layoutAlgo); }
 				// Reset covCanonMode for the new structure
 				this._covCanonMode = false;
@@ -10015,28 +10068,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 
 			this._currentStructIdx = idx;
-			// Animate only when both structures share the same sequence — different
+			// Animate only when both structures share the same sequence - different
 			// sequences mean different lengths / base identities which would corrupt
 			// the transition frame interpolation.
-			if (srcRna.sequence === tgtRna.sequence && this._transitionDuration > 0 && !srcRna.baseDisplay && !tgtRna.baseDisplay) {
+			this._outlinePick = null;
+			if (srcRna.sequence === tgtRna.sequence && this._transitionDuration > 0 && !srcRna.baseDisplay && !tgtRna.baseDisplay && !this._outlineMode) {
 				this._animateTransition(srcRna, tgtRna);
 			} else {
-				this._rna = tgtRna;
-				this._applyStructIndices(tgtRna, this._lastConfig);
-				this._updateStatusBar();
-				if (tgtRna.values) this._updateLegend(tgtRna.colorMap);
-				this._updateLegendVisibility();
-				if (this._showSsEnds && tgtRna?.ssEnds) {
-					this._rebuildCurrentLayout();
-				} else if (this._covCanonMode && tgtRna.pairCanonPct) {
-					this._applyCovCanonColoring();
-					this.fit();
-				} else {
-					this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
-					this._render();
-					this.fit();
-				}
+				this._activateLayout(tgtRna);
 			}
+		}
+		// Stop a running structure-transition animation. finish=true jumps to its end state.
+		_cancelAnimation(finish = false) {
+			if (!this._isAnimating) return;
+			cancelAnimationFrame(this._animFrame);
+			this._animFrame = null;
+			this._isAnimating = false;
+			this._structBar?.classList.remove('rv--animating');
+			const tgt = this._structLayouts?.[this._currentStructIdx];
+			if (finish && tgt) this._activateLayout(tgt, { fit: false });
 		}
 		_animateTransition(srcRna, tgtRna) {
 			const n = srcRna.n;
@@ -10080,21 +10130,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				} else {
 					this._isAnimating = false;
 					this._structBar?.classList.remove('rv--animating');
-					this._rna = tgtRna;
-					this._applyStructIndices(tgtRna, this._lastConfig);
-					this._buildPairAnnotLegend(tgtRna.pairAnnotColorMap, tgtRna?.isCovAnnot);
-					this._updateStatusBar();
-					if (tgtRna.values) this._updateLegend(tgtRna.colorMap);
-					this._updateLegendVisibility();
-					if (this._showSsEnds && tgtRna?.ssEnds) {
-						this._rebuildCurrentLayout();
-					} else if (this._covCanonMode && tgtRna.pairCanonPct) {
-						this._applyCovCanonColoring();
-						this.fit();
-					} else {
-						this._render();
-						this.fit();
-					}
+					this._activateLayout(tgtRna);
 				}
 			};
 			this._animFrame = requestAnimationFrame(frame);
@@ -10130,13 +10166,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Theme colors for animation
 			const cs = getComputedStyle(this._root);
 			const baseR = parseFloat(cs.getPropertyValue('--rv-base-radius')) || BASE_R;
-			const idxOff = parseFloat(cs.getPropertyValue('--rv-base-index-offset')) || 26;
 			const bgColor = cs.getPropertyValue('--rv-bg').trim() || '#ffffff';
 			const pairColor = cs.getPropertyValue('--rv-pair-break').trim ? cs.getPropertyValue('--rv-basepair').trim() || '#000' : '#000';
 			const breakColor = cs.getPropertyValue('--rv-pair-break').trim ? cs.getPropertyValue('--rv-pair-break').trim() || '#bc1717' : '#bc1717';
 			const formColor = cs.getPropertyValue('--rv-pair-form').trim() || '#21a325';
 			const bpWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
-			const pseudopairWidth = parseFloat(cs.getPropertyValue('--rv-pseudopair-width')) || 2;
 			// Helper, draw a styled bond (GC=double, GU=dot, AU=single)
 			const drawBond = (i, j, color, opacity) => {
 				if (opacity < 0.01) return;
@@ -10174,7 +10208,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				} else if (pair === 'AU' || pair === 'UA') {
 					mkL(x1, y1, x2, y2);
 				} else if (this._relaxedSequence) {
-					// Non-standard bases — single line
+					// Non-standard bases - single line
 					mkL(x1, y1, x2, y2);
 				} else {
 					// Non-canonical, dot only
@@ -10219,96 +10253,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				of gainedPairs) drawPair(i, j, formColor, fadeIn);
 			// Pseudoknot pairs (target) fading in, on top of bases
 			if (this._showPseudoknots !== false) {
-				const _showAnnot = this._showPairAnnotations;
-				const pkCovMap = _showAnnot ?
-					new Map((this._rna.pseudoCovAnnotations || []).map(({
-						i,
-						j,
-						color
-					}) => [pairKey(i, j), color])) :
-					new Map();
-				const pkHelixGlowSet = _showAnnot ?
-					new Set((this._rna.pseudoHelixCovAnnotations || []).map(({
-						i,
-						j
-					}) => pairKey(i, j))) :
-					new Set();
-				const _helixColor = cs.getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
-				const _pkColor = cs.getPropertyValue('--rv-pseudopair').trim() || '#1f2328';
-				const _pkWidth = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
-				// Build occupancy grid for arc direction selection
-				const _GRID = 30;
-				let _minGX = Infinity,
-					_maxGX = -Infinity,
-					_minGY = Infinity,
-					_maxGY = -Infinity;
-				for (let k = 0; k < coords.length; k++) {
-					if (coords[k].x < _minGX) _minGX = coords[k].x;
-					if (coords[k].x > _maxGX) _maxGX = coords[k].x;
-					if (coords[k].y < _minGY) _minGY = coords[k].y;
-					if (coords[k].y > _maxGY) _maxGY = coords[k].y;
-				}
-				const _span = Math.max(_maxGX - _minGX, _maxGY - _minGY, 1);
-				const _cellSize = _span / _GRID;
-				const _occ = new Uint8Array((_GRID + 2) * (_GRID + 2));
-				const _markCell = (gx, gy) => {
-					if (gx >= 0 && gx <= _GRID && gy >= 0 && gy <= _GRID)
-						_occ[gy * (_GRID + 2) + gx] = 1;
-				};
-				for (let k = 0; k < coords.length; k++) {
-					const gx = Math.min(_GRID, Math.floor((coords[k].x - _minGX) / _cellSize));
-					const gy = Math.min(_GRID, Math.floor((coords[k].y - _minGY) / _cellSize));
-					for (let dy = -1; dy <= 1; dy++)
-						for (let dx = -1; dx <= 1; dx++)
-							_markCell(gx + dx, gy + dy);
-				}
-				const _sampleOcc = (px, py) => {
-					if (px < _minGX || px > _maxGX || py < _minGY || py > _maxGY) return 0;
-					const gx = Math.min(_GRID, Math.max(0, Math.floor((px - _minGX) / _cellSize)));
-					const gy = Math.min(_GRID, Math.max(0, Math.floor((py - _minGY) / _cellSize)));
-					return _occ[gy * (_GRID + 2) + gx];
-				};
-				const _arcOcc = (ax, ay, cpx, cpy, bx, by) => {
-					let sum = 0;
-					for (let s = 1; s < 8; s++) {
-						const t = s / 8;
-						const px = (1 - t) * (1 - t) * ax + 2 * (1 - t) * t * cpx + t * t * bx;
-						const py = (1 - t) * (1 - t) * ay + 2 * (1 - t) * t * cpy + t * t * by;
-						sum += _sampleOcc(px, py);
-					}
-					return sum;
-				};
-				for (const ps of pseudoPairs) {
-					const key = pairKey(ps.i, ps.j);
-					const arcColor = pkCovMap.get(key) ?? _pkColor;
-					const strokeW = pkCovMap.has(key) ? _pkWidth * 1.5 : _pkWidth;
-					const ax = coords[ps.i].x,
-						ay = coords[ps.i].y;
-					const bx = coords[ps.j].x,
-						by = coords[ps.j].y;
-					const mx = (ax + bx) / 2,
-						my = (ay + by) / 2;
-					const len = Math.hypot(bx - ax, by - ay) || 1;
-					const nx = -(by - ay) / len,
-						ny = (bx - ax) / len;
-					const off = len * 0.35;
-					const cp1x = mx + nx * off,
-						cp1y = my + ny * off;
-					const cp2x = mx - nx * off,
-						cp2y = my - ny * off;
-					const sign = _arcOcc(ax, ay, cp1x, cp1y, bx, by) <= _arcOcc(ax, ay, cp2x, cp2y, bx, by) ? 1 : -1;
-					const arcD = `M ${ax} ${ay} Q ${mx + sign * nx * off} ${my + sign * ny * off} ${bx} ${by}`;
-					if (pkHelixGlowSet.has(key)) {
-						const glow = document.createElementNS(NS, 'path');
-						glow.setAttribute('d', arcD);
-						glow.style.cssText = `stroke:${_helixColor};stroke-width:${_pkWidth * 5};fill:none;stroke-linecap:round;opacity:0.25`;
-						g_pk.appendChild(glow);
-					}
-					const arc = document.createElementNS(NS, 'path');
-					arc.setAttribute('d', arcD);
-					arc.style.cssText = `stroke:${arcColor};stroke-width:${strokeW};fill:none;stroke-linecap:round;stroke-dasharray:5 3`;
-					g_pk.appendChild(arc);
-				}
+				this._drawPkArcs(g_pk, coords, pseudoPairs, cs);
 			}
 			// Pair annotation boxes (fade with target structure)
 			if (this._showPairAnnotations && pairAnnotations?.length) {
@@ -10367,7 +10312,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 		}
-		_exitAlnView() {
+		// refresh=true when the user leaves the view: apply toggles changed while it was open.
+		_exitAlnView(refresh = false) {
 			this._alnActive = false;
 			if (this._alnViewEl) {
 				this._alnViewEl.classList.remove('rv--active');
@@ -10381,11 +10327,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			if (this._alnBtn) {
 				this._alnBtn.classList.remove('rv--active');
-				this._alnBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Alignment view</span>';
+				this._alnBtn.innerHTML = ICON_ALN + '<span class="rv-btn-label">Alignment view</span>';
 			}
+			this._updateOutlineBar();
+			this._updateOutlineLegend();
 			if (this._rna?.values && this._showColors) this._legend.style.display = 'block';
 			if (this._rna?.pairAnnotColorMap && this._rna?.isCovAnnot && this._showPairAnnotations) this._palLegend.style.display = 'block';
 			if (this._alnLegend && this._rna?.baseDisplay) this._alnLegend.classList.add('rv-visible');
+			if (refresh) this._refreshView({ fit: false });
 		}
 		_toggleAlnView() {
 			if (!this._rna?.alnSeqs) return;
@@ -10398,14 +10347,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._legend.style.display = 'none';
 				this._palLegend.style.display = 'none';
 				if (this._alnLegend) this._alnLegend.classList.remove('rv-visible');
+				this._outlinePick = null;
+				this._updateOutlineBar();
+				this._updateOutlineLegend();
 				this._alnViewEl.classList.add('rv--active');
 				if (this._alnBtn) {
 					this._alnBtn.classList.add('rv--active');
-					this._alnBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg><span class="rv-btn-label">Structure</span>';
+					this._alnBtn.innerHTML = ICON_ALN + '<span class="rv-btn-label">Structure</span>';
 				}
 				this._buildAlnView();
 			} else {
-				this._exitAlnView();
+				this._exitAlnView(true);
 			}
 		}
 		_buildAlnView() {
@@ -10420,7 +10372,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				n
 			} = this._rna;
 			const pseudoPairs = this._rna.pseudoPairs || [];
-			// Rendered-index → helix colour
+			// Rendered-index > helix colour
 			const nHelices = helices?.length || 0;
 			const posColor = new Array(n).fill(null);
 			if (helices) {
@@ -10465,7 +10417,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				});
 			}
-			// Original alignment column (0-based) → colour
+			// Original alignment column (0-based) > colour
 			const colColor = new Array(alnLen).fill(null);
 			if (positionLabels) positionLabels.forEach((origCol1, ri) => {
 				colColor[origCol1 - 1] = posColor[ri];
@@ -10485,7 +10437,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				name,
 				seq
 			}) => !name.startsWith('#') && seq && /[A-Za-z]/.test(seq));
-			const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+			const esc = escHtml;
 			const muted = 'var(--rv-muted,#656d76)';
 			// thead
 			const hParts = ['<thead class="rv-aln-thead"><tr><td class="rv-aln-name">\u00a0</td>'];

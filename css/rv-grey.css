@@ -86,6 +86,13 @@
   --rv-inset-max-width:         120px;
   --rv-inset-min-width:         80px;
   --rv-logo-filter:             invert(1);
+
+    /* Outline mode (backbone-only view with coloured domains) */
+    --rv-outline-color: #eee;
+    --rv-outline-width: 25;
+
+    /* Annotation (SS_cons_*) label font size */
+    --rv-annot-label-font-size: 12;
 }
 
 /* ---- Toolbar ---- */
@@ -312,6 +319,124 @@
 .rv .rv-about-desc  { color: #ccc; }
 .rv .rv-about-link  { color: #ffcc00; }
 .rv .rv-about-link:hover { color: #ffd740; }
+
+/* ---- Inset panels & outline mode ---- */
+
+.rv .rv-pk-panel,
+.rv .rv-outline-legend,
+.rv .rv-outline-bar {
+    background: #333;
+    border-color: #555;
+    color: #eee;
+}
+.rv .rv-pk-panel h4,
+.rv .rv-outline-hint,
+.rv .rv-outline-cols,
+.rv .rv-outline-empty {
+    color: #aaa;
+}
+.rv .rv-outline-bar button {
+    background: #444;
+    border-color: #555;
+    color: #ffcc00;
+}
+.rv .rv-outline-bar button:hover:not(:disabled) {
+    border-color: #ffcc00;
+}
+.rv .rv-outline-bar input[type=color],
+.rv .rv-outline-row input[type=color],
+.rv .rv-setting-row input[type=color] {
+    border-color: #555;
+}
+.rv .rv-outline-name,
+.rv .rv-stop-val {
+    background: #444;
+    border-color: #555;
+    color: #eee;
+}
+.rv .rv-outline-swatch,
+.rv .rv-pal-swatch {
+    border-color: rgba(255,255,255,.25);
+}
+.rv .rv-stop-del { color: #aaa; }
+.rv .rv-stop-del:hover { color: #f87171; }
+.rv .rv-stop-add { color: #ffcc00; border-color: #555; }
+.rv .rv-setting-row input[type=range] { accent-color: #ffcc00; }
+
+/* ---- Rfam panel, error dialog, loading box ---- */
+
+.rv .rv-rfam-panel,
+.rv .rv-error-dialog,
+.rv .rv-loading {
+    background: #333;
+    border-color: #555;
+    color: #eee;
+}
+.rv .rv-rfam-input {
+    background: #444;
+    border-color: #555;
+    color: #eee;
+}
+.rv .rv-rfam-spinner,
+.rv .rv-loading-msg { color: #aaa; }
+.rv .rv-loading-spinner { border-color: #555; border-top-color: #ffcc00; }
+.rv .rv-error-dialog-hdr { border-bottom-color: #555; }
+.rv .rv-error-dialog-hdr h3 { color: #f87171; }
+.rv .rv-error-dialog-body { color: #eee; }
+.rv .rv-error {
+    background: #333;
+    border-color: #f8717160;
+    color: #f87171;
+}
+
+/* ---- Panel headers, inputs and lists ---- */
+
+.rv .rv-upload-hdr h3,
+.rv .rv-upload-lbl { color: #eee; }
+.rv .rv-upload-lbl span { color: #aaa; }
+.rv .rv-upload-x { color: #aaa; }
+.rv .rv-upload-x:hover { color: #ffcc00; }
+.rv .rv-upload-drop {
+    border-color: #555;
+    color: #aaa;
+}
+.rv .rv-upload-drop:hover,
+.rv .rv-upload-drop.rv--drag {
+    border-color: #ffcc00;
+    background: color-mix(in srgb, #ffcc00 8%, transparent);
+    color: #eee;
+}
+.rv .rv-upload-btn-cancel {
+    background: transparent;
+    border-color: #555;
+    color: #aaa;
+}
+.rv .rv-upload-btn-cancel:hover {
+    border-color: #eee;
+    color: #eee;
+}
+.rv .rv-xml-target-row,
+.rv .rv-annot-target-row {
+    background: #3a3a3a;
+    border-color: #555;
+    color: #eee;
+}
+.rv .rv-xml-target-row:hover,
+.rv .rv-annot-target-row:hover { border-color: #ffcc00; }
+.rv .rv-struct-order-idx,
+.rv .rv-struct-order-src,
+.rv .rv-struct-order-btn { color: #aaa; }
+.rv .rv-struct-order-btn:hover { color: #eee; }
+
+/* ---- Toolbar tooltips, zoom label, status dot ---- */
+
+.rv .rv-toolbar .rv-btn::after {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #eee;
+}
+.rv.rv--toolbar-left .rv-toolbar { border-right-color: #555; }
+.rv .rv-zoom-lbl { color: #aaa; }
 
 /* ---- Rotation handle ---- */
 

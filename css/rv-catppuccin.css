@@ -79,6 +79,13 @@
 
   /* Error border (semi-transparent) */
   --rv-error-border: #f38ba860;
+
+  /* Outline mode (backbone-only view with coloured domains) */
+  --rv-outline-color: #cdd6f4;
+  --rv-outline-width: 25;
+
+  /* Annotation (SS_cons_*) label font size */
+  --rv-annot-label-font-size: 12;
 }
 
 /* ─── Toolbar ─────────────────────────────────────────────────────────────── */
@@ -157,6 +164,82 @@
 .rv-theme-catppuccin .rv-about-name { color: var(--rv-accent); }
 .rv-theme-catppuccin .rv-about-link { color: var(--rv-accent); }
 .rv-theme-catppuccin .rv-about-link:hover { color: var(--rv-accent2); }
+
+/* ─── Inset panels & outline mode ─────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-pk-panel,
+.rv-theme-catppuccin .rv-outline-legend,
+.rv-theme-catppuccin .rv-outline-bar { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-pk-panel h4,
+.rv-theme-catppuccin .rv-outline-hint,
+.rv-theme-catppuccin .rv-outline-cols,
+.rv-theme-catppuccin .rv-outline-empty { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-outline-bar button { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-outline-bar button:hover:not(:disabled) { border-color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-outline-bar input[type=color],
+.rv-theme-catppuccin .rv-outline-row input[type=color],
+.rv-theme-catppuccin .rv-setting-row input[type=color] { border-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-outline-name,
+.rv-theme-catppuccin .rv-stop-val { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-outline-swatch,
+.rv-theme-catppuccin .rv-pal-swatch { border-color: color-mix(in srgb,var(--rv-text) 25%,transparent); }
+.rv-theme-catppuccin .rv-stop-del { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-stop-del:hover { color: var(--rv-error); }
+.rv-theme-catppuccin .rv-stop-add { color: var(--rv-accent); border-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-setting-row input[type=range] { accent-color: var(--rv-accent); }
+
+/* ─── Rfam panel, error dialog, loading box ───────────────────────────────── */
+
+.rv-theme-catppuccin .rv-rfam-panel,
+.rv-theme-catppuccin .rv-error-dialog,
+.rv-theme-catppuccin .rv-loading { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-rfam-input { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-rfam-spinner,
+.rv-theme-catppuccin .rv-loading-msg { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-loading-spinner { border-color: var(--rv-border); border-top-color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-error-dialog-hdr { border-bottom-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-error-dialog-hdr h3 { color: var(--rv-error); }
+.rv-theme-catppuccin .rv-error-dialog-body { color: var(--rv-text); }
+.rv-theme-catppuccin .rv-error { background: var(--rv-surface); border-color: var(--rv-error-border); color: var(--rv-error); }
+
+/* ─── Panel headers, inputs and lists ─────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-upload-hdr h3,
+.rv-theme-catppuccin .rv-upload-lbl { color: var(--rv-text); }
+.rv-theme-catppuccin .rv-upload-lbl span { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-upload-x { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-upload-x:hover { color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-upload-drop { border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-upload-drop:hover,
+.rv-theme-catppuccin .rv-upload-drop.rv--drag { border-color: var(--rv-accent); background: color-mix(in srgb,var(--rv-accent) 6%,transparent); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-upload-btn-cancel { background: transparent; border-color: var(--rv-border); color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-upload-btn-cancel:hover { border-color: var(--rv-text); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-xml-target-row,
+.rv-theme-catppuccin .rv-annot-target-row { background: var(--rv-bg); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin .rv-xml-target-row:hover,
+.rv-theme-catppuccin .rv-annot-target-row:hover { border-color: var(--rv-accent); }
+.rv-theme-catppuccin .rv-struct-order-idx,
+.rv-theme-catppuccin .rv-struct-order-src,
+.rv-theme-catppuccin .rv-struct-order-btn { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-struct-order-btn:hover { color: var(--rv-text); }
+
+/* ─── .rv-theme-catppuccinoolbar tooltips, zoom label, status dot, about ─────────────────────── */
+
+.rv-theme-catppuccin .rv-toolbar .rv-btn::after { background: var(--rv-surface); border-color: var(--rv-border); color: var(--rv-text); }
+.rv-theme-catppuccin.rv--toolbar-left .rv-toolbar { border-right-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-zoom-lbl { color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-dot { background: var(--rv-accent2); }
+.rv-theme-catppuccin .rv-about-ver,
+.rv-theme-catppuccin .rv-about-desc { color: var(--rv-muted); }
+
+/* ─── Alignment view ──────────────────────────────────────────────────────── */
+
+.rv-theme-catppuccin .rv-aln-scroll { background: var(--rv-bg); }
+.rv-theme-catppuccin .rv-aln-thead th { background: var(--rv-surface); border-bottom-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-aln-tfoot td { background: var(--rv-surface); border-top-color: var(--rv-border); }
+.rv-theme-catppuccin .rv-aln-name { background: var(--rv-bg); color: var(--rv-muted); }
+.rv-theme-catppuccin .rv-aln-thead .rv-aln-name,
+.rv-theme-catppuccin .rv-aln-tfoot .rv-aln-name { background: var(--rv-surface); color: var(--rv-text); }
 
 /* ─── Scrollbars ──────────────────────────────────────────────────────────── */
 

@@ -56,7 +56,7 @@ if (isCLI) {
 if (cliArgs.help || cliArgs.h) {
 
     console.log(`
- RFview (v1.1.8)
+ RFview (v1.2.0)
  RNA Framework Structure Viewer [https://github.com/dincarnato/RFviewJS]
 
  Author:   Danny Incarnato (dincarnato[at]rnaframework.com)
@@ -292,6 +292,72 @@ ipcMain.handle('fetch-rfam', async (_, rfamId) => {
     });
 });
 
+// Stockholm input (--structureFile, or the alignment downloaded for --rfam) is read in chunks of
+// whole lines and fed straight into RFview's own Stockholm reader, so it is never held in memory as
+// a whole (RFview keeps the first 1000 sequences as text for the alignment view and uses all of them,
+// compactly, for the consensus: GSC up to 1000 sequences, PB above).
+// Everything here is synchronous on purpose: handing control back to the event loop would let
+// Electron initialise the display, which fails on machines without one.
+function syncLineChunks(file, chunkSize = 4 * 1024 * 1024) {
+    const { StringDecoder } = require('string_decoder');
+    const decoder = new StringDecoder('utf8'); // keeps multi-byte characters split across reads intact
+    const fd = fs.openSync(file, 'r');
+    const buf = Buffer.allocUnsafe(chunkSize);
+    let carry = '', done = false;
+    return {
+        // Next block of complete lines (without the final line break), or null at the end of the file
+        next() {
+            while (!done) {
+                const bytesRead = fs.readSync(fd, buf, 0, chunkSize, null);
+                if (bytesRead === 0) {
+                    done = true;
+                    fs.closeSync(fd);
+                    const rest = carry + decoder.end();
+                    carry = '';
+                    return rest.length ? rest : null;
+                }
+                const text = carry + decoder.write(buf.subarray(0, bytesRead));
+                let cut = text.lastIndexOf('\n');
+                if (cut < 0) cut = text.lastIndexOf('\r');
+                if (cut < 0) { carry = text; continue; } // no line break yet: read more
+                carry = text.slice(cut + 1);
+                return text.slice(0, cut);
+            }
+            return null;
+        },
+    };
+}
+// Whether a file starts with '# STOCKHOLM' (optionally after a UTF-8 byte-order mark / whitespace)
+function isStockholmFile(file) {
+    const peek = Buffer.alloc(64);
+    const fd = fs.openSync(file, 'r');
+    const n = fs.readSync(fd, peek, 0, 64, 0);
+    fs.closeSync(fd);
+    return peek.subarray(0, n).toString('utf8').replace(/^\uFEFF/, '').trimStart().startsWith('# STOCKHOLM');
+}
+// Download url to file without leaving the main thread: a child process (this same executable run
+// as plain Node) streams the response to disk while execFileSync waits for it.
+function downloadSync(url, file) {
+    const script = `
+        const [url, out] = process.argv.slice(-2);
+        require(url.startsWith('http:') ? 'http' : 'https').get(url, res => {
+            if (res.statusCode !== 200) { res.resume(); process.stderr.write('HTTP ' + res.statusCode); process.exit(3); }
+            const f = require('fs').createWriteStream(out);
+            res.pipe(f);
+            f.on('finish', () => process.exit(0));
+            f.on('error', e => { process.stderr.write(e.message); process.exit(2); });
+        }).on('error', e => { process.stderr.write(e.message); process.exit(2); });`;
+    try {
+        require('child_process').execFileSync(process.execPath, ['-e', script, url, file], {
+            env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+            stdio: ['ignore', 'ignore', 'pipe'],
+        });
+        return null;
+    } catch (e) {
+        return (e.stderr && e.stderr.toString().trim()) || e.message;
+    }
+}
+
 // Headless / CLI mode
 async function runHeadless(args) {
 
@@ -325,98 +391,32 @@ async function runHeadless(args) {
         console.error(`[!] Error: unknown layout "${layout}" (available: ${validLayouts.join(', ')})`); process.exit(1);
     }
 
-    let structureText, structureName;
+    // Stockholm input (an Rfam alignment, or a --structureFile starting with '# STOCKHOLM') is
+    // streamed into RFview's reader (see syncLineChunks); other structure files are read whole.
+    let structureText = null, structureName, structureStream = null;
+    let removeTmp = () => {}; // deletes the downloaded Rfam alignment (process.exit skips 'exit' handlers here)
     if (args.rfam) {
         const rfamId = args.rfam.toUpperCase();
         console.log(`Fetching Rfam alignment: ${rfamId}`);
-        try {
-          structureText = await new Promise((resolve, reject) => {
-          const https = require('https');
-          const url = `https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`;
-          https.get(url, res => {
-              if (res.statusCode !== 200) {
-                  res.resume();
-                  reject(new Error(`HTTP ${res.statusCode} — family "${rfamId}" not found on Rfam`));
-                  return;
-              }
-              let data = '';
-              res.on('data', chunk => data += chunk);
-              res.on('end', () => resolve(data));
-          }).on('error', err => reject(err));
-        });
-        } catch (err) {
-          console.error(`[!] Error: ${err.message}`);
-          app.exit(1);
-          return;
+        const tmpDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'rfview-'));
+        removeTmp = () => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {} };
+        const tmpFile = path.join(tmpDir, rfamId + '.sto');
+        const err = downloadSync(`https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`, tmpFile);
+        if (err) {
+            removeTmp();
+            console.error(/^HTTP \d+$/.test(err) ? `[!] Error: ${err} — family "${rfamId}" not found on Rfam` : `[!] Error: ${err}`);
+            process.exit(1);
         }
-    if (!structureText.trimStart().startsWith('# STOCKHOLM')) {
-        console.error(`[!] Error: Rfam returned no valid alignment for "${rfamId}". Please verify ID.`);
-        process.exit(1);
-        return;
-    }
-    structureName = rfamId + '.sto';
+        if (!isStockholmFile(tmpFile)) {
+            removeTmp();
+            console.error(`[!] Error: Rfam returned no valid alignment for "${rfamId}". Please verify ID.`);
+            process.exit(1);
+        }
+        structureStream = syncLineChunks(tmpFile);
+        structureName = rfamId + '.sto';
     } else {
-        // Peek to detect Stockholm format
-        const _peek = Buffer.alloc(64);
-        const _fd = fs.openSync(args.structureFile, 'r');
-        fs.readSync(_fd, _peek, 0, 64, 0);
-        fs.closeSync(_fd);
-        if (_peek.toString('utf8').trimStart().startsWith('# STOCKHOLM')) {
-            // Read synchronously in chunks — keep only first 1000 sequences + SS_cons.
-            // Never store #=GS/#=GR lines to avoid OOM on large files.
-            const LIMIT = 1000;
-            const seqs = new Map(), seqOrder = [];
-            const ssConsParts = [], ssConsFeatureParts = {};
-            let stoId = null, stoAc = null;
-            const RBUF = Buffer.alloc(64 * 1024);
-            const fd2 = fs.openSync(args.structureFile, 'r');
-            let leftover = '', bytesRead;
-            const processLine = line => {
-                if (line.startsWith('#=GC SS_cons_')) {
-                    const fields = line.split(/\s+/);
-                    const fn = fields[1].slice('SS_cons_'.length);
-                    if (fn) { if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = []; ssConsFeatureParts[fn].push(fields[fields.length-1]); }
-                } else if (line.startsWith('#=GC SS_cons')) {
-                    const fields = line.split(/\s+/);
-                    ssConsParts.push(fields[fields.length-1]);
-                } else if (line.startsWith('#=GF ID ')) { stoId = line.slice(8).trim();
-                } else if (line.startsWith('#=GF AC ')) { stoAc = line.slice(8).trim();
-                } else if (!line.startsWith('#')) {
-                    const t = line.trim(), sp = t.search(/\s/);
-                    if (sp > 0) {
-                        const sid = t.slice(0, sp), seq = t.slice(sp).trim();
-                        if (sid && seq) {
-                            if (!seqs.has(sid)) {
-                                if (seqOrder.length >= LIMIT) return;
-                                seqs.set(sid, ''); seqOrder.push(sid);
-                            }
-                            seqs.set(sid, seqs.get(sid) + seq);
-                        }
-                    }
-                }
-            };
-            while ((bytesRead = fs.readSync(fd2, RBUF, 0, RBUF.length, null)) > 0) {
-                const chunk = leftover + RBUF.slice(0, bytesRead).toString('utf8');
-                const lines = chunk.split('\n');
-                leftover = lines.pop();
-                for (const line of lines) processLine(line.replace(/\r$/, ''));
-            }
-            if (leftover) processLine(leftover);
-            fs.closeSync(fd2);
-            const ssConsLines = ssConsParts.map(p => '#=GC SS_cons' + ' '.repeat(20) + p);
-            const ssFeatureLines = Object.entries(ssConsFeatureParts).flatMap(([fn, parts]) =>
-                parts.map(p => '#=GC SS_cons_' + fn + ' '.repeat(Math.max(1,19-fn.length)) + p));
-            const seqLines = seqOrder.map(id => id + ' '.repeat(Math.max(1, 30-id.length)) + seqs.get(id));
-            structureText = '# STOCKHOLM 1.0\n' +
-                (stoId ? '#=GF ID ' + stoId + '\n' : '') +
-                (stoAc ? '#=GF AC ' + stoAc + '\n' : '') +
-                seqLines.join('\n') + '\n' +
-                ssConsLines.join('\n') + '\n' +
-                ssFeatureLines.join('\n') + '\n' +
-                '//\n';
-        } else {
-            structureText = fs.readFileSync(args.structureFile, 'utf8');
-        }
+        if (isStockholmFile(args.structureFile)) structureStream = syncLineChunks(args.structureFile);
+        else structureText = fs.readFileSync(args.structureFile, 'utf8');
         structureName = path.basename(args.structureFile);
     }
     const xmlText = args.xml ? fs.readFileSync(args.xml, 'utf8') : null;
@@ -494,9 +494,22 @@ async function runHeadless(args) {
     if (layout && layout !== 'auto') viewer.setLayoutAlgorithm(layout);
     if (args.noLegend) viewer._noLegend = true;
 
+    // Stockholm alignments go line by line into RFview's Stockholm reader (synchronous reads: the
+    // reader's awaits resolve without returning to the event loop)
+    const feedLines = async (_file, onLine) => {
+        for (let chunk; (chunk = structureStream.next()) !== null;) {
+            const lines = chunk.split(/\r\n|\r|\n/);
+            for (let i = 0; i < lines.length; i++) onLine(lines[i]);
+        }
+    };
     let structs;
-    try { structs = RFviewJS.parseDbFile(structureText, structureName); }
-    catch (e) { console.error(`[!] Cannot parse "${structureName}": ${e.message}`); process.exit(1); }
+    try {
+        structs = structureStream
+            ? await RFviewJS.parseStockholmFileChunked(null, structureName, feedLines, false, null)
+            : RFviewJS.parseDbFile(structureText, structureName);
+    }
+    catch (e) { removeTmp(); console.error(`[!] Cannot parse "${structureName}": ${e.message}`); process.exit(1); }
+    removeTmp(); // the alignment has been read
     if (!structs?.length) { console.error(`[!] No structure records found in "${structureName}".`); process.exit(1); }
 
     if (xmlText) {

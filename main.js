@@ -54,7 +54,7 @@ if (isCLI) {
 if (cliArgs.help || cliArgs.h) {
 
     console.log(`
- RFview (v1.1.8)
+ RFview (v1.2.0)
  RNA Framework Structure Viewer [https://github.com/dincarnato/RFviewJS]
 
  Author:   Danny Incarnato (dincarnato[at]rnaframework.com)
@@ -269,6 +269,51 @@ ipcMain.handle('headless-done', async (_, svgText, outPath, pdfPath) => {
     return true;
 });
 
+// Streamed Stockholm input (CLI: --structureFile or --rfam): the renderer pulls the alignment in
+// chunks of whole lines and feeds them to RFview's own Stockholm reader, so it is never held in
+// memory as a whole (RFview keeps the first 1000 sequences as text for the alignment view and uses
+// all of them, compactly, for the consensus: GSC up to 1000 sequences, PB above).
+// source: any readable byte stream (file stream, HTTPS response).
+let structureStream = null;
+function lineChunks(source, minChars = 1024 * 1024) {
+    const { StringDecoder } = require('string_decoder');
+    const decoder = new StringDecoder('utf8'); // keeps multi-byte characters split across reads intact
+    const it = source[Symbol.asyncIterator]();
+    let carry = '', done = false;
+    const read = async () => { // append the next piece to carry; false at the end of the stream
+        const { value, done: end } = await it.next();
+        if (end) { done = true; carry += decoder.end(); return false; }
+        carry += decoder.write(value);
+        return true;
+    };
+    return {
+        // The first characters of the stream, without consuming them (format check)
+        async head(n = 64) {
+            while (!done && carry.length < n) await read();
+            return carry.slice(0, n);
+        },
+        // Next block of complete lines (at least minChars unless the stream ends; without the final
+        // line break), or null at the end of the stream
+        async next() {
+            while (!done && carry.length < minChars) await read();
+            let cut = done ? carry.length : carry.lastIndexOf('\n');
+            if (cut < 0) cut = carry.lastIndexOf('\r');
+            while (cut < 0 && !done) { // one line longer than minChars: read until it ends
+                await read();
+                cut = done ? carry.length : carry.lastIndexOf('\n');
+                if (cut < 0) cut = carry.lastIndexOf('\r');
+            }
+            if (!carry.length) return null;
+            const out = carry.slice(0, cut);
+            carry = carry.slice(cut + 1);
+            return out;
+        },
+        close() { source.destroy?.(); },
+    };
+}
+const isStockholmHead = head => head.replace(/^\uFEFF/, '').trimStart().startsWith('# STOCKHOLM');
+ipcMain.handle('structure-chunk', async () => (structureStream ? structureStream.next() : null));
+
 ipcMain.handle('headless-error', async (_, message) => {
 
     console.error(`[!] Error: ${message}`);
@@ -323,96 +368,41 @@ async function runHeadless(args) {
         console.error(`[!] Error: unknown layout "${layout}" (available: ${validLayouts.join(', ')})`); app.exit(1); return;
     }
 
-    let structureText, structureName;
+    // Stockholm input (an Rfam alignment, or a --structureFile starting with '# STOCKHOLM') is
+    // streamed to the renderer (see lineChunks); other structure files are read whole.
+    let structureText = null, structureName, streamStructure = false;
     if (args.rfam) {
         const rfamId = args.rfam.toUpperCase();
         console.log(`Fetching Rfam alignment: ${rfamId}`);
         try {
-          structureText = await new Promise((resolve, reject) => {
-          const https = require('https');
-          const url = `https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`;
-          https.get(url, res => {
-              if (res.statusCode !== 200) {
-                  res.resume();
-                  reject(new Error(`HTTP ${res.statusCode} — family "${rfamId}" not found on Rfam`));
-                  return;
-              }
-              let data = '';
-              res.on('data', chunk => data += chunk);
-              res.on('end', () => resolve(data));
-          }).on('error', err => reject(err));
-        });
+            const res = await new Promise((resolve, reject) => {
+                const url = `https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`;
+                require(url.startsWith('http:') ? 'http' : 'https').get(url, resolve).on('error', reject);
+            });
+            if (res.statusCode !== 200) {
+                res.resume();
+                throw new Error(`HTTP ${res.statusCode} — family "${rfamId}" not found on Rfam`);
+            }
+            structureStream = lineChunks(res);
+            if (!isStockholmHead(await structureStream.head())) {
+                structureStream.close();
+                throw new Error(`Rfam returned no valid alignment for "${rfamId}". Please verify ID.`);
+            }
         } catch (err) {
-          console.error(`[!] Error: ${err.message}`);
-          app.exit(1);
-          return;
+            console.error(`[!] Error: ${err.message}`);
+            app.exit(1);
+            return;
         }
-    if (!structureText.trimStart().startsWith('# STOCKHOLM')) {
-        console.error(`[!] Error: Rfam returned no valid alignment for "${rfamId}". Please verify ID.`);
-        app.exit(1);
-        return;
-    }
-    structureName = rfamId + '.sto';
+        structureName = rfamId + '.sto';
+        streamStructure = true;
     } else {
         structureName = path.basename(args.structureFile);
-        // Peek to detect Stockholm format
-        const _peek = Buffer.alloc(64);
-        const _fd = fs.openSync(args.structureFile, 'r');
-        fs.readSync(_fd, _peek, 0, 64, 0);
-        fs.closeSync(_fd);
-        if (_peek.toString('utf8').trimStart().startsWith('# STOCKHOLM')) {
-            // Stream line by line — keep only first 1000 sequences + SS_cons lines.
-            // Never store #=GS, #=GR or other annotation lines to avoid OOM.
-            const readline = require('readline');
-            const LIMIT = 1000;
-            const seqs = new Map(), seqOrder = [];
-            const ssConsParts = [], ssConsFeatureParts = {};
-            let stoId = null, stoAc = null;
-            await new Promise((resolve, reject) => {
-                const rl = readline.createInterface({
-                    input: fs.createReadStream(args.structureFile, { encoding: 'utf8' }),
-                    crlfDelay: Infinity,
-                });
-                rl.on('line', line => {
-                    if (line.startsWith('#=GC SS_cons_')) {
-                        const fields = line.split(/\s+/);
-                        const fn = fields[1].slice('SS_cons_'.length);
-                        if (fn) { if (!ssConsFeatureParts[fn]) ssConsFeatureParts[fn] = []; ssConsFeatureParts[fn].push(fields[fields.length-1]); }
-                    } else if (line.startsWith('#=GC SS_cons')) {
-                        const fields = line.split(/\s+/);
-                        ssConsParts.push(fields[fields.length-1]);
-                    } else if (line.startsWith('#=GF ID ')) { stoId = line.slice(8).trim();
-                    } else if (line.startsWith('#=GF AC ')) { stoAc = line.slice(8).trim();
-                    } else if (!line.startsWith('#')) {
-                        const t = line.trim(), sp = t.search(/\s/);
-                        if (sp > 0) {
-                            const sid = t.slice(0, sp), seq = t.slice(sp).trim();
-                            if (sid && seq) {
-                                if (!seqs.has(sid)) {
-                                    if (seqOrder.length >= LIMIT) return;
-                                    seqs.set(sid, ''); seqOrder.push(sid);
-                                }
-                                seqs.set(sid, seqs.get(sid) + seq);
-                            }
-                        }
-                    }
-                });
-                rl.on('close', resolve);
-                rl.on('error', reject);
-            });
-            // Reconstruct minimal valid Stockholm text
-            const ssConsLines = ssConsParts.map((p, i) => '#=GC SS_cons' + ' '.repeat(20) + p);
-            const ssFeatureLines = Object.entries(ssConsFeatureParts).flatMap(([fn, parts]) =>
-                parts.map(p => '#=GC SS_cons_' + fn + ' '.repeat(Math.max(1,19-fn.length)) + p));
-            const seqLines = seqOrder.map(id => id + ' '.repeat(Math.max(1, 30-id.length)) + seqs.get(id));
-            structureText = '# STOCKHOLM 1.0\n' +
-                (stoId ? '#=GF ID ' + stoId + '\n' : '') +
-                (stoAc ? '#=GF AC ' + stoAc + '\n' : '') +
-                seqLines.join('\n') + '\n' +
-                ssConsLines.join('\n') + '\n' +
-                ssFeatureLines.join('\n') + '\n' +
-                '//\n';
+        const fileStream = lineChunks(fs.createReadStream(args.structureFile, { highWaterMark: 4 * 1024 * 1024 }));
+        if (isStockholmHead(await fileStream.head())) {
+            structureStream = fileStream;
+            streamStructure = true;
         } else {
+            fileStream.close();
             structureText = fs.readFileSync(args.structureFile, 'utf8');
         }
     }
@@ -478,10 +468,10 @@ async function runHeadless(args) {
 
         // Embeds all data as JSON so no IPC hand-off is needed.
         // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-        const payload = JSON.stringify({ structureText, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, pdfPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds, percCanonical: !!args.percCanonical });
+        const payload = JSON.stringify({ structureText, streamStructure, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, pdfPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds, percCanonical: !!args.percCanonical });
 
         const code = `
-(function () {
+(async function () {
   try {
     const d = ${payload};
 
@@ -491,9 +481,22 @@ async function runHeadless(args) {
     if (d.layout && d.layout !== 'auto') viewer.setLayoutAlgorithm(d.layout);
     if (d.noLegend) viewer._noLegend = true;
 
-    /* Parse structure */
+    /* Parse structure: a Stockholm --structureFile is streamed from the main process in chunks
+       of whole lines, straight into RFview's Stockholm reader                                  */
+    const feedLines = async function (_file, onLine) {
+      for (;;) {
+        const chunk = await window.electronAPI.readStructureChunk();
+        if (chunk === null) return;
+        const lines = chunk.split(/\\r\\n|\\r|\\n/);
+        for (let i = 0; i < lines.length; i++) onLine(lines[i]);
+      }
+    };
     let structs;
-    try { structs = RFviewJS.parseDbFile(d.structureText, d.structureName); }
+    try {
+      structs = d.streamStructure
+        ? await RFviewJS.parseStockholmFileChunked(null, d.structureName, feedLines, false, null)
+        : RFviewJS.parseDbFile(d.structureText, d.structureName);
+    }
     catch (e) { window.electronAPI.headlessError('Cannot parse "' + d.structureName + '": ' + e.message); return; }
     if (!structs || !structs.length) {
       window.electronAPI.headlessError('No structure records found in "' + d.structureName + '".');
