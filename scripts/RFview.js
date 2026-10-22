@@ -2985,7 +2985,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._vscale = 1;
 			this._autoRefit = config.autoRefit !== false;
 			this._covCanonMode = !!config.showPercCanonical;
-			// Outline mode: backbone only, with colored domains (per structure: s.outlineDomains)
+			// Outline mode: backbone only, with coloured domains (per structure: s.outlineDomains)
 			this._outlineMode = !!config.outlineMode;
 			this._outlinePick = null;      // {idx} start base of the domain being picked by clicking
 			this._outlineColorIdx = 0;     // next palette colour for click-made domains
@@ -3087,9 +3087,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					b.pseudoknots ? `<button class="rv-btn rv-btn-toggle rv-chk-pk" title="Pseudoknots" style="display:none">${ICON_PK}<span class="rv-btn-label">Pseudoknots</span></button>` : '',
 					b.insets ? toggleBtn('rv-chk-r3d-insets', 'Inset panels', letterIcon('I'), 'Insets') : '',
 					b.labels ? toggleBtn('rv-chk-r3d-labels', 'Annotation labels', letterIcon('L'), 'Labels') : '',
-					b.ssEnds ? toggleBtn('rv-chk-ssends', 'Single-stranded 5&prime;/3&prime; ends', '<span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span>', 'SS ends') : '',
+					b.ssEnds ? toggleBtn('rv-chk-ssends', 'Show/hide single-stranded 5&prime;/3&prime; ends', '<span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:-0.5px;line-height:1">SS</span>', 'SS ends') : '',
 					b.weighting ? toggleBtn('rv-chk-weight rv--active', 'Sequence weighting', ICON_WEIGHT, 'Weighting') : '',
-					b.outline ? `<button class="rv-btn rv-btn-toggle rv-chk-outline" title="Outline mode" style="display:none">${ICON_OUTLINE}<span class="rv-btn-label">Outline</span></button>` : '',
+					b.outline ? `<button class="rv-btn rv-btn-toggle rv-chk-outline" title="Outline mode: backbone only, colour domains along it" style="display:none">${ICON_OUTLINE}<span class="rv-btn-label">Outline</span></button>` : '',
 				].join('')],
 				// Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
 				[b.layout || b.alignment, [b.layout ? `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>` : '', b.alignment ? toggleBtn('rv-btn-aln', 'Alignment view', ICON_ALN, 'Alignment view') : '', ].join('')],
@@ -3393,7 +3393,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
 			this._showSsEnds = this._constructorConfig?.showSsEnds === true;
 			if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
-			this._useWeighting = true; // sequence weighting on by default
+			this._useWeighting = this._constructorConfig?.weighting !== false; // sequence weighting on by default
 			if (this._chkWeight) this._chkWeight.classList.toggle('rv--active', this._useWeighting);
 			this._layoutBtn = q('.rv-btn-layout');
 			this._uploadBtn = q('.rv-btn-upload');
@@ -4154,6 +4154,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
 			this._rebuildCurrentLayout();
 		}
+		// Turn sequence weighting of the consensus (R2R GSC/PB weights) on or off. Only Stockholm
+		// structures have a weighted variant, so the flag is kept but has no visible effect otherwise.
+		setWeighting(val) {
+			const on = !!val;
+			if (on === this._useWeighting) return;
+			this._useWeighting = on;
+			if (this._chkWeight) this._chkWeight.classList.toggle('rv--active', on);
+			this._updateWeightTitle();
+			if (this._structures?.[this._currentStructIdx]?._rVar) this._applyWeighting();
+		}
+		getWeighting() { return this._useWeighting; }
 		// Switch the layout algorithm and re-renders the current structure if one is loaded
 		setLayoutAlgorithm(algo) {
 			const valid = ['auto', 'naview', 'radiate'];
@@ -7252,7 +7263,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const s = this._structures?.[this._currentStructIdx];
 			if (!s) return null;
 			const doms = this._outlineDomains(true);
-			const b = this._outlineBounds();
+			const dom = this._normOutlineDomain(d, doms, s);
+			doms.push(dom);
+			if (refresh) this._outlineChanged();
+			return dom;
+		}
+		// Build a normalised domain for structure record `s`, given the domains already defined on it
+		_normOutlineDomain(d, doms, s) {
+			d = d && typeof d === 'object' ? d : {};
+			const b = this._outlineBounds(s);
 			const prevEnd = doms.length ? doms[doms.length - 1].end : null;
 			const dom = {
 				name: d.name != null && String(d.name).trim() !== '' ? String(d.name) : `Domain #${doms.length + 1}`,
@@ -7260,9 +7279,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				end: Number.isFinite(+d.end) && d.end !== null && d.end !== '' ? +d.end : b.max,
 				color: /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color.toLowerCase() : '#000000',
 			};
-			this._clampOutlineDomain(dom);
-			doms.push(dom);
-			if (refresh) this._outlineChanged();
+			this._clampOutlineDomain(dom, s);
 			return dom;
 		}
 		removeOutlineDomain(i) {
@@ -7283,15 +7300,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return r?.positionLabels || Array.from({ length: r?.n || 0 }, (_, i) => i + 1);
 		}
 		// Numbering limits of the whole RNA (the untrimmed one when single-stranded ends exist)
-		_outlineBounds() {
-			const s = this._structures?.[this._currentStructIdx];
+		_outlineBounds(s = this._structures?.[this._currentStructIdx]) {
 			const full = s?.ssEnds?.fullPositionLabels || s?.positionLabels;
 			if (full?.length) return { min: full[0], max: full[full.length - 1] };
 			const n = s?.ssEnds?.fullStruct?.length || s?.structure?.length || this._rna?.n || 1;
 			return { min: 1, max: n };
 		}
-		_clampOutlineDomain(dom) {
-			const b = this._outlineBounds();
+		_clampOutlineDomain(dom, s) {
+			const b = this._outlineBounds(s);
 			dom.start = Math.min(b.max, Math.max(b.min, Math.round(dom.start)));
 			dom.end = Math.min(b.max, Math.max(b.min, Math.round(dom.end)));
 			if (dom.end < dom.start) [dom.start, dom.end] = [dom.end, dom.start];
@@ -7319,7 +7335,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!this._outlineBar) return;
 			this._outlineBar.classList.toggle('rv-visible', this._outlineMode && !!this._rna && !this._alnActive);
 			const hint = this._outlineBar.querySelector('.rv-outline-hint');
-			if (hint) hint.textContent = this._outlinePick ? 'Click to select the end of the domain (Esc to cancel)' : 'Click to select the start of the domain';
+			if (hint) hint.textContent = this._outlinePick ? 'Click the end of the domain (Esc cancels)' : 'Click the backbone where a domain starts';
 			const undo = this._outlineBar.querySelector('.rv-outline-undo');
 			if (undo) undo.disabled = !this._outlineDomains(false).length;
 		}
@@ -9712,8 +9728,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					ssConsFeatures: s.ssConsFeatures || sl?.ssConsFeatures || undefined,
 					ssConsPkPairs: s.ssConsPkPairs || sl?.ssConsPkPairs || undefined,
 					pairCanonPct: s.pairCanonPct || sl?.pairCanonPct || undefined,
+					outlineDomains: s.outlineDomains || config.outlineDomains || undefined,
 				};
 			});
+			// Outline domains given in the config get the same defaults and clamping as addOutlineDomain()
+			for (const s of this._structures) {
+				if (!Array.isArray(s.outlineDomains)) { delete s.outlineDomains; continue; }
+				const doms = [];
+				for (const d of s.outlineDomains) doms.push(this._normOutlineDomain(d, doms, s));
+				s.outlineDomains = doms;
+			}
+			// Sequence weighting state (global) from the config, when given
+			if (config.weighting != null) this._useWeighting = config.weighting !== false;
 			this._buildStructSwitcher();
 			this._rna = this._structLayouts[this._currentStructIdx];
 			// Show % canonical toggle for Stockholm structures; mode starts from the showPercCanonical option
@@ -9848,7 +9874,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const s = this._structures?.[this._currentStructIdx >= 0 ? this._currentStructIdx : 0];
 			if (!this._chkWeight || !s?._rVar) return;
 			const how = this._useWeighting ? (s.weighting === 'PB' ? 'position-based (PB)' : 'GSC') : 'unweighted frequencies';
-			this._chkWeight.title = `Sequence weighting ${this._useWeighting ? 'ON' : 'OFF'} (${how})`;
+			this._chkWeight.title = `Sequence weighting ${this._useWeighting ? 'on' : 'off'} (${how})`;
 		}
 
 		// Switch the current Stockholm structure between its weighted (R2R GSC/PB) and unweighted
