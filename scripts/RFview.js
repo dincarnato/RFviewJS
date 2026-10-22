@@ -33,7 +33,7 @@
 	// Scoped CSS (injected once)
 	const STYLE_ID = 'rfviewjs-css';
 
-	// Structural CSS - all  colors use var(--rv-*, fallback).
+	// Structural CSS, all colors use var(--rv-*, fallback).
 	// Fallback values match rfviewjs.css exactly, so appearance is identical
 	// whether or not the external stylesheet is loaded.
 	const CSS = `
@@ -292,7 +292,6 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// Data lines: n Base n-1 n+1 pairedWith naturalIndex
 	// Multiple structures allowed (one header block each)
 	// Pseudoknots are detected and encoded with [], {}, <> brackets
-	//
 	function parseCTFile(text) {
 		const records = [];
 		const rawLines = text.replace(/\r/g, '').split('\n');
@@ -383,7 +382,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				for (let prev = 0; prev < idx; prev++) {
 					if (levels[prev] !== lvl) continue;
 					const [c, d] = pairs[prev];
-					// Interleaving = pseudoknot: c < a < d < b  or  a < c < b < d
+					// Interleaving = pseudoknot: c < a < d < b or a < c < b < d
 					if ((c < a && a < d && d < b) || (a < c && c < b && b < d)) {
 						ok = false;
 						break;
@@ -407,7 +406,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// Requires #=GC SS_cons line for the consensus structure.
 	// Shared Stockholm parser constants
 	const _STO_BRACKET_RE = /[()[\]{}<>A-Za-z]/;
-	// R2R strengthColorMap: 1 = red (≥97%), 2 = black (≥90%), 3 = grey (≥75%), 4 = white (≥50% present)
+	// R2R strengthColorMap: 1 = red (>= 97%), 2 = black (>= 90%), 3 = grey (>= 75%), 4 = white (>= 50% present)
 	const _STO_RED = '#cc0000', _STO_BLACK = '#111111', _STO_GREY = '#888888', _STO_WHITE = '#ffffff';
 
 	// R2R-like structure rendering
@@ -417,7 +416,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// GSC is too slow in a browser beyond that, so larger alignments use squid's position-based (PB)
 	// weights, over every sequence.
 	const _R2R_GSC_MAX_SEQS = 1000;
-	// R2R column codes (reduced alignment): 0..3 = A,C,G,U ; 4 = gap ; 5 = degenerate letter (N)
+	// R2R column codes (reduced alignment): 0..3 = A, C, G, U, 4 = gap, 5 = degenerate letter (N)
 	const _R2R_GAP = 4, _R2R_DEGEN = 5;
 
 	const _STO_CLS_GAP = 5;
@@ -439,7 +438,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 
 	// GSC weights 
-	//   distance  = 1 - PairwiseIdentity (idents / min(#nongap1, #nongap2), case-sensitive raw chars)
+	//   distance = 1 minus PairwiseIdentity (idents / min(#nongap1, #nongap2), case-sensitive raw chars)
 	//   tree      = Cluster(..., CLUSTER_MIN)  (single linkage, squid's row/col swapping & tie order)
 	//   weights   = upweight/downweight 
 	// Returns Float64Array of N weights (sum N).
@@ -449,7 +448,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (N === 0) return wgt;
 		if (N === 1) { wgt[0] = 1; return wgt; }
 		const f = Math.fround;
-		// Gaps are stored as 0 so the identity loop is a single compare.
+		// Gaps are stored as 0 so the identity loop is a single compare
 		const S = new Array(N), nongap = new Int32Array(N);
 		for (let s = 0; s < N; s++) {
 			const c = codes[s], a = new Uint8Array(alnLen);
@@ -506,14 +505,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			for (let col = 0; col < Np; col++) mx[col][i] = ri[col];
 			coord[Np - 2] = Np + N - 2;
 		}
-		// upweight (children have larger tree index than parents, iterate k = N-2 … 0)
+		// Upweight (children have larger tree index than parents, iterate k = N-2 down to 0)
 		const lwt = new Float32Array(2 * N - 1), rwt = new Float32Array(2 * N - 1), fwt = new Float32Array(2 * N - 1);
 		for (let k = N - 2; k >= 0; k--) {
 			const node = k + N, ld = tLeft[k], rd = tRight[k];
 			lwt[node] = f(f(lwt[ld] + rwt[ld]) + tLbl[k]);
 			rwt[node] = f(f(lwt[rd] + rwt[rd]) + tRbl[k]);
 		}
-		// downweight from root (node N = tree[0]), parents before children, k = 0 … N-2
+		// Downweight from root (node N = tree[0]), parents before children, k = 0 up to N-2
 		fwt[N] = N;
 		for (let k = 0; k <= N - 2; k++) {
 			const node = k + N, ld = tLeft[k], rd = tRight[k];
@@ -570,12 +569,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		for (let p = 0; p < alnLen; p++) {
 			const o = p * 5, norm = F[o] + F[o + 1] + F[o + 2] + F[o + 3] + F[o + 4];
 			if (norm > 0) for (let k = 0; k < 5; k++) F[o + k] /= norm;
-			else F[o + 4] = NaN; // all-degenerate column
+			else F[o + 4] = NaN; // All-degenerate column
 		}
 		return F;
 	}
 
-	// R2R consensus symbol + strength for one column (exact rule order of GSCWeightedConsensus_OneColumn).
+	// R2R consensus symbol + strength for one column (exact rule order of GSCWeightedConsensus_OneColumn)
 	function _r2rClassify(F, o) {
 		const T = _R2R_NUC_THRESH;
 		for (let t = 0; t < T.length; t++)
@@ -592,7 +591,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 
 	// Build per-column display descriptors.
-	// R2R colours (strengthColorMap): 1 red, 2 black, 3 grey, 4 white; letters use the same map.
+	// R2R colours (strengthColorMap): 1 red, 2 black, 3 grey, 4 white. Letters use the same map.
 	// '-' columns are removed (RemoveGaps) unless paired
 	function _r2rDisplayColumns(F, alnLen, pairedMask) {
 		const TXT = [null, _STO_RED, _STO_BLACK, _STO_GREY];
@@ -603,7 +602,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const pct = v => Number.isFinite(v) ? +(v * 100).toFixed(1) : 0;
 			const colStats = { A: pct(F[o]), C: pct(F[o + 1]), G: pct(F[o + 2]), U: pct(F[o + 3]),
 				gap: Number.isFinite(F[o + 4]) ? pct(F[o + 4]) : 100 };
-			// most common nucleotide (used only as the layout's sequence letter)
+			// Most common nucleotide (used only as the layout's sequence letter)
 			let mx = 'N', mv = 0;
 			for (let n = 0; n < 4; n++) if (F[o + n] > mv) { mv = F[o + n]; mx = 'ACGU'[n]; }
 			allSeq[p] = mx;
@@ -616,10 +615,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 
 	// % canonical pairs (AU/UA/GC/CG/GU/UG) per paired column, over sequences that have a
-	// nucleotide at both ends; each sequence counts with its weight (uniform when weights=null).
+	// nucleotide at both ends, each sequence counts with its weight (uniform when weights=null).
 	function _r2rCanonPct(codes, weights, alnLen, pairedCols) {
 		const out = new Array(alnLen).fill(null);
-		// codes: 0 A,1 C,2 G,3 U ; canonical: A-U, C-G, G-U (both orders)
+		// Codes: 0 A, 1 C, 2 G, 3 U. Canonical: A-U, C-G, G-U (both orders)
 		const CAN = [[0,0,0,1],[0,0,1,0],[0,1,0,1],[1,0,1,0]];
 		for (const [ci, cj] of pairedCols) {
 			let can = 0, tot = 0;
@@ -641,7 +640,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	//   1. R-scape original_msa_manipulate():
 	//        RemoveFragments(-F 0) : drop sequences with no residues
 	//        RemoveGapColumns(0.75): keep a column only if residues/(residues+gaps) >= 0.25
-	//                                (unweighted; '~' missing ignored; any letter is a residue)
+	//                                (unweighted, '~' missing ignored, any letter is a residue)
 	//        RemoveBrokenBasepairs : a pair (SS_cons or SS_cons_*) losing a column is unpaired
 	//        ConvertDegen2N / ConvertMissingNonresidue2Gap, T>U, uppercase
 	//   2. GSC weights are computed on the kept columns only
@@ -651,9 +650,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	//   ssCons       : raw #=GC SS_cons string
 	//   featureLines : raw #=GC SS_cons_* strings (their pairs are kept like SS_cons pairs)
 	// Returns the kept-column arrays (positionLabels = original alignment columns), trimmed/untrimmed
-	// (ssEnds) data and two display variants: wVar (default; weighted when >= 2 sequences) and rVar
-	// (unweighted, for the W toggle; null when no weighting applies). Both share the same columns.
-	const _RSCAPE_MIN_RES_FRAC = 0.25; // 1 - R-scape --gapthresh 0.75
+	// (ssEnds) data and two display variants: wVar (default, weighted when >= 2 sequences) and rVar
+	// (unweighted, for the W toggle, null when no weighting applies). Both share the same columns.
+	const _RSCAPE_MIN_RES_FRAC = 0.25; // One minus the R-scape --gapthresh of 0.75
 	function _stoBuildConsensus(seqs, ssCons, featureLines = null) {
 		const alnLen = ssCons.length;
 		// 1. R-scape preprocessing (class codes: <= 4 letter, 5 counted gap, 6 other)
@@ -688,7 +687,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		const cols = [];
 		for (let p = 0; p < alnLen; p++) if (useCol[p]) cols.push(p);
 		const L = cols.length;
-		// Reduced alignment in R2R codes: degenerate letters > N, T > U, any non-letter > gap
+		// Reduced alignment in R2R codes: degenerate letters become N, T becomes U, any non-letter becomes a gap
 		const codes = seqsUsed.map(a => {
 			const o = new Uint8Array(L);
 			for (let k = 0; k < L; k++) { const x = a[cols[k]]; o[k] = x < 4 ? x : x === 4 ? _R2R_DEGEN : _R2R_GAP; }
@@ -726,18 +725,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// pair never loses one partner here.
 		let keep = [];
 		for (let c = 0; c < alnLen; c++) if (!vW.allBD[c].skip) keep.push(c);
-		if (!keep.length) keep = Array.from({ length: alnLen }, (_, c) => c); // render something valid
+		if (!keep.length) keep = Array.from({ length: alnLen }, (_, c) => c); // Render something valid
 		const cell = bd => bd.skip ? { letter: null, textColor: null, fillColor: null, colStats: bd.colStats } : bd;
 		const pick = v => ({ seq: keep.map(c => v.allSeq[c]), bd: keep.map(c => cell(v.allBD[c])), canon: keep.map(c => v.canon[c]) });
 		const pW = pick(vW), pR = vR ? pick(vR) : null;
 		const struct = keep.map(c => structFull[c]);
 		const posLabels = keep.map(c => c + 1);
-		// Trim terminal positions unpaired in SS_cons; untrimmed arrays go into ssEnds for the toggle.
+		// Trim terminal positions unpaired in SS_cons. Untrimmed arrays go into ssEnds for the toggle.
 		// (SS_cons_* features in the trimmed ends are kept for the full view by _stoMakeRecord.)
 		let trimS = 0, trimE = struct.length - 1;
 		while (trimS <= trimE && struct[trimS] === '.') trimS++;
 		while (trimE >= trimS && struct[trimE] === '.') trimE--;
-		if (trimS > trimE) trimS = 0; // fully single-stranded, don't trim at all
+		if (trimS > trimE) trimS = 0; // Fully single-stranded, don't trim at all
 		const trimmed = trimS > 0 || trimE < struct.length - 1;
 		const cut = a => trimmed ? a.slice(trimS, trimE + 1) : a.slice();
 		let ssEnds = null;
@@ -769,8 +768,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// always uses every sequence (the rest are kept as 1-byte class codes only).
 	const _STO_MAX_SEQS = 1000;
 
-	// SS_cons_* feature lines > {ssConsFeatures: {name: [drawnIdx…]}, ssConsPkPairs: {name: [{i,j}…]}}.
-	// A feature covers every drawn column whose character is not '.', ':', '_' or '-'; its bracket /
+	// SS_cons_* feature lines give {ssConsFeatures: {name: [drawnIdx, ...]}, ssConsPkPairs: {name: [{i, j}, ...]}}.
+	// A feature covers every drawn column whose character is not '.', ':', '_' or '-'. Its bracket /
 	// letter pairs become inset pairs when both ends are drawn.
 	function _stoFeatureAnnotations(featParts, alnLen, positionLabels) {
 		const colToRi = colToRenderedMap(positionLabels);
@@ -796,7 +795,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 
 	// One structure record from a finished Stockholm alignment block (null when it has no
-	// SS_cons or no sequences). seqs: id > text (alignment view); extra: id > {a, n} class codes
+	// SS_cons or no sequences). seqs maps id to text (alignment view), extra maps id to {a, n} class codes
 	// of the sequences beyond those (consensus only).
 	function _stoMakeRecord({ id, ac, seqs, extra, ssConsParts, featParts, filenameFallback }) {
 		if (!ssConsParts.length || !(seqs.size + (extra?.size || 0))) return null;
@@ -810,7 +809,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (extra)
 			for (const e of extra.values()) {
 				if (e.n === alnLen) { all.push(e.a.subarray(0, alnLen)); continue; }
-				const a = new Uint8Array(alnLen).fill(_STO_CLS_GAP); // short sequence: padded with gaps
+				const a = new Uint8Array(alnLen).fill(_STO_CLS_GAP); // Short sequence: padded with gaps
 				a.set(e.a.subarray(0, e.n));
 				all.push(a);
 			}
@@ -839,7 +838,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			ssEnds: C.ssEnds, // null if no terminal unpaired bases were trimmed
 			// Sequence weighting (W toggle): weighted / unweighted display variants
 			weighting: C.weighting,
-			nSeqs: seqs.size + (extra?.size || 0), // sequences in the block (alnSeqs holds at most _STO_MAX_SEQS)
+			nSeqs: seqs.size + (extra?.size || 0), // Sequences in the block (alnSeqs holds at most _STO_MAX_SEQS)
 			_wVar: C.rVar ? C.wVar : undefined,
 			_rVar: C.rVar || undefined,
 		};
@@ -847,19 +846,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 	// Line-by-line Stockholm reader shared by the text and the streamed (chunked) parser.
 	// Interleaved blocks append to the same sequence. The first maxSeqs sequence ids of each
-	// alignment block are kept as text (alignment view); every further sequence is kept only as
+	// alignment block are kept as text (alignment view), every further sequence is kept only as
 	// 1-byte class codes, so the consensus covers the whole alignment without holding all of it
-	// as strings. Each '//' (or the end of input) closes a block > one record.
+	// as strings. Each '//' (or the end of input) closes a block, which gives one record.
 	function _stoReader(filenameFallback, maxSeqs = _STO_MAX_SEQS) {
 		const records = [];
 		let id = null, ac = null;
-		const seqs = new Map();  // seqId > gapped sequence (first maxSeqs)
-		const extra = new Map(); // seqId > {a: Uint8Array class codes, n: length} (the rest)
+		const seqs = new Map();  // seqId to gapped sequence (first maxSeqs)
+		const extra = new Map(); // seqId to {a: Uint8Array class codes, n: length} (the rest)
 		const ssConsParts = [], featParts = {};
 		const appendExtra = (sid, seq) => {
 			let e = extra.get(sid);
 			if (!e) extra.set(sid, e = { a: new Uint8Array(Math.max(64, seq.length)), n: 0 });
-			if (e.n + seq.length > e.a.length) { // grow (doubling)
+			if (e.n + seq.length > e.a.length) { // Grow (doubling)
 				const b = new Uint8Array(Math.max(e.a.length * 2, e.n + seq.length));
 				b.set(e.a.subarray(0, e.n));
 				e.a = b;
@@ -896,7 +895,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			else appendExtra(sid, seq);
 		};
 		const finish = () => {
-			endBlock(); // file may lack the final '//'
+			endBlock(); // File may lack the final '//'
 			if (!records.length) throw new Error('No valid Stockholm alignment found');
 			return records;
 		};
@@ -909,8 +908,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return reader.finish();
 	}
 
-	// Streaming Stockholm parser - reads the file in chunks via parseFileChunked and never
-	// assembles the full text. The consensus always uses every sequence; useAllSeqs also keeps
+	// Streaming Stockholm parser, reads the file in chunks via parseFileChunked and never
+	// assembles the full text. The consensus always uses every sequence, useAllSeqs also keeps
 	// every sequence as text for the alignment view (default: the first _STO_MAX_SEQS).
 	async function parseStockholmFileChunked(file, filenameFallback, parseFileChunked, useAllSeqs, onProgress) {
 		const reader = _stoReader(filenameFallback, useAllSeqs ? Infinity : _STO_MAX_SEQS);
@@ -929,7 +928,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (/^\d+$/.test(p[0]) && (p.length === 1 || !/^[ACGUTacgut]$/i.test(p[1]))) return parseCTFile(text);
 		// Valid characters for each line type
 		const SEQ_RE = /^[A-Za-z\-]+$/;
-		const STRUCT_RE = /^[().\[\]{}<>A-Za-z-]+$/; // dot-bracket + pseudoknot letters
+		const STRUCT_RE = /^[().\[\]{}<>A-Za-z-]+$/; // Dot-bracket + pseudoknot letters
 		// Strip trailing free-energy annotation like " (-88.93)"
 		const stripFE = s => s.replace(/\s+\(\s*[-−]?\d+\.?\d*\s*\)\s*$/, '').trim();
 		const records = [];
@@ -940,7 +939,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!line) {
 				i++;
 				continue;
-			} // blank - skip
+			} // Blank line, skip
 			if (line.startsWith('>')) {
 				// Named record: >label / sequence / structure
 				const label = line.slice(1).trim() || `structure_${records.length + 1}`;
@@ -976,12 +975,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (!records.length) throw new Error('No valid records found');
 		return records;
 	}
-	//
 	// Parse an RNA Framework's reactivity XML file produced by rf-norm.
 	// Extracts <sequence> and <reactivity> from each <transcript>.
 	// Returns [{id, sequence, values: number[]}, ...]
 	// NaN and missing entries are stored as null.
-	//
 	function parseXmlReactivity(text) {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(text, 'application/xml');
@@ -1002,12 +999,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 		});
 	}
-	//
 	// Parses a custom format tab-separated pair-annotation file.
 	// Format: i<TAB>j[<TAB>category] (i and j are 0-based)
 	// Lines starting with # are comments.
 	// Returns [{i, j, category}], with category = null when not provided.
-	//
 	function parsePairAnnotFile(text) {
 		const lines = text.replace(/\r/g, '').split('\n');
 		const pairs = [];
@@ -1029,16 +1024,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (!pairs.length) throw new Error('no valid pairs found');
 		return pairs;
 	}
-	//
 	// Parses an R-scape covariation .cov file.
 	// Data lines start with '*' followed by whitespace-separated columns:
 	// <left_pos (1-based)> <right_pos (1-based)> <score> <E-value> <pvalue> <substitutions> <power>
-	// Positions are converted to 0-based.  Category is derived from E-value:
+	// Positions are converted to 0-based. Category is derived from E-value:
 	// E < 0.05 is "E < 0.05" (green)
 	// E < 0.1 is "E < 0.1" (blue)
 	// E < 0.2 is "E < 0.2" (purple)
-	// E ≥ 0.2 is "E ≥ 0.2" (grey)
-	//
+	// E >= 0.2 is "E >= 0.2" (grey)
 	function parseCovFile(text) {
 		const COV_COLORS = [{
 				limit: 0.05,
@@ -1065,8 +1058,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		let colLeft = -1, colRight = -1, colEvalue = -1;
 		for (const raw of text.replace(/\r/g, '').split('\n')) {
 			const line = raw.trim();
-			if (!line) continue; // skip blank lines
-			if (!line.startsWith('#')) break; // end of header section
+			if (!line) continue; // Skip blank lines
+			if (!line.startsWith('#')) break; // End of header section
 			if (!line.includes('left_pos')) continue;
 			const headers = line.replace(/^#+\s*/, '').split(/\s+/);
 			headers.forEach((h, i) => {
@@ -1082,7 +1075,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		for (const raw of text.replace(/\r/g, '').split('\n')) {
 			const line = raw.trim();
 			if (line.startsWith('#')) continue;
-			if (!line.startsWith('*')) continue; // first col * = significant
+			if (!line.startsWith('*')) continue; // First col * = significant
 			const cols = line.split(/\s+/);
 			const left   = parseInt(cols[colLeft]);
 			const right  = parseInt(cols[colRight]);
@@ -1102,7 +1095,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return pairs;
 	}
 	// Parse R-scape .helixcov file.
-	// Returns all RM_HELIX records. significant=true only for an aggregated E-value marked with "*" (e.g. LANCASTER);
+	// Returns all RM_HELIX records. significant=true only for an aggregated E-value marked with "*" (e.g. LANCASTER),
 	// with aggregation NONE there is no helix-level significance (R-scape then draws no helix covariation either).
 	// Positions returned are 0-based alignment columns.
 	function parseHelixCovFile(text) {
@@ -1149,7 +1142,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 	// Extracts all base-pair positions from a dot-bracket string as a Set of "i,j" strings (i<j)
 	// Match brackets of a dot-bracket / WUSS / Stockholm SS string. Openers are ( [ { < and A-Z,
-	// closers ) ] } > and a-z (Rfam pseudoknot letters); each bracket type has its own stack and
+	// closers ), ], }, > and a-z (Rfam pseudoknot letters). Each bracket type has its own stack and
 	// unmatched brackets are ignored. Returns [{i, j, bracket}] (i < j) in closing order.
 	function matchBracketPairs(structure) {
 		const out = [], stacks = {}, OPEN = { ')': '(', ']': '[', '}': '{', '>': '<' };
@@ -1237,7 +1230,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			...(h.pkPairs ? { pkPairs: shiftIdx(h.pkPairs, d) } : {}),
 		}));
 	}
-	// {name: [pos…]} (ssConsFeatures) or {name: [{i,j}…]} (ssConsPkPairs)
+	// {name: [pos, ...]} (ssConsFeatures) or {name: [{i, j}, ...]} (ssConsPkPairs)
 	function shiftFeatureMap(obj, d) {
 		if (!obj || !d) return obj;
 		const out = {};
@@ -1245,7 +1238,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return out;
 	}
 
-	// Group pseudoknot pairs into stems: runs of consecutive i whose partner j steps by ±1.
+	// Group pseudoknot pairs into stems: runs of consecutive i whose partner j steps by plus or minus 1
 	function groupPkStems(pairs) {
 		const stems = [];
 		let cur = null;
@@ -1257,7 +1250,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		return stems;
 	}
 
-	// Map 0-based original alignment column > drawn (rendered) index, from 1-based positionLabels.
+	// Map a 0-based original alignment column to its drawn (rendered) index, from 1-based positionLabels
 	function colToRenderedMap(positionLabels) {
 		const m = new Map();
 		if (positionLabels) positionLabels.forEach((col1, ri) => m.set(col1 - 1, ri));
@@ -1275,7 +1268,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			j: origToRendered.get(p.j) ?? -1,
 		}));
 	}
-	// Returns { annotArr, pairAnnotColorMap, invalid } or throws if no valid pairs.
+	// Returns { annotArr, pairAnnotColorMap, invalid } or throws if no valid pairs
 	function buildAnnotationArrays(remappedPairs, structPairs, filename, label) {
 		const invalid = remappedPairs.filter(({
 			i,
@@ -1311,14 +1304,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			pairAnnotColorMap
 		};
 	}
-	// Assigns  colors to annotation categories
+	// Assigns colors to annotation categories
 	const ANNOT_PALETTE = ['#0969da', '#1a7f37', '#d1242f', '#bf8700', '#8250df', '#0550ae', '#116329', '#a40e26', '#7d4e00', '#6639ba', '#086f75', '#5c6c00', '#c84801', '#1d6a96', '#5c3d8f', ];
 	const ANNOT_MISSING_KEY = '(undefined)';
 	const ANNOT_DEFAULT_COLOR = '#0969da';
 
 	function buildAnnotColorMap(pairs) {
 		const hasAny = pairs.some(p => p.category !== null);
-		if (!hasAny) return null; // if no categories, then single  color used
+		if (!hasAny) return null; // If no categories, then single color used
 		const cats = [...new Set(pairs.map(p => p.category).filter(Boolean))];
 		const map = {};
 		cats.forEach((c, i) => {
@@ -1328,14 +1321,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		if (pairs.some(p => p.category === null)) map[ANNOT_MISSING_KEY] = ANNOT_DEFAULT_COLOR;
 		return map;
 	}
-	//
-	// Build a colormap from pairs.  If pairs carry inline `_color` properties
+	// Build a colormap from pairs. If pairs carry inline `_color` properties
 	// (produced by parseCovFile), use those directly per category.
 	// Otherwise delegate to buildAnnotColorMap with the auto-palette.
-	//
 	function buildAnnotColorMapAuto(pairs) {
 		if (pairs.some(p => p._color)) {
-			// .cov mode: each category has a fixed  color embedded in the pair
+			// .cov mode: each category has a fixed color embedded in the pair
 			const map = {};
 			for (const p of pairs) {
 				const key = p.category ?? ANNOT_MISSING_KEY;
@@ -1351,7 +1342,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const el = document.createElement('style');
 			el.id = STYLE_ID;
 			el.textContent = CSS;
-			// Insert at the BEGINNING of <head> so any external stylesheet
+			// Insert at the beginning of <head> so any external stylesheet
 			// (which appears later in the document) overrides our defaults
 			// at equal specificity without needing !important.
 			const first = document.head.firstChild;
@@ -1420,22 +1411,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		return x;
 	}
-	//
 	// Dot-bracket parser
 	// Returns:
-	// - pairs       [Int32Array] Nested pairs (used for layout + helix tree)
-	// - pseudoPairs [Array]      Pseudoknot pairs rendered as dashed lines
+	// pairs (Int32Array): nested pairs (used for layout + helix tree)
+	// pseudoPairs (Array): pseudoknot pairs rendered as dashed lines
 	//
-	// ALL bracket types are treated equally: (), [], {}, <>, Aa ... Zz.
+	// All bracket types are treated equally: (), [], {}, <>, Aa ... Zz.
 	// Nestedness is determined by crossing analysis, not by bracket choice
-	//
 	function parseDotBracket(structure) {
 		const n = structure.length;
 		const pairs = new Int32Array(n).fill(-1);
 		const pseudoPairs = [];
 		// Parse every bracket type into a flat pair list {i, j, bracket} with i < j
 		const allPairs = matchBracketPairs(structure);
-		//
 		// Assign pairs to levels via crossing analysis.
 		// Two pairs (a,b) and (c,d) cross (pseudoknot) when a<c<b<d or c<a<d<b.
 		// Level 0 = nested (no crossings within level 0), layout uses these.
@@ -1717,14 +1705,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			n
 		};
 	}
-	//
 	// NAView hybrid layout
 	// Flat exterior loop (VARNA radiate) + size-proportional angle allocation at
 	// every internal junction (NAView principle).
 	//
 	// The key insight of NAView: at a multi-loop junction, each outgoing helix
-	// receives an angular sector PROPORTIONAL TO ITS SUB-TREE SIZE.  A stem leading
-	// to 80 bases gets 8x more arc than one leading to 10 bases.  The loop radius is
+	// receives an angular sector proportional to its sub-tree size. A stem leading
+	// to 80 bases gets 8x more arc than one leading to 10 bases. The loop radius is
 	// then the minimum that keeps every chord >= the required distance, so the circle
 	// expands as needed instead of forcing elements to overlap.
 	//
@@ -1735,13 +1722,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	// adapted to enable helix rotation in a Radiate-like fashion
 	//
 	// Key differences from the radiate layout:
-	// - Angles are derived from the SEQUENTIAL position of each region on a
+	// Angles are derived from the sequential position of each region on a
 	// conceptual full-circle, not from sub-tree sizes or unpaired-base counts.
-	// - The most-connected loop is drawn at the centre, not the exterior loop.
-	// - The loop radius is chosen by least-squares to minimise deviation from
-	// unit base-separation; crowded segments are "extruded" outside the circle.
-	// - Produces near-overlap-free layouts for complex multi-junction structures.
-	//
+	// The most-connected loop is drawn at the centre, not the exterior loop.
+	// The loop radius is chosen by least-squares to minimise deviation from
+	// unit base-separation, crowded segments are "extruded" outside the circle.
+	// Produces near-overlap-free layouts for complex multi-junction structures.
 	function drawRNANAView(pairs, n) {
 		var PI = Math.PI;
 		var ANUM = 9999.0;
@@ -2252,7 +2238,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							direction = -1;
 						}
 						done = (icup === -1 && icdown === -1);
-					} // end while placing this block
+					} // End while placing this block
 					var icnext = (icend + 1) % lp.nconnection;
 					if (icend !== icstart && !(icstart === icstart1 && icnext === icstart1)) {
 						var cpSt = lp.connections[icstart],
@@ -2297,7 +2283,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 					icstart = icnext;
 					done_all = (icstart === icstart1);
-				} // end while (!done_all)
+				} // End while (!done_all)
 				if (globalRestart) break;
 				// Fill unpaired bases between connections
 				for (var ic4 = 0; ic4 < lp.nconnection && !globalRestart; ic4++) {
@@ -2319,7 +2305,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					var dcpF = ((cpNF.angle - cpF.angle) + 2 * PI) % (2 * PI);
 					if (Math.abs(danF - dcpF) > PI) {
 						if (cpF.extruded) {
-							// warning: crossed regions, skip
+							// Warning: crossed regions, skip
 						} else if ((cpNF.start - cpF.end) !== 1) {
 							cpF.extruded = true;
 							globalRestart = true;
@@ -2380,7 +2366,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					traverseLoop(cpR.loop, cpR);
 				}
 			}
-		} // end traverseLoop
+		} // End traverseLoop
 		traverseLoop(root, null);
 		// Convert to viewer coordinate format
 		var coords = Array.from({
@@ -2750,10 +2736,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		while (pHelL < pOld) pHelL += 2 * Math.PI;
 		let pLimL2 = pLimL;
 		while (pLimL2 < pHelL) pLimL2 += 2 * Math.PI;
-		// _hasRN / _hasLN used only to guard fixUnpairedPositions below.
+		// _hasRN / _hasLN used only to guard fixUnpairedPositions below
 		const _hasRN = prevIndex !== hi;
 		const _hasLN = nextIndex !== hj;
-		// Restore original VARNA [0, 2π) clamping - signed delta breaks the
+		// Restore original VARNA [0, 2 pi) clamping, the signed delta breaks the
 		// while/if guards and lets helices rotate past neighbours.
 		const minDelta = normalizeAngle(pLimR2 - pHelR + 0.25);
 		let maxDelta = normalizeAngle(pLimL2 - pHelL - 0.25);
@@ -2781,7 +2767,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Skip fixUnpairedPositions when neither side has a real neighbouring
 		// helix: the limit angles collapse to the helix endpoints, and
 		// distributeUnpaired would place outer-loop bases on a small-radius
-		// circle around the inner loop centre - directly over the inner
+		// circle around the inner loop centre, directly over the inner
 		// loop content (the entanglement seen with single-pair helices).
 		if (_hasRN || _hasLN) {
 			fixUnpairedPositions(isDirect, pHelRnew, pLimL, pLimR, pHelLnew, radius, base, cx, cy, helix.prevUnpaired, helix.nextUnpaired, coords);
@@ -2839,7 +2825,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		};
 	}
 	// Pair-annotation colormap normalizer
-	// Accepts either an object  { key: color, … } or an array  [{ key, color }, …]
+	// Accepts either an object { key: color, ... } or an array [{ key, color }, ...]
 	// and always returns an array of { key, color } entries (or null).
 	function normalizePairAnnotColorMap(cm) {
 		if (!cm) return null;
@@ -2854,8 +2840,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 
 	function valueToColor(v, colorMap) {
-		if (!colorMap?.stops?.length) return null; // no valid map, then transparent
-		// NaN, null, undefined, or out-of-bounds (undefined), then NaN  color.
+		if (!colorMap?.stops?.length) return null; // No valid map, then transparent
+		// NaN, null, undefined, or out-of-bounds (undefined), then NaN color.
 		// This also catches values[i] when i >= values.length (returns undefined).
 		if (v == null || (typeof v === 'number' && isNaN(v))) {
 			return colorMap.nanColor ?? '#8f8f8f';
@@ -2876,7 +2862,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			return stops[stops.length - 1].color;
 		}
-		// gradient: piecewise linear interpolation between stops
+		// Gradient: piecewise linear interpolation between stops
 		const first = stops[0],
 			last = stops[stops.length - 1];
 		if (v <= first.value) return first.color;
@@ -2889,8 +2875,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		return last.color;
 	}
-	// Given a hex fill  color, return a text  color (#dark or #light) that
-	// guarantees readable contrast - using the WCAG relative-luminance formula.
+	// Given a hex fill color, return a text color (#dark or #light) that
+	// guarantees readable contrast, using the WCAG relative-luminance formula.
 	function getContrastTextColor(hex) {
 		if (!hex || hex[0] !== '#' || hex.length < 7) return null;
 		const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -2898,7 +2884,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		const b = parseInt(hex.slice(5, 7), 16) / 255;
 		const lin = c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 		const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-		// Switch at L ≈ 0.2 - white text below, dark text above
+		// Switch at L of about 0.2, white text below, dark text above
 		return L > 0.2 ? '#1a1a2e' : '#f0f6ff';
 	}
 	// Convert user-friendly helixAnnotations [{i, color, opacity}] to internal
@@ -2907,7 +2893,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	function resolveHelixAnnotations(annotations, pairs, positionLabels = null) {
 		const origToRendered = colToRenderedMap(positionLabels);
 		return annotations.map(ann => {
-			if (ann.subHelices) return ann; // already internal
+			if (ann.subHelices) return ann; // Already internal
 			const i = origToRendered.size ? (origToRendered.get(ann.i) ?? ann.i) : ann.i;
 			const j = pairs[i];
 			if (j === undefined || j < 0) throw new Error(`helixAnnotations: position ${i} is not paired`);
@@ -2961,7 +2947,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (config.height) container.style.height = typeof config.height === 'number' ? config.height + 'px' : config.height;
 			this._container = container;
 			this._lastConfig = null;
-			this._constructorConfig = config; // preserved for defaults like showIndices
+			this._constructorConfig = config; // Preserved for defaults like showIndices
 			// UI layout config (fixed at construction time)
 			const validPos = ['top', 'bottom', 'left', 'right'];
 			this._toolbarPos = validPos.includes(config.toolbarPosition) ? config.toolbarPosition : 'left';
@@ -2969,9 +2955,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._canvasDrop = config.canvasDrop !== false;
 			// Layout algorithm: 'radiate' (default) | 'naview'
 			this._layoutAlgo = (config.layout === 'naview' || config.layout === 'radiate') ? config.layout : 'auto';
-			// normalize buttons config: true/omitted, then all on; false, then all off,
-			// object: merge with all-on defaults.
-			// Toolbar buttons: every key defaults to on; `buttons: false` turns all of them off,
+			// Toolbar buttons: every key defaults to on, `buttons: false` turns all of them off,
 			// `buttons: {key: false}` turns off individual ones. Values are normalised to booleans.
 			const BUTTON_KEYS = ['zoomIn', 'zoomOut', 'fit', 'reset', 'save', 'indices', 'colorMap', 'layout', 'alignment',
 				'pseudoknots', 'pairAnnotations', 'percCanonical', 'insets', 'labels', 'ssEnds', 'weighting', 'upload', 'rfam',
@@ -2988,26 +2972,26 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Outline mode: backbone only, with coloured domains (per structure: s.outlineDomains)
 			this._outlineMode = !!config.outlineMode;
 			this._outlinePick = null;      // {idx} start base of the domain being picked by clicking
-			this._outlineColorIdx = 0;     // next palette colour for click-made domains
+			this._outlineColorIdx = 0;     // Next palette colour for click-made domains
 			this._panStart = null;
 			this._rotState = null;
 			this._flipState = null;
-			this._showIndices = config.showIndices !== false; // default true
-			this._showColors = config.showColors !== false; // default true
+			this._showIndices = config.showIndices !== false; // Default true
+			this._showColors = config.showColors !== false; // Default true
 			this._relaxedSequence = config.relaxedSequence !== false;
 			this._showPairAnnotations = config.showPairAnnotations !== false;
 			this._autoTolerance = config.autoLayoutTolerance ?? 0;
-			this._id = config.id || null; // used as SVG export filename
+			this._id = config.id || null; // Used as SVG export filename
 			this._lastPickedAlgo = null;
 			this._rna = null;
 			// Multi-structure state
-			this._structures = []; // raw structure configs [{label, structure, ...}]
-			this._structLayouts = []; // computed rna objects, one per structure
+			this._structures = []; // Raw structure configs [{label, structure, ...}]
+			this._structLayouts = []; // Computed rna objects, one per structure
 			this._currentStructIdx = -1;
 			this._isAnimating = false;
 			this._animFrame = null;
 			this._transitionDuration = config.transitionDuration ?? 600;
-			this._uid = ++_viewerSeq; // per-instance suffix for element ids
+			this._uid = ++_viewerSeq; // Per-instance suffix for element ids
 			this._buildDOM();
 			if (config.theme) this._root.classList.add(`rv-theme-${config.theme}`);
 			this._bindEvents();
@@ -3020,7 +3004,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (this._chkOutline) this._chkOutline.classList.add('rv--active');
 				this._syncOutlineColorInput();
 			}
-			// Initial button label - for 'auto' shows 'Auto' until _pickLayout runs
+			// Initial button label, for 'auto' shows 'Auto' until _pickLayout runs
 			if (this._layoutBtn) {
 				const lbl = this._layoutBtn.querySelector('.rv-layout-lbl');
 				if (lbl) lbl.textContent = this._layoutAlgo === 'naview' ? 'NAView' : this._layoutAlgo === 'auto' ? 'Auto' : 'Radiate';
@@ -3035,7 +3019,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const pos = this._toolbarPos;
 			// Build toolbar content: separators only appear between non-empty groups
 			const btnHTML = (cls, extraCls, icon, label) => `<button class="rv-btn${extraCls ? ' '+extraCls : ''} ${cls}" title="${label}">${icon}<span class="rv-btn-label">${label}</span></button>`;
-			// Toggle buttons start hidden; they are shown when the loaded structure supports them.
+			// Toggle buttons start hidden, they are shown when the loaded structure supports them
 			const toggleBtn = (cls, title, icon, label) => `<button class="rv-btn rv-btn-toggle ${cls}" title="${title}" style="display:none">${icon}<span class="rv-btn-label">${label}</span></button>`;
 			const letterIcon = ch => `<span style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${ch}</span>`;
 			const ICONS = {
@@ -3091,7 +3075,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					b.weighting ? toggleBtn('rv-chk-weight rv--active', 'Sequence weighting', ICON_WEIGHT, 'Weighting') : '',
 					b.outline ? `<button class="rv-btn rv-btn-toggle rv-chk-outline" title="Outline mode: backbone only, colour domains along it" style="display:none">${ICON_OUTLINE}<span class="rv-btn-label">Outline</span></button>` : '',
 				].join('')],
-				// Layout algorithm toggle: letter shows the TARGET layout (N = go to NAView, R = go to Radiate)
+				// Layout algorithm toggle: letter shows the target layout (N = go to NAView, R = go to Radiate)
 				[b.layout || b.alignment, [b.layout ? `<button class="rv-btn rv-btn-toggle rv-btn-layout" title="${this._layoutAlgo === 'naview' ? 'Switch to Radiate layout' : 'Switch to NAView layout'}"><span class="rv-layout-letter" style="font-family:monospace;font-weight:700;font-size:14px;width:14px;display:inline-block;text-align:center;line-height:1">${this._layoutAlgo === 'naview' ? 'R' : 'N'}</span><span class="rv-btn-label rv-layout-lbl">${this._layoutAlgo === 'naview' ? 'Radiate' : 'NAView'}</span></button>` : '', b.alignment ? toggleBtn('rv-btn-aln', 'Alignment view', ICON_ALN, 'Alignment view') : '', ].join('')],
 				[b.toolbarPos, b.toolbarPos ? btnHTML('rv-btn-toolbar-pos', '', ICON_TOOLBAR_POS, this._toolbarPos === 'left' ? 'Move toolbar to top' : 'Move toolbar to left') : ''],
 			];
@@ -3393,7 +3377,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._chkR3dLabels) this._chkR3dLabels.classList.toggle('rv--active', this._showR3dLabels);
 			this._showSsEnds = this._constructorConfig?.showSsEnds === true;
 			if (this._chkSsEnds) this._chkSsEnds.classList.toggle('rv--active', this._showSsEnds);
-			this._useWeighting = this._constructorConfig?.weighting !== false; // sequence weighting on by default
+			this._useWeighting = this._constructorConfig?.weighting !== false; // Sequence weighting on by default
 			if (this._chkWeight) this._chkWeight.classList.toggle('rv--active', this._useWeighting);
 			this._layoutBtn = q('.rv-btn-layout');
 			this._uploadBtn = q('.rv-btn-upload');
@@ -3428,7 +3412,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._accumulatedAnnotFiles = [];
 			this._pendingAnnotData = []; // [{filename, pairs:[{i,j,category}]}]
 			this._pendingStructures = [];
-			this._pendingXmlData = []; // pre-parsed xml records, user-ordered
+			this._pendingXmlData = []; // Pre-parsed xml records, user-ordered
 		}
 		// Event wiring
 		_bindEvents() {
@@ -3504,7 +3488,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._useWeighting = !this._useWeighting;
 					this._chkWeight.classList.toggle('rv--active', this._useWeighting);
 					this._updateWeightTitle();
-					this._applyWeighting(); // updates data even in alignment view; renders only in structure view
+					this._applyWeighting(); // Updates data even in alignment view, renders only in structure view
 				});
 			}
 			if (this._chkPAnnot) {
@@ -3594,7 +3578,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						}
 					});
 				}
-				// Drops on any zone above set the zone's input and dispatch 'change' > one path per kind
+				// Drops on any zone above set the zone's input and dispatch 'change', so there is one path per kind
 				this._upFileDb.addEventListener('change', () => this._onUploadInput('db'));
 				this._upFileXml.addEventListener('change', () => this._onUploadInput('xml'));
 				this._upFileAnnot?.addEventListener('change', () => this._onUploadInput('annot'));
@@ -3678,7 +3662,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (items.some(it => it.kind === 'file')) {
 					e.preventDefault();
 					e.dataTransfer.dropEffect = 'copy';
-					// Only highlight canvas when NOT hovering over a panel
+					// Only highlight canvas when not hovering over a panel
 					if (!e.target.closest('.rv-upload-panel, .rv-manual-panel')) this._canvas.classList.add('rv--drop-hover');
 				}
 			});
@@ -3746,7 +3730,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (this._upAnnotTargetSection) this._upAnnotTargetSection.style.display = 'none';
 					return;
 				}
-				// Normal structure file drop - start fresh
+				// Normal structure file drop, start fresh
 				this._resetPendingLoadState();
 				this._accumulatedDbFiles = [...dbFiles];
 				const dropErrors = await this._previewDbFiles();
@@ -3778,7 +3762,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._showError('No structure records found in provided config');
 					return;
 				}
-				// If caller explicitly provided a label, use it - overrides whatever
+				// If caller explicitly provided a label, use it, which overrides whatever
 				// the file itself contains (e.g. #=GF ID in Stockholm).
 				if (config.label) {
 					if (parsed.length === 1) {
@@ -3806,9 +3790,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const { structure } = config;
 			const sequence = config.sequence;
 			this._errEl.style.display = 'none';
-			// No sequence AND no structure, then empty/clean start, nothing to render.
+			// No sequence and no structure, then empty/clean start, nothing to render
 			if (!sequence && !structure) return;
-			// One provided without the other, that's a config mistake, report it.
+			// One provided without the other, that's a config mistake, report it
 			if (!sequence) {
 				this._showError('Structure provided without a sequence');
 				return;
@@ -3835,14 +3819,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		// Load covariation data from .cov or .helixcov text onto the current structure.
 		// Auto-detects the format: if the text contains RM_HELIX records it is treated
-		// as a .helixcov file and routed to loadHelixCov(); otherwise it is parsed as a
+		// as a .helixcov file and routed to loadHelixCov(), otherwise it is parsed as a
 		// standard .cov pair-annotation file.
 		loadCov(covText) {
 			if (!this._rna) throw new Error('No structure loaded - call load() first.');
 			if (/^#\s+RM_HELIX\b/m.test(covText)) return this.loadHelixCov(covText);
 			const pairs = parseCovFile(covText);
 			// For Stockholm: keep the alignment-derived covRawPairs (synthetic pairs
-			// covering ALL base-pairs with pairCanonPct). Only use .cov pairs for
+			// covering all base-pairs with pairCanonPct). Only use .cov pairs for
 			// E-value boxes, not for the canon toggle.
 			if (!this._rna.pairCanonPct) {
 				this._rna.covRawPairs = pairs;
@@ -3851,7 +3835,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._rna.pairCanonPct && this._chkCovCanon) {
 				this._chkCovCanon.style.display = '';
 			}
-			// If % canonical pairs coloring was active, switch it off - the cov file
+			// If % canonical pairs coloring was active, switch it off, the cov file
 			// provides its own coloring via E-value boxes.
 			if (this._covCanonMode) {
 				this._covCanonMode = false;
@@ -3867,7 +3851,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._render();
 		}
 		// Apply pair annotations (alignment or drawn coordinates) to a layout, replacing previous
-		// ones: pairs of nested helices > boxes (pairAnnotations + colour map), pseudoknot pairs >
+		// ones: pairs of nested helices become boxes (pairAnnotations + colour map), pseudoknot pairs become
 		// coloured arcs / inset boxes (pseudoCovAnnotations). Throws if no pair matches the
 		// structure. Returns {invalid}: number of pairs that are not in the structure.
 		_applyPairAnnotations(layout, pairs, filename, { isCov = false } = {}) {
@@ -3878,7 +3862,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const nestedStructPairs = new Set([...allStructPairs].filter(k => !pkSet.has(k)));
 			const nested = remapped.filter(({ i, j }) => nestedStructPairs.has(pairKey(i, j)));
 			const pk = remapped.filter(({ i, j }) => pkSet.has(pairKey(i, j)));
-			if (!nested.length && !pk.length) buildAnnotationArrays(remapped, allStructPairs, filename, layout.label); // throws with proper message
+			if (!nested.length && !pk.length) buildAnnotationArrays(remapped, allStructPairs, filename, layout.label); // Throws with proper message
 			layout.pairAnnotations = null;
 			layout.pairAnnotColorMap = null;
 			layout.pseudoCovAnnotations = undefined;
@@ -3913,7 +3897,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return invalid ? `Warning: "${filename}", ${invalid} pair${invalid > 1 ? 's' : ''} not in structure were skipped` : '';
 		}
 		// Snapshot of the loaded structures as load() configs, for re-loading with extra structures
-		// (append) or new reactivity. Records give sequence / structure / alignment data; annotations
+		// (append) or new reactivity. Records give sequence / structure / alignment data, annotations
 		// come from the trimmed-index base layout (unshifted even when SS ends are shown, real pair
 		// colour map in % canonical mode), so a reload reproduces exactly what is loaded.
 		_snapshotStructures() {
@@ -3939,7 +3923,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				};
 			});
 		}
-		// Make structure idx current immediately (no transition animation).
+		// Make structure idx current immediately (no transition animation)
 		_selectStructure(idx) {
 			if (idx === this._currentStructIdx || !this._structLayouts?.[idx]) return;
 			this.switchToStructure(idx);
@@ -3985,7 +3969,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				for (let c = h.start5p; c <= h.end5p; c++)
 					if (o2r.has(c)) ri5All.push(o2r.get(c));
 				// Map each 5' position directly to its structural partner.
-				// Do NOT filter by a 3' column range - for reversed helices (c > d)
+				// Do not filter by a 3' column range, for reversed helices (c > d)
 				// the actual partners may extend beyond the reported range end.
 				const hp = ri5All
 					.filter(r => _partnerMap.has(r))
@@ -4008,7 +3992,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				}
 				subHelices.push(cur);
-				// Split sub-helices into nested and pseudoknot pairs based on structure brackets.
+				// Split sub-helices into nested and pseudoknot pairs based on structure brackets
 				const pkSet = this._buildPkSet(this._rna);
 				const nestedSubs = [],
 					pkPairs = [];
@@ -4066,7 +4050,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!this._rna) return;
 			const pw = this._canvas.clientWidth,
 				ph = this._canvas.clientHeight;
-			// Canvas not yet laid out - retry on next frame
+			// Canvas not yet laid out, retry on next frame
 			if (!pw || !ph) {
 				requestAnimationFrame(() => this.fit());
 				return;
@@ -4179,13 +4163,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._rna = n ? this._structLayouts[this._currentStructIdx] : (this._relayoutStructure(-1) || this._rna);
 			this._refreshView();
 		}
-		//
 		// Returns a discrete SHAPE-reactivity colormap that adapts to the current
 		// theme: the unreactive band is black on light backgrounds, white on dark.
-		// - 0-0.3: unreactive (black / white)
-		// - 0.3-0.7: moderately reactive (yellow)
-		// - 0.7+: reactive (red)
-		//
+		// 0 to 0.3: unreactive (black / white)
+		// 0.3 to 0.7: moderately reactive (yellow)
+		// 0.7 and above: reactive (red)
 		_getDefaultShapeColorMap() {
 			const bg = getComputedStyle(this._root).getPropertyValue('--rv-bg').trim() || '#ffffff';
 			const dark = this._colorLuminance(bg) < 0.4;
@@ -4205,7 +4187,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}, ],
 			};
 		}
-		// Relative luminance of a hex  color (0 = black, 1 = white).
+		// Relative luminance of a hex color (0 = black, 1 = white).
 		// Returns true if at least 15% of bases are within the current canvas viewport
 		_colorLuminance(hex) {
 			const h = hex.replace(/^#/, '');
@@ -4285,7 +4267,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const _layout = this._structLayouts[this._currentStructIdx];
 			const _base = _layout?._base;
 			if (!_base || _base === _layout) return;
-			const d = -(_layout._shift || 0); // offset the live layout was built with
+			const d = -(_layout._shift || 0); // Offset the live layout was built with
 			_base.pairAnnotations = shiftIdx(this._rna.pairAnnotations, d) || _base.pairAnnotations;
 			_base.pairAnnotColorMap = this._origPairAnnotColorMap(this._rna) || _base.pairAnnotColorMap;
 			_base.helixAnnotations = shiftHelixAnnots(this._rna.helixAnnotations, d) || _base.helixAnnotations;
@@ -4295,7 +4277,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
 			// pairCanonPct is not synced: it lives on the structure record (s / s.ssEnds)
 		}
-		// Returns true if b1/b2 form a canonical Watson-Crick or wobble pair.
+		// Returns true if b1/b2 form a canonical Watson-Crick or wobble pair
 		_isCanonPair(b1, b2) {
 			const a = b1.toUpperCase(),
 				b = b2.toUpperCase();
@@ -4306,11 +4288,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				(a === 'G' && b === 'T') || (a === 'T' && b === 'G');
 		}
 
-		//
 		// Copies all runtime annotation properties from one layout object to another.
 		// Used when recomputing coordinates (layout switch, reset) to avoid losing
 		// annotations that were loaded post-layout via loadCov() or drag-drop.
-		//
 		_copyLayoutAnnotations(src, dst) {
 			const props = [
 				'helixAnnotations', 'isCovAnnot', 'pseudoCovAnnotations',
@@ -4321,7 +4301,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			for (const p of props)
 				if (src[p]) dst[p] = src[p];
 			// pairAnnotColorMap and pairAnnotations are passed directly to _computeLayout,
-			// but covRawPairs/_savedPairAnnotColorMap are runtime-only - copy them here.
+			// but covRawPairs/_savedPairAnnotColorMap are runtime-only, copy them here.
 		}
 
 		// Creates an SVG line element. cls is optional. Does not append it.
@@ -4366,11 +4346,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return null;
 		}
 
-		//
 		// Stockholm bond between two base centres at (x1,y1) and (x2,y2).
 		// Returns an array of SVG elements (line and/or dot).
 		// Shortens the line by `shrinkEach` on each end to avoid overlapping eraser circles.
-		//
 		_mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR, canonPct = null) {
 			// If canonPct (% canonical pairs across alignment) is provided, use it.
 			// Otherwise fall back to consensus nucleotide comparison.
@@ -4395,14 +4373,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const mx = (x1 + x2) / 2,
 				my = (y1 + y2) / 2;
 			if (!isCanon) return [mkDot(mx, my)];
-			if (len * (1 - 2 * shrink) <= 0) return []; // too short to draw
+			if (len * (1 - 2 * shrink) <= 0) return []; // Too short to draw
 			return [mkL(sx1, sy1, sx2, sy2)];
 		}
 
-		//
 		// Pair-annotation rectangle centred between two base positions.
-		// Works for any angle - used in both main structure and insets.
-		//
+		// Works for any angle, used in both main structure and insets.
 		_mkPairAnnotRect(x1, y1, x2, y2, color, opa, sw, pad, baseR) {
 			const dist = Math.hypot(x2 - x1, y2 - y1);
 			const w = dist + pad * 2;
@@ -4426,7 +4402,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 
 		// Display label of each pseudoknot stem in insets / arcs: the SS_cons_* pair feature it comes
-		// from, else the SS_cons_* feature covering it (5' arm first), else PK1, PK2, …
+		// from, else the SS_cons_* feature covering it (5' arm first), else PK1, PK2, ...
 		_pkStemLabels(stems, featureName = null) {
 			if (featureName) return stems.map(() => featureName);
 			const posToName = new Map();
@@ -4438,8 +4414,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				return `PK${si + 1}`;
 			});
 		}
-		// SVG-export inset panels: ONE panel per distinct name, stacking every stem that carries it
-		// (an SS_cons_* feature can be split into hundreds of 1–2 bp pieces sharing one name).
+		// SVG-export inset panels: one panel per distinct name, stacking every stem that carries it
+		// (an SS_cons_* feature can be split into hundreds of 1 to 2 bp pieces sharing one name).
 		// Stems come from the pseudoknot pairs (named as on screen) and the SS_cons_* pair features,
 		// in first-seen order. [{label, stems}]
 		_insetGroups() {
@@ -4458,9 +4434,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return [...byName].map(([label, stems]) => ({ label, stems }));
 		}
 		// Pair-annotation, covariation and % canonical boxes of one inset panel (same for screen and
-		// SVG export). allPairs: the panel's pairs; inPairs: position > partner within the panel.
+		// SVG export). allPairs holds the panel's pairs, inPairs maps a position to its partner within the panel.
 		// An annotation given by one position (or matching only one end) uses that base's panel pair.
-		// Returns [{i, j, color, opacity, strokeWidth, padding}] (undefined > default style).
+		// Returns [{i, j, color, opacity, strokeWidth, padding}] (undefined means the default style).
 		_insetAnnotBoxes(allPairs, inPairs) {
 			const boxes = [];
 			if (!this._showPairAnnotations) return boxes;
@@ -4498,7 +4474,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const stems = groupPkStems(pseudoPairs);
 
 			// R3D coverage (positions already labelled by an SS_cons_* feature are not labelled again)
-			const r3dPosToName = new Map(); // residue index > R3D feature name
+			const r3dPosToName = new Map(); // Residue index to R3D feature name
 			for (const [name, positions] of Object.entries(this._rna.ssConsFeatures || {}))
 				for (const p of positions) r3dPosToName.set(p, name);
 			// Display label of each stem (same names as the inset panels and the SVG export)
@@ -4522,7 +4498,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			});
 
 			// CSS vars 
-			const baseR = 11; // fixed in insets - not affected by the base size settings slider
+			const baseR = 11; // Fixed in insets, not affected by the base size settings slider
 			const bpW = parseFloat(cs.getPropertyValue('--rv-basepair-width')) || 2.2;
 			const bbW = parseFloat(cs.getPropertyValue('--rv-backbone-width')) || 2;
 			const bbCol = cs.getPropertyValue('--rv-backbone').trim() || '#1f2328';
@@ -4539,32 +4515,32 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Panel geometry
 			const colSep = baseR * 6;
 			const rowStep = baseR * 3.5;
-			const _helixPadCS = baseR * 1.7; // inset helix pad is fixed, not controlled by settings slider
-			const _annPadInset = _helixPadCS * 1.35; // helix box padding used in insets
-			const col5x = _annPadInset + baseR * 0.5; // shift right so box doesn't clip left edge
+			const _helixPadCS = baseR * 1.7; // Inset helix pad is fixed, not controlled by settings slider
+			const _annPadInset = _helixPadCS * 1.35; // Helix box padding used in insets
+			const col5x = _annPadInset + baseR * 0.5; // Shift right so box doesn't clip left edge
 			const col3x = col5x + colSep;
-			const svgW = col3x + _annPadInset + baseR * 0.5; // enough room on right side too
+			const svgW = col3x + _annPadInset + baseR * 0.5; // Enough room on right side too
 			// Vertical padding: equal top and bottom
 			// vPad must be at least annPad so the helix box isn't clipped at top/bottom
 			const vPad = _annPadInset + baseR * 0.5;
 
 			// When featureName is set (ssConsPkPairs call), all stems belong to the same
-			// named feature and go into ONE panel with a gap between runs.
+			// named feature and go into one panel with a gap between runs.
 			// When featureName is null (pseudoPairs call), one panel per stem as before.
 			const stemGroups = featureName ? [stems.map((stem, si) => ({
 					stem,
 					si
-				}))] // all stems > one group
+				}))] // All stems in one group
 				:
 				stems.map((stem, si) => [{
 					stem,
 					si
-				}]); // one stem per group
+				}]); // One stem per group
 
 			const betweenStemGap = rowStep * 0.8;
 
 			stemGroups.forEach(group => {
-				if (this._keepInsets) return; // panels kept from the previous render (see _render)
+				if (this._keepInsets) return; // Panels kept from the previous render (see _render)
 				// Build combined inCoords / inPairs for all stems in this group
 				const inCoords = {};
 				const inPairs = {};
@@ -4588,7 +4564,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 				const svgH = curY - rowStep + baseR * 2 + baseR * 0.8;
 				const label = stemLabels[group[0].si];
-				const si = group[0].si; // representative si for this group
+				const si = group[0].si; // Representative si for this group
 
 				const panel = document.createElement('div');
 				panel.className = 'rv-pk-panel';
@@ -4615,14 +4591,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				].join('');
 				svg.appendChild(style);
 
-				// SVG layer groups - order (bottom to top):
-				// backbone > eraser circles > helix boxes > pair annot boxes > bases > bonds
-				const ins_bb = document.createElementNS(NS, 'g'); // backbone
-				const ins_era = document.createElementNS(NS, 'g'); // white eraser circles
-				const ins_hbox = document.createElementNS(NS, 'g'); // helix annotation boxes
-				const ins_abox = document.createElementNS(NS, 'g'); // pair annotation boxes
-				const ins_base = document.createElementNS(NS, 'g'); // base letters / fill circles
-				const ins_bp = document.createElementNS(NS, 'g'); // bonds (base-pair lines) - topmost
+				// SVG layer groups, in order from bottom to top:
+				// backbone, eraser circles, helix boxes, pair annotation boxes, bases, bonds
+				const ins_bb = document.createElementNS(NS, 'g'); // Backbone
+				const ins_era = document.createElementNS(NS, 'g'); // White eraser circles
+				const ins_hbox = document.createElementNS(NS, 'g'); // Helix annotation boxes
+				const ins_abox = document.createElementNS(NS, 'g'); // Pair annotation boxes
+				const ins_base = document.createElementNS(NS, 'g'); // Base letters / fill circles
+				const ins_bp = document.createElementNS(NS, 'g'); // Bonds (base-pair lines), topmost
 				svg.append(ins_bb, ins_era, ins_hbox, ins_abox, ins_base, ins_bp);
 
 				// Rendering order:
@@ -4631,7 +4607,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// 3. helix annotation boxes
 				// 4. pair annotation boxes
 				// 5. bases (letters / fill circles)
-				// 6. bonds (base-pair lines) - on top so they aren't hidden by annotation boxes
+				// 6. bonds (base-pair lines), on top so they aren't hidden by annotation boxes
 
 				// All pairs in this panel (across all runs)
 				const allPairs = group.flatMap(({
@@ -4787,7 +4763,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 				// Step 2: multi-column layout (needs a fresh rAF so browser reflects new sizes)
 				requestAnimationFrame(() => {
-					if (!container.isConnected || panels.some(p => p.parentNode !== container)) return; // re-rendered meanwhile
+					if (!container.isConnected || panels.some(p => p.parentNode !== container)) return; // Re-rendered meanwhile
 					// Measure from a clean state: an earlier _scaleOverlays() may have fixed the container's
 					// height (flex items would shrink to fit) and scaled it (getBoundingClientRect is scaled).
 					container.style.transform = '';
@@ -4842,7 +4818,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const cy = coords.reduce((s, c) => s + c.y, 0) / n;
 
 			// Compute signed area of backbone polygon to determine winding order.
-			// Positive = counterclockwise (SVG y-down: clockwise visually) > outside is LEFT of forward direction.
+			// Positive = counterclockwise (SVG y-down: clockwise visually), so the outside is to the left of the forward direction.
 			// We use this to flip normals globally so they always point outside.
 			let signedArea = 0;
 			for (let i = 0; i < n; i++) {
@@ -4868,8 +4844,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const _annotLblFSz = parseFloat(cs.getPropertyValue('--rv-annot-label-font-size')) || 12;
 			const lSz = Math.min(baseR * 3, Math.max(baseR * 0.5, _annotLblFSz / _fitScale));
 			const lFont = cs.getPropertyValue('--rv-base-index-font').trim() || 'monospace';
-			// pad < baseR+idxOff so ss_cons lines sit inside the index label radius;
-			// loop indices go inward so no conflict; helix indices already outside
+			// pad < baseR+idxOff so SS_cons lines sit inside the index label radius,
+			// loop indices go inward so there is no conflict, helix indices are already outside
 			const pad = baseR + lSz * 1.2;
 
 			// Pseudoknot partner map
@@ -4886,7 +4862,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 
 			// Pre-pass: if any position in a feature's run touches a helix base,
-			// mark ALL positions in that run as helix-like so overlapping features
+			// mark all positions in that run as helix-like so overlapping features
 			// (e.g. tr_6 and rm2_csra_motif.rev sharing the same bases) both use
 			// straight lines rather than one curve and one straight line.
 			// We must do this before rendering so all features see the same helixPos.
@@ -4918,9 +4894,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					w: tw,
 					h: th
 				});
-			// Pre-fill occupancy with index label boxes AND base circle footprints
+			// Pre-fill occupancy with index label boxes and base circle footprints
 			for (let i = 0; i < n; i++) {
-				// Base circle - prevents labels landing on the structure
+				// Base circle, prevents labels landing on the structure
 				addOccupied(coords[i].x, coords[i].y, baseR * 2 + lSz * 0.8, baseR * 2 + lSz * 0.8);
 				if (i === 0 || (i + 1) % 10 === 0 || i === n - 1) {
 					const pi = Math.max(0, i - 1),
@@ -4934,7 +4910,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						inx = -inx;
 						iny = -iny;
 					}
-					// Unpaired (loop) bases: index is placed INWARD - flip direction
+					// Unpaired (loop) bases: index is placed inward, flip direction
 					const inLoop = pairs[i] < 0 && !pkPartner.has(i);
 					if (inLoop) {
 						inx = -inx;
@@ -4946,7 +4922,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 
-			// Register helix annotation boxes (rotated rects - use axis-aligned bounding box)
+			// Register helix annotation boxes (rotated rects, use the axis-aligned bounding box)
 			if (this._showPairAnnotations && !this._covCanonMode && this._rna?.helixAnnotations?.length) {
 				const hPad = parseFloat(cs.getPropertyValue('--rv-helix-annot-padding')) || baseR * 1.7;
 				for (const ann of this._rna.helixAnnotations) {
@@ -5029,7 +5005,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 			// Merge labels that share a start position
 			const edgeGap = lSz * 3.5;
-			// posDirection: ri > 'open' (5' arm) | 'close' (3' arm)
+			// posDirection maps ri to 'open' (5' arm) or 'close' (3' arm)
 			// Built from ssConsPkPairs so arm boundaries are known exactly.
 			const posDirection = new Map();
 			if (this._rna.ssConsPkPairs)
@@ -5044,7 +5020,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				posDirection.set(ps.j, 'close');
 			}
 			const toRuns = (positions) => {
-				// Split on direction change (5'>3' arm boundary) or gap > 3 within same arm.
+				// Split on direction change (boundary between the 5' and 3' arms) or gap > 3 within same arm
 				const runs = [];
 				let run = [positions[0]];
 				for (let k = 1; k < positions.length; k++) {
@@ -5063,15 +5039,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			// Per-position labels: every annotated position (non-'.' non-':') gets a label.
 			// Features sharing a position get one merged label (alphabetically sorted).
-			const posToNames = new Map(); // pos -> [featureName, ...]
+			const posToNames = new Map(); // pos to [featureName, ...]
 			for (const [name, positions] of Object.entries(features)) {
 				for (const pos of positions) {
 					if (!posToNames.has(pos)) posToNames.set(pos, []);
 					posToNames.get(pos).push(name);
 				}
 			}
-			const posLabel = new Map(); // pos -> merged label string
-			const posOwner = new Map(); // pos -> featureName that renders the label
+			const posLabel = new Map(); // pos to merged label string
+			const posOwner = new Map(); // pos to the featureName that renders the label
 			for (const [pos, names] of posToNames) {
 				const sorted = [...new Set(names)].sort();
 				posLabel.set(pos, sorted.join(', '));
@@ -5090,14 +5066,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const isNaview = this._rna?._algo === 'naview';
 					// For helix-arm groups, expand to include all positions between
 					// first and last so the line passes through every base in the arm.
-					// Skip in naview - helix arms aren't linear there.
+					// Skip in naview, helix arms aren't linear there.
 					const expandedGroup = (!isNaview && group.some(i => helixPos.has(i))) ?
 						Array.from({
 							length: group[group.length - 1] - group[0] + 1
 						}, (_, k) => group[0] + k) :
 						group;
 					const activeGroup = expandedGroup;
-					// Per-position offset points - always outside via outwardSign
+					// Per-position offset points, always outside via outwardSign
 					const allLoop = !isNaview && activeGroup.every(i => !helixPos.has(i));
 
 					const pts = activeGroup.map(i => {
@@ -5121,7 +5097,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					let d;
 					const bezSegs = []; // { p0,c1,c2,p1 } per segment
 					if (pts.length < 2) {
-						// Single-point annotation - no line to draw
+						// Single-point annotation, no line to draw
 					} else if (pts.length < 3 || !allLoop) {
 						d = `M ${pts[0].x} ${pts[0].y}`;
 						for (let k = 1; k < pts.length; k++) {
@@ -5134,7 +5110,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							});
 						}
 					} else {
-						// Tangent at each point = 90° rotation of outward normal,
+						// Tangent at each point = 90 degree rotation of outward normal,
 						// chosen to face the direction of travel along the arc.
 						const tangs = pts.map((p, k) => {
 							const t1x = p.ny,
@@ -5187,7 +5163,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						};
 					};
 					// Sample the actual drawn curve at a normalised arc-fraction t in [0,1].
-					// Uses the bezSegs array; falls back to pts[0] for single-point paths.
+					// Uses the bezSegs array, falls back to pts[0] for single-point paths.
 					const curvePtAtT = (t) => {
 						if (bezSegs.length === 0) return {
 							x: pts[0].x,
@@ -5202,7 +5178,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					};
 					const path = document.createElementNS(NS, 'path');
 					if (!d) {
-						// pts.length < 2 - no path to draw, skip
+						// pts.length < 2 means no path to draw, skip
 					} else {
 						path.setAttribute('d', d);
 						path.setAttribute('class', 'rv-ss-cons-line');
@@ -5211,7 +5187,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						gLines.appendChild(path);
 					}
 
-					// Pre-compute segment bounding boxes - added AFTER label placement
+					// Pre-compute segment bounding boxes, added after label placement
 					const segM = bbW / 2 + lSz * 0.5;
 					const segBoxes = [];
 					for (let k = 0; k < pts.length - 1; k++) {
@@ -5447,10 +5423,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// line from arcMid toward the box centre. This gives a clean edge-exit
 			// point for the leader line so it never overlaps the text.
 
-			// Three-pass DOM rendering: leader lines, then bg+text groups (so text is on top of leader).
+			// Three-pass DOM rendering: leader lines, then bg+text groups (so text is on top of leader)
 			const bgPad = lSz * 0.35;
 
-			// Pass 1: leader lines - stored by index so drag can update x1/y1
+			// Pass 1: leader lines, stored by index so drag can update x1/y1
 			const leaderEls = [];
 			for (const {
 					layout,
@@ -5505,7 +5481,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				g.appendChild(txt);
 				gLabels.appendChild(g);
 
-				// Drag handling - SVG coordinate space
+				// Drag handling, SVG coordinate space
 				const leader = leaderEls[idx];
 				let dragging = false,
 					startMx = 0,
@@ -5605,7 +5581,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			}
 		}
-		// Settings row: text label + colour input; onInput(value) runs on every change.
+		// Settings row: text label + colour input, onInput(value) runs on every change
 		_makeColorRow(label, value, onInput) {
 			const row = document.createElement('div');
 			row.className = 'rv-setting-row';
@@ -5624,7 +5600,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (!m || color.startsWith('#')) return color;
 				return '#' + m.slice(0, 3).map(n => parseInt(n).toString(16).padStart(2, '0')).join('');
 			};
-			// Read  color values: prefer declared CSS custom property, fall back to computed stroke/fill
+			// Read color values: prefer declared CSS custom property, fall back to computed stroke/fill
 			const readColor = (cssVar, elSel, cssProp) => {
 				const v = _gv(cssVar);
 				if (v) return toHex(v);
@@ -5736,12 +5712,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const cur = getComputedStyle(this._root).getPropertyValue('--rv-helix-annot-color').trim() || '#aff0a8';
 					const hexMatch = cur.match(/#[0-9a-f]{6}/i);
 					haColorPicker.value = hexMatch ? hexMatch[0] : '#064e3b';
-					haColorPicker.oninput = () => { // property: the panel is reopened many times
+					haColorPicker.oninput = () => { // Property: the panel is reopened many times
 						this._root.style.setProperty('--rv-helix-annot-color', haColorPicker.value);
 						this._renderSoon();
 					};
 				}
-				// Build category  color pickers
+				// Build category color pickers
 				const paColorDiv = this._settingsPanel.querySelector('.rv-pa-colors');
 				if (paColorDiv) {
 					paColorDiv.innerHTML = '';
@@ -5804,7 +5780,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								}));
 							});
 						} else {
-							// No  color map (single  color), so show one picker using first annotation's  color
+							// No color map (single color), so show one picker using first annotation's color
 							const defaultColor = pAnnots[0]?.color || ANNOT_DEFAULT_COLOR;
 							paColorDiv.appendChild(this._makeColorRow('Annotation color', defaultColor, c => {
 								const updateAnns = anns => {
@@ -5816,7 +5792,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								this._renderSoon();
 							}));
 						}
-					} // end else (non-canon mode)
+					} // End else (non-canon mode)
 				}
 			}
 			// Sync General tab checkbox
@@ -5990,7 +5966,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					nanColor: nan,
 				},
 			});
-			// Apply only to the current structure - colormaps are per-structure
+			// Apply only to the current structure, colormaps are per-structure
 			const idx = this._currentStructIdx ?? 0;
 			if (this._structLayouts?.[idx]) this._structLayouts[idx].colorMap = cm;
 			if (this._rna) this._rna.colorMap = cm;
@@ -6000,7 +5976,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			this._render();
 		}
-		// Forget every file picked / parsed for loading (upload panel open/close, canvas drop, clear()).
+		// Forget every file picked / parsed for loading (upload panel open/close, canvas drop, clear())
 		_resetPendingLoadState() {
 			this._pendingStructures = [];
 			this._pendingXmlData = [];
@@ -6009,8 +5985,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._accumulatedXmlFiles = [];
 			this._accumulatedAnnotFiles = [];
 			this._loadedStructsOrder = [];
-			this._dbPreviewed = new Set(); // db file names already parsed into _pendingStructures
-			this._previewGen = (this._previewGen || 0) + 1; // previews still running are discarded
+			this._dbPreviewed = new Set(); // .db file names already parsed into _pendingStructures
+			this._previewGen = (this._previewGen || 0) + 1; // Previews still running are discarded
 		}
 		_showUploadPanel() {
 			if (!this._uploadPanel) return;
@@ -6042,7 +6018,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				annot: [this._upFileAnnot, '_accumulatedAnnotFiles', () => this._previewAnnotFiles()],
 			}[kind] || [];
 			if (!input?.files?.length) return;
-			this._upLoadBtn.disabled = true; // re-enabled after preview completes
+			this._upLoadBtn.disabled = true; // Re-enabled after preview completes
 			this._upStatus.textContent = '';
 			this._upStatus.className = 'rv-upload-status';
 			for (const f of input.files) if (!this[key].some(e => e.name === f.name)) this[key].push(f);
@@ -6062,14 +6038,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const readNext = () => {
 					if (offset >= file.size) {
 						leftover += dec.decode();
-						if (leftover) onLine(leftover.replace(/\r$/, '')); // final incomplete line
+						if (leftover) onLine(leftover.replace(/\r$/, '')); // Final incomplete line
 						return res();
 					}
 					const r = new FileReader();
 					r.onload = () => {
 						const text = leftover + dec.decode(r.result, { stream: true });
 						const lines = text.split('\n');
-						leftover = lines.pop(); // last element may be incomplete
+						leftover = lines.pop(); // Last element may be incomplete
 						for (const line of lines) onLine(line.replace(/\r$/, ''));
 						offset += CHUNK;
 						readNext();
@@ -6083,7 +6059,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const gen = this._previewGen;
 			if (!this._dbPreviewed) this._dbPreviewed = new Set();
 			// Files parsed earlier keep their records (and the user's ordering / removals) in
-			// _pendingStructures; only newly added files are parsed and appended.
+			// _pendingStructures, only newly added files are parsed and appended.
 			const errors = [];
 			const failed = new Set();
 			for (const file of this._accumulatedDbFiles) {
@@ -6100,7 +6076,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						? await parseStockholmFileChunked(file, file.name, parseFileChunked, false, showLoad)
 						: parseDbFile(await readText(file), file.name);
 					hideLoad();
-					if (gen !== this._previewGen) return []; // panel was reset meanwhile
+					if (gen !== this._previewGen) return []; // Panel was reset meanwhile
 					if (!recs.length) throw new Error('no records found');
 					this._pendingStructures.push(...recs.map(s => ({
 						...s,
@@ -6224,11 +6200,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// is never blocked by stale reactivity, annotation, or file data.
 			this._resetPendingLoadState();
 		}
-		// Remove only the currently displayed structure; keep all others.
+		// Remove only the currently displayed structure, keep all others
 		_openManualDialog() {
 			const panel = this._manualPanel;
 			if (!panel) return;
-			// Always query fresh - guarantees we have live elements even after DOM tweaks
+			// Always query fresh, this guarantees we have live elements even after DOM tweaks
 			const seqEl = panel.querySelector('.rv-manual-seq');
 			const strEl = panel.querySelector('.rv-manual-struct');
 			const nameEl = panel.querySelector('.rv-manual-name');
@@ -6308,7 +6284,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			panel.style.display = 'block';
 			seqEl.focus();
 		}
-		// Remove only the currently displayed structure; keep all others
+		// Remove only the currently displayed structure, keep all others
 		clearCurrent() {
 			if (!this._rna || !this._structLayouts.length) return;
 			if (this._structLayouts.length === 1) {
@@ -6341,7 +6317,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						_src: file.name
 					})));
 				} catch (_) {
-					// skip
+					// Skip
 				}
 			}
 			this._renderXmlOrder();
@@ -6353,7 +6329,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._upLoadBtn.disabled = false;
 				this._upStatus.textContent = '';
 				this._upStatus.className = 'rv-upload-status';
-				// Always use the reorderable list - never the checkbox target section.
+				// Always use the reorderable list, never the checkbox target section.
 				// Populate _loadedStructsOrder with matching structures (if not already
 				// set by the canvas-drop handler which may have called us).
 				if (!this._loadedStructsOrder?.length) {
@@ -6432,7 +6408,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const origIdx = allStructs.indexOf(s);
 				const row = document.createElement('label');
 				row.className = 'rv-annot-target-row';
-				// .cov: never pre-select; .tab: pre-select the current structure
+				// .cov: never pre-select, .tab: pre-select the current structure
 				const checked = !hasCov && origIdx === this._currentStructIdx ? ' checked' : '';
 				row.innerHTML = `<input type="radio" name="rv-annot-target" value="${origIdx}"${checked}>` + `<span class="rv-annot-target-idx">${origIdx + 1}</span>` + `<span class="rv-annot-target-lbl" title="${escHtml(s.label)}">${escHtml(s.label)}</span>`;
 				this._upAnnotTargetList.appendChild(row);
@@ -6498,8 +6474,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const _annotWarnings = [];
 					for (let annotFileIdx = 0; annotFileIdx < this._pendingAnnotData.length; annotFileIdx++) {
 						// Determine target structure:
-						// • positional mode (canvas drop): file[i] > _loadedStructsOrder[i]
-						// • radio mode (upload panel): all files > radio-selected structure
+						// Positional mode (canvas drop): file[i] goes to _loadedStructsOrder[i]
+						// Radio mode (upload panel): all files go to the radio-selected structure
 						let targetIdx;
 						if (this._loadedStructsOrder?.length > 0) {
 							const orderedStruct = this._loadedStructsOrder[annotFileIdx];
@@ -6522,21 +6498,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._hideUploadPanel();
 					return;
 				}
-				// Use pre-parsed structures (already ordered by user via ↑↓ buttons)
+				// Use pre-parsed structures (already ordered by user via the up and down buttons)
 				let newStructures = this._pendingStructures.map(s => ({
 					...s
 				}));
 				// XML-only mode: add reactivity to the already-loaded structures
-				// Do NOT go through APPEND/REPLACE, just update values in-place.
+				// Do not go through append or replace, just update values in-place.
 				const isXmlOnly = newStructures.length === 0;
 				let xmlOnlyTargetIdxs = null;
 				if (isXmlOnly) {
 					if (this._pendingXmlData.length === 0 || !this._rna) throw new Error('No structure records found');
 					// Carry values + annotations from structLayouts (raw _structures[] doesn't have them).
-					// Do NOT carry colorMap - let the top-level SHAPE default be applied correctly.
+					// Do not carry colorMap, let the top-level SHAPE default be applied correctly.
 					const allExisting = this._snapshotStructures().map(s => ({ ...s, colorMap: undefined }));
 					if (this._loadedStructsOrder?.length > 0) {
-						// Canvas-drop positional mode: user reordered both lists - match by position.
+						// Canvas-drop positional mode: user reordered both lists, match by position.
 						// Both lists must be the same length before loading.
 						const nXml = this._pendingXmlData.length;
 						const nStructs = this._loadedStructsOrder.length;
@@ -6546,14 +6522,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						}
 						const orderedIdxs = this._loadedStructsOrder.map(s => (this._structures || []).indexOf(s)).filter(i => i >= 0);
 						xmlOnlyTargetIdxs = new Set(orderedIdxs);
-						// Subset for the positional matcher; mutations propagate back to allExisting
+						// Subset for the positional matcher, mutations propagate back to allExisting
 						newStructures = orderedIdxs.map(i => allExisting[i]);
-						var _xmlAllExisting = allExisting; // restore after matching
+						var _xmlAllExisting = allExisting; // Restore after matching
 					} else {
 						const checkedIdxs = new Set(
 							[...(this._upXmlTargetList?.querySelectorAll('input[type=checkbox]:checked') || [])].map(cb => parseInt(cb.value)));
 						if (checkedIdxs.size === 0 && allExisting.length > 1) throw new Error('Select at least one structure to apply reactivity to');
-						// Selected structure count must always equal the number of XML files.
+						// Selected structure count must always equal the number of XML files
 						const nXml = this._pendingXmlData.length;
 						const nSel = checkedIdxs.size || allExisting.length;
 						if (nSel !== nXml) {
@@ -6569,7 +6545,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (this._pendingXmlData.length > 0) {
 					const xmlRecs = this._pendingXmlData;
 					if (xmlRecs.length === newStructures.length) {
-						// Positional match - user explicitly ordered both lists
+						// Positional match, the user explicitly ordered both lists
 						for (let i = 0; i < newStructures.length; i++) {
 							const s = newStructures[i];
 							const rec = xmlRecs[i];
@@ -6579,7 +6555,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							s.values = rec.values;
 						}
 					} else {
-						// Counts don't match - refuse to guess which file goes to which structure
+						// Counts don't match, refuse to guess which file goes to which structure
 						const diff = Math.abs(xmlRecs.length - newStructures.length);
 						const verb = newStructures.length > xmlRecs.length ? 'Remove' : 'Add';
 						throw new Error(`${xmlRecs.length} reactivity file${xmlRecs.length !== 1 ? 's' : ''} but ` + `${newStructures.length} structure${newStructures.length !== 1 ? 's' : ''} - ` + `${verb} ${diff} ${diff !== 1 ? 'entries' : 'entry'} so the counts match.`);
@@ -6589,7 +6565,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// Use structLayouts directly, null means no reactivity, no fallback to s.values
 				// (which was just mutated by the XML matcher above).
 				if (isXmlOnly && xmlOnlyTargetIdxs) {
-					// In positional (canvas-drop) mode newStructures was the ordered subset;
+					// In positional (canvas-drop) mode newStructures was the ordered subset,
 					// switch back to the full allExisting list for the restore step.
 					if (typeof _xmlAllExisting !== 'undefined') newStructures = _xmlAllExisting;
 					newStructures = newStructures.map((s, i) => xmlOnlyTargetIdxs.has(i) ? s : {
@@ -6605,11 +6581,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					startIdx = (xmlOnlyTargetIdxs?.size > 0) ? Math.min(...xmlOnlyTargetIdxs) : (this._currentStructIdx ?? 0);
 				} else {
 					const curSeq = this._rna ? normalizeSeq(this._rna.sequence) : null;
-					const doAppend = curSeq !== null; // allow any sequences to coexist as tabs
+					const doAppend = curSeq !== null; // Allow any sequences to coexist as tabs
 					if (doAppend) {
 						const existing = this._snapshotStructures();
 						allStructures = [...existing, ...newStructures];
-						startIdx = existing.length; // jump to first newly added structure
+						startIdx = existing.length; // Jump to first newly added structure
 					} else {
 						allStructures = newStructures;
 					}
@@ -6621,7 +6597,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					colorMap: hasReact ? this._getDefaultShapeColorMap() : undefined,
 					_startIdx: startIdx,
 				};
-				const prevStructCount = this._structures?.length || 0; // for the "(appended)" status
+				const prevStructCount = this._structures?.length || 0; // For the "(appended)" status
 				this.load(cfg);
 				this._pendingStructures = [];
 				this._accumulatedDbFiles = [];
@@ -6630,7 +6606,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						this._showColors = true;
 						if (this._chkColors) this._chkColors.classList.add('rv--active');
 					}
-					// Only show the  color legend if the structure now in focus has reactivity
+					// Only show the color legend if the structure now in focus has reactivity
 					if (this._rna?.values && this._rna.colorMap?.stops?.length) {
 						this._updateLegend(this._rna.colorMap);
 						this._legend.style.display = 'block';
@@ -6667,7 +6643,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 		}
 		_canonPctToColor(pct) {
-			// User-adjustable stops: low (0%) > mid (50%) > high (100%)
+			// User-adjustable stops: low (0%), mid (50%), high (100%)
 			const lo = this._covCanonLow || '#d73027';
 			const mi = this._covCanonMid || '#fee090';
 			const hi = this._covCanonHigh || '#1a9850';
@@ -6721,7 +6697,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								canonPct: pairCanonPct[ps.i]
 							});
 					}
-					// Store in dedicated canon fields - never touch pairAnnotations
+					// Store in dedicated canon fields, never touch pairAnnotations
 					if (nestedPairs.length) {
 						const res = buildAnnotationArrays(nestedPairs, nestedStructPairs, 'canon', this._rna.label);
 						for (const ann of res.annotArr)
@@ -6734,7 +6710,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						color: this._canonPctToColor(p.canonPct)
 					}));
 				}
-				// Park the real pair colour map once; repeated calls must not overwrite it with null
+				// Park the real pair colour map once, repeated calls must not overwrite it with null
 				if (this._rna._savedPairAnnotColorMap == null) this._rna._savedPairAnnotColorMap = this._rna.pairAnnotColorMap;
 				this._rna.pairAnnotColorMap = null;
 				this._buildPairAnnotLegend(null, true);
@@ -6748,11 +6724,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			this._render();
 		}
-		// Pair-annotation colour map of a layout as it is without % canonical colouring.
+		// Pair-annotation colour map of a layout as it is without % canonical colouring
 		_origPairAnnotColorMap(l) {
 			return l?._savedPairAnnotColorMap ?? l?.pairAnnotColorMap ?? null;
 		}
-		// Drop the % canonical colouring state from a layout, restoring its real pair colour map.
+		// Drop the % canonical colouring state from a layout, restoring its real pair colour map
 		_clearCanonState(l) {
 			if (!l) return;
 			l.pairAnnotColorMap = this._origPairAnnotColorMap(l);
@@ -6760,7 +6736,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			l._canonAnnotations = null;
 			l._canonPkAnnotations = null;
 		}
-		// Draw the current layout: % canonical colouring (which renders) or pair legend + render.
+		// Draw the current layout: % canonical colouring (which renders) or pair legend + render
 		_drawCurrent(fit = true) {
 			const rna = this._rna;
 			if (!rna) return;
@@ -6793,7 +6769,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_buildPairAnnotLegend(colorMap, isCov = false) {
 			if (!this._palLegend) return;
 			const hasHelix = !!this._rna?.helixAnnotations?.length && !this._covCanonMode;
-			// canonical pairs gradient legend
+			// Canonical pairs gradient legend
 			if (this._covCanonMode && isCov && !colorMap) {
 				const lo = this._covCanonLow || '#d73027';
 				const mi = this._covCanonMid || '#fee090';
@@ -6821,11 +6797,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._palLegend.style.display = this._showPairAnnotations ? 'block' : 'none';
 			requestAnimationFrame(() => this._scaleOverlays());
 		}
-		//
 		// Cycle through layout algorithms.
 		// In Auto mode each structure is independently scored and the algorithm
 		// with fewer overlapping base circles is used.
-		//
 		toggleLayout() {
 			const _curAlgo = this._structLayouts?.[this._currentStructIdx]?._algo ?? this._rna?._algo ?? this._lastPickedAlgo ?? 'radiate';
 			const current = this._layoutAlgo === 'auto' ? _curAlgo : this._layoutAlgo;
@@ -6835,13 +6809,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._cancelAnimation(true);
 			const rna = this._relayoutStructure(this._currentStructIdx);
 			if (rna) this._rna = rna;
-			this._refreshView(); // rebuilds the full layout when SS-ends are shown
+			this._refreshView(); // Rebuilds the full layout when SS-ends are shown
 		}
 		// Recompute the coordinates of structure idx with the current layout algorithm, keeping
 		// its data, annotations and runtime state. The live layout is the source of truth (it
 		// carries user-applied values, colour maps and pair annotations that may not be in
-		// _structures[]); with SS-ends shown it is in full-index space, so its trimmed-index base
-		// is used instead. The result is trimmed-index; _refreshView() rebuilds the full layout.
+		// _structures[]). With SS-ends shown it is in full-index space, so its trimmed-index base
+		// is used instead. The result is trimmed-index, _refreshView() rebuilds the full layout.
 		_relayoutStructure(idx) {
 			const cfg = this._lastConfig || {};
 			const s = this._structures?.[idx];
@@ -6857,21 +6831,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const rna = this._computeLayout(rec.sequence, rec.structure, vals, cm, pa, pacm, ha,
 				rec.baseDisplay || null, rec.positionLabels || null, rec.alnSeqs || null, rec.alnStruct || null, rec.alnLen || 0);
 			this._copyLayoutAnnotations(src, rna);
-			this._clearCanonState(rna); // position-dependent canon caches are rebuilt on draw
+			this._clearCanonState(rna); // Position-dependent canon caches are rebuilt on draw
 			rna.pairAnnotColorMap = pacm;
 			if (existing._toggleState) rna._toggleState = { ...existing._toggleState, layoutAlgo: rna._algo };
 			if (s) this._structLayouts[idx] = rna;
 			return rna;
 		}
-		//
-		// Sync the layout button label and  color to `algo` ('radiate' or 'naview').
+		// Sync the layout button label and color to `algo` ('radiate' or 'naview').
 		// Always reflects the algorithm actually being rendered, regardless of whether
 		// the internal _layoutAlgo is 'auto', 'naview', or 'radiate'.
-		//
 		_syncLayoutBtn(algo) {
 			if (!this._layoutBtn) return;
-			// The button always shows the TARGET (where clicking takes you),
-			// not the current state: NAView active > show "R" / Radiate; Radiate active > show "N" / NAView
+			// The button always shows the target (where clicking takes you),
+			// not the current state: with NAView active it shows "R" (Radiate), with Radiate active it shows "N" (NAView)
 			const goingTo = (algo === 'naview') ? 'radiate' : 'naview';
 			const letter = this._layoutBtn.querySelector('.rv-layout-letter');
 			const lbl = this._layoutBtn.querySelector('.rv-layout-lbl');
@@ -6881,12 +6853,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._layoutBtn.classList.remove('rv--naview', 'rv--auto');
 			if (algo === 'naview') this._layoutBtn.classList.add('rv--naview');
 		}
-		//
 		// Choose the layout with fewer overlapping base circles.
-		// Both radiate and NAView are computed; the one with the lower
+		// Both radiate and NAView are computed, the one with the lower
 		// overlap score (fast spatial-grid count) is returned.
 		// Records the choice in _lastPickedAlgo and immediately syncs the button.
-		//
 		_pickLayout(pairs, n) {
 			const rad = drawRNARadiate(pairs, n);
 			const nav = drawRNANAView(pairs, n);
@@ -6901,18 +6871,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._syncLayoutBtn(this._lastPickedAlgo);
 			return useNav ? this._autoRotateLayout(nav) : rad;
 		}
-		//
 		// Rotate a NAView layout result so the structure fills the canvas as
 		// large as possible after fit().
 		//
-		// Tries 180 candidate angles (every 2°; the bounding-box has period π
+		// Tries 180 candidate angles (every 2 degrees, the bounding-box has period pi
 		// so this covers all distinct orientations) and keeps the angle that
-		// maximises min(canvasW/W, canvasH/H).  Falls back to minimising
+		// maximises min(canvasW/W, canvasH/H). Falls back to minimising
 		// max(W,H) when the canvas is not yet rendered.
 		//
 		// Both coords and loop-centre arrays are rotated so helix-rotation
 		// interaction remains correct after the transform.
-		//
 		_autoRotateLayout(result) {
 			const n = result.coords.length;
 			if (n < 2) return result;
@@ -7008,18 +6976,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 		}
-		//
-		// Draw  colored boxes behind each annotated base pair.
+		// Draw colored boxes behind each annotated base pair.
 		//
 		// Each annotation is an object with:
-		// - i           {number}  0-indexed base position (lower of the pair)
-		// - j           {number}  optional partner (defaults to pairs[i])
-		// - color       {string}  hex  color, use this OR value
-		// - value       {number}  mapped through pairAnnotColorMap
-		// - opacity     {number}  fill opacity (default: 0.3)
-		// - strokeWidth {number}  border thickness (default: 1.5)
-		// - padding     {number}  extra space around pair (default: 5 scene units)
-		//
+		// i (number): 0-indexed base position (lower of the pair)
+		// j (number): optional partner (defaults to pairs[i])
+		// color (string): hex color, use this or value
+		// value (number): mapped through pairAnnotColorMap
+		// opacity (number): fill opacity (default: 0.3)
+		// strokeWidth (number): border thickness (default: 1.5)
+		// padding (number): extra space around pair (default: 5 scene units)
 		_renderPairAnnotations(g, coords, pairs, annotations, colorMap, baseR, masterOpacity = 1) {
 			// Read CSS variable defaults (per-annotation fields override these)
 			const cs = getComputedStyle(this._root);
@@ -7029,7 +6995,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			for (const ann of annotations) {
 				let i = ann.i,
 					j = ann.j;
-				// Resolve i/j silently - already validated at load time
+				// Resolve i/j silently, already validated at load time
 				if (i != null && j != null) {
 					if (pairs[i] !== j || pairs[j] !== i) continue;
 				} else if (i != null) {
@@ -7040,7 +7006,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (i == null || i < 0) continue;
 				} else continue;
 				if (i < 0 || i >= coords.length || j < 0 || j >= coords.length) continue;
-				// Color resolution: direct color > key lookup > white fallback
+				// Color resolution: direct color first, then key lookup, then the white fallback
 				let color = ann.color;
 				if (!color && ann.key != null && colorMap) {
 					const entry = colorMap.find(e => e.key === ann.key);
@@ -7057,11 +7023,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				g.appendChild(this._mkPairAnnotRect(x1, y1, x2, y2, color, fopacity, sw, pad, baseR));
 			}
 		}
-		//
 		// Validate a pairAnnotations array against the actual pairs of a structure.
 		// Returns the first error string found, or null if everything is valid.
 		// Called during load, before _render(), so _showError can be used safely.
-		//
 		_validatePairAnnotations(annotations, pairs, n) {
 			for (const ann of annotations) {
 				const i = ann.i,
@@ -7077,9 +7041,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (j < 0 || j >= n) return `pairAnnotations: index ${j} out of range (sequence length ${n})`;
 					if (pairs[j] < 0) return `pairAnnotations: base ${j} is unpaired in this structure`;
 				}
-				// key validation, must exist in the colormap
+				// Key validation, must exist in the colormap
 				if (ann.key != null) {
-					if (!ann._colorMap && !ann.color); // validated later with the actual colormap, skip here
+					if (!ann._colorMap && !ann.color); // Validated later with the actual colormap, skip here
 				}
 			}
 			return null;
@@ -7096,7 +7060,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return null;
 		}
 		_scoreOverlaps(coords, n) {
-			// Signed area of triangle OAB (cross product of OA × OB)
+			// Signed area of triangle OAB (cross product of OA and OB)
 			function cross2(ox, oy, ax, ay, bx, by) {
 				return (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
 			}
@@ -7171,7 +7135,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const pos = idx === 0 ? `${base}left:0` : idx === arr.length - 1 ? `${base}right:0` : `${base}left:${p}%;transform:translateX(-50%)`;
 				return `<span style="${pos}">${fmt(v)}</span>`;
 			}).join('');
-			// NaN swatch, shown as a separate row BELOW the gradient
+			// NaN swatch, shown as a separate row below the gradient
 			if (this._legendNaN) {
 				if (colorMap.nanColor) {
 					this._legendNaN.style.display = 'flex';
@@ -7206,7 +7170,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 		}
 		// Everything the inset panels are built from (never the layout coordinates): when none of it
-		// changed since the last render - e.g. while a helix is dragged or rotated - the panels are
+		// changed since the last render, e.g. while a helix is dragged or rotated, the panels are
 		// kept as they are instead of being rebuilt and laid out again (they stay still, like legends).
 		_insetsUnchanged() {
 			const r = this._rna;
@@ -7222,14 +7186,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._insetDeps = deps;
 			return !!(last && this._pkPanelsEl?.children.length && deps.every((d, i) => d === last[i]));
 		}
-		// ─────────────────────────────────────────────────────────────────────────
 		// Outline mode: the backbone alone as one thick line, with coloured "domains" over it.
 		// Domains live on the structure record (s.outlineDomains = [{name, start, end, color}]) so
 		// they survive toggling the mode, structure switches and re-layouts. start/end are base
 		// numbers as shown by the index labels (alignment columns for Stockholm, 1..n otherwise),
 		// inclusive. They can be added by clicking two points on the backbone or from the Outline
 		// tab of the settings window.
-		// ─────────────────────────────────────────────────────────────────────────
 		setOutlineMode(on) {
 			on = !!on;
 			if (on === this._outlineMode) return;
@@ -7256,7 +7218,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._outlineChanged();
 		}
 		clearOutlineDomains() { this.setOutlineDomains([]); }
-		// Add a domain; missing fields get defaults (name "Domain #k", colour black, from the end of
+		// Add a domain, missing fields get defaults (name "Domain #k", colour black, from the end of
 		// the previous domain to the end of the RNA). Positions are clamped to the RNA.
 		// Returns the stored domain (null without a structure).
 		addOutlineDomain(d = {}, refresh = true) {
@@ -7374,7 +7336,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// first click sets the start base, second the end base
 		_onOutlineClick(e) {
 			if (!this._outlineMode || !this._rna || e.button !== 0) return;
-			if (!this._mouseDownPt || Math.hypot(e.clientX - this._mouseDownPt.x, e.clientY - this._mouseDownPt.y) > 4) return; // a drag (pan / helix rotation)
+			if (!this._mouseDownPt || Math.hypot(e.clientX - this._mouseDownPt.x, e.clientY - this._mouseDownPt.y) > 4) return; // A drag (pan / helix rotation)
 			this._mouseDownPt = null;
 			const p = this._clientToScene(e.clientX, e.clientY);
 			const idx = this._nearestBase(p.x, p.y);
@@ -7440,7 +7402,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (skip(i)) { open = false; continue; }
 				if (open) line(coords[i].x, coords[i].y); else move(coords[i].x, coords[i].y);
 			}
-			if (pts === 1 && last) line(last[0], last[1]); // a single base: a dot (round caps)
+			if (pts === 1 && last) line(last[0], last[1]); // A single base: a dot (round caps)
 			return d;
 		}
 		// Paths of the domains in the current view: each runs exactly from the centre of its first
@@ -7474,8 +7436,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_renderOutline() {
 			const { coords, n } = this._rna;
 			const { width, color } = this._outlineStyle();
-			const bg = this._gv('--rv-bg') || '#ffffff'; // markers: theme background against the outline colour
-			if (this._rotState || this._flipState) this._tooltip.style.display = 'none'; // redraw during a helix drag
+			const bg = this._gv('--rv-bg') || '#ffffff'; // Markers: theme background against the outline colour
+			if (this._rotState || this._flipState) this._tooltip.style.display = 'none'; // Redraw during a helix drag
 			const g = document.createElementNS(NS, 'g');
 			g.setAttribute('class', 'rv-outline');
 			this._scene.appendChild(g);
@@ -7521,7 +7483,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				g.appendChild(this._outlineHoverEl);
 				// Invisible circle on every base: hovering shows the base, dragging a paired base rotates
 				// or flips its helix (same handlers as in normal mode, via data-idx), a click picks it
-				const hr = this._gvn('--rv-base-radius', BASE_R); // base-sized, so neighbouring circles don't overlap
+				const hr = this._gvn('--rv-base-radius', BASE_R); // Base-sized, so neighbouring circles don't overlap
 				const { pairs } = this._rna;
 				const hoverNearest = e => { const q = this._clientToScene(e.clientX, e.clientY); this._outlineHover(this._nearestBase(q.x, q.y), e); };
 				for (let i = 0; i < n; i++) {
@@ -7580,13 +7542,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const inp = document.createElement('input');
 					inp.type = 'number'; inp.className = 'rv-stop-val'; inp.min = b.min; inp.max = b.max; inp.step = 1;
 					inp.value = dom[key]; inp.title = `${title} base (${b.min}–${b.max})`;
-					inp.addEventListener('input', () => { // live, keeps the other end in place while typing
+					inp.addEventListener('input', () => { // Live, keeps the other end in place while typing
 						const v = parseInt(inp.value, 10);
 						if (!Number.isFinite(v)) return;
 						dom[key] = Math.min(b.max, Math.max(b.min, v));
 						if (this._outlineMode && !this._alnActive) this._renderSoon();
 					});
-					inp.addEventListener('change', () => { // settle: clamp, order start ≤ end, show the stored values
+					inp.addEventListener('change', () => { // Settle: clamp, order start <= end, show the stored values
 						const v = parseInt(inp.value, 10);
 						dom[key] = Number.isFinite(v) ? v : dom[key];
 						this._clampOutlineDomain(dom);
@@ -7689,9 +7651,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				values,
 				colorMap
 			} = this._rna;
-			const g_bg = document.createElementNS(NS, 'g'); // white eraser circles
-			const g_helix = document.createElementNS(NS, 'g'); // helix cov boxes (deepest)
-			const g_annot = document.createElementNS(NS, 'g'); // pair annotation boxes
+			const g_bg = document.createElementNS(NS, 'g'); // White eraser circles
+			const g_helix = document.createElementNS(NS, 'g'); // Helix cov boxes (deepest)
+			const g_annot = document.createElementNS(NS, 'g'); // Pair annotation boxes
 			const g_bb = document.createElementNS(NS, 'g');
 			const g_bp = document.createElementNS(NS, 'g');
 			const g_base = document.createElementNS(NS, 'g');
@@ -7701,7 +7663,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const g_end_labels = document.createElementNS(NS, 'g'); // 5'/3' labels, topmost
 			// Stockholm structures use a different PK visualization (R3D arcs + mini panels)
 			const isStockholm = !!(this._rna?.baseDisplay);
-			// Layer order differs: Stockholm bonds go ABOVE bases; standard bonds go BELOW bases
+			// Layer order differs: Stockholm bonds go above bases, standard bonds go below bases
 			if (isStockholm) {
 				this._scene.append(g_bb, g_bg, g_helix, g_annot, g_base, g_bp, g_pk, g_pk_top, g_ss_labels, g_end_labels);
 			} else {
@@ -7761,7 +7723,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// GC: two parallel lines (offset perpendicular to pair axis)
 				// GU: single line + filled dot at midpoint
 				// other: filled dot at midpoint
-				const BP_OFFSET = 2.8; // scene units between GC double-line centres
+				const BP_OFFSET = 2.8; // Scene units between GC double-line centres
 				for (let i = 0; i < n; i++) {
 					if (pairs[i] <= i) continue;
 					const j = pairs[i];
@@ -7773,7 +7735,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						dy = y2 - y1;
 					const len = Math.hypot(dx, dy) || 1;
 					const nx = -dy / len,
-						ny = dx / len; // unit normal to pair axis
+						ny = dx / len; // Unit normal to pair axis
 					const b1 = sequence[i].toUpperCase(),
 						b2 = sequence[j].toUpperCase();
 					const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
@@ -7786,7 +7748,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							.forEach(el => g_bp.appendChild(el));
 					} else if (!isCanon) {
 						if (this._relaxedSequence) {
-							// Non-standard bases - render as single line instead of dot
+							// Non-standard bases, render as single line instead of dot
 							g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
 						} else {
 							// Non-canonical, dot only at midpoint
@@ -7814,7 +7776,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				}
 				// Per-base highlight boxes for covarying pseudoknot pairs
-				// Gated on both pair-annotations AND pseudoknots toggles
+				// Gated on both pair-annotations and pseudoknots toggles
 				if (this._showPairAnnotations && this._showPseudoknots !== false && !isStockholm && this._rna.pseudoCovAnnotations?.length) {
 					const s = baseR * 2.4;
 					for (const {
@@ -7840,7 +7802,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						}
 					}
 				}
-				// Pseudoknot pairs - curved dashed arcs (non-Stockholm only; Stockholm uses mini helix panels)
+				// Pseudoknot pairs, curved dashed arcs (non-Stockholm only, Stockholm uses mini helix panels)
 				if (this._showPseudoknots !== false && !isStockholm) {
 					this._drawPkArcs(g_pk, coords, pseudoPairs, cs);
 				}
@@ -7902,7 +7864,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								const er = this._mkEraserCircle(coords[i].x, coords[i].y, baseR, bgColor);
 								er.setAttribute('class', 'rv-base-circle rv-eraser');
 								er.style.pointerEvents = 'none';
-								g_bg.appendChild(er); // eraser behind annotation boxes
+								g_bg.appendChild(er); // Eraser behind annotation boxes
 								// Invisible hit-target in g_base so _onMouseDown finds the base
 								const hit = document.createElementNS(NS, 'circle');
 								hit.setAttribute('class', 'rv-hit');
@@ -7915,7 +7877,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 								lbl.style.fill = bd.textColor;
 								lbl.style.fontSize = (baseR * 3) + 'px';
 								lbl.style.fontWeight = 'bold';
-								grp.append(hit, lbl); // hit-target + letter in front of annotation boxes
+								grp.append(hit, lbl); // Hit-target + letter in front of annotation boxes
 							} else {
 								// Circle only, no letter
 								circ.style.fill = bd.fillColor;
@@ -7931,7 +7893,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					// Position index shown even for skipped positions (keeps numbering aligned)
 					if (this._showIndices && (i === 0 || (i + 1) % 10 === 0 || i === n - 1)) {
 						// Outward direction = perpendicular to the local backbone tangent,
-						// on the side AWAY from the WC partner (paired) or centroid (unpaired).
+						// on the side away from the WC partner (paired) or centroid (unpaired).
 						// This is always truly outside the helix/loop regardless of orientation.
 						const prev = i > 0 ? coords[i - 1] : coords[i];
 						const next = i < n - 1 ? coords[i + 1] : coords[i];
@@ -7945,19 +7907,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						} else {
 							// Two perpendiculars to the backbone tangent
 							const p1x = -ty,
-								p1y = tx; // 90° CCW
+								p1y = tx; // 90 degrees counter-clockwise
 							const p2x = ty,
-								p2y = -tx; // 90° CW
+								p2y = -tx; // 90 degrees clockwise
 							const partner = pairs[i];
 							if (partner !== -1) {
-								// Paired base: go to the side AWAY from the WC partner
+								// Paired base: go to the side away from the WC partner
 								const vpx = coords[partner].x - coords[i].x;
 								const vpy = coords[partner].y - coords[i].y;
 								const useP1 = (p1x * vpx + p1y * vpy) < 0;
 								dx = useP1 ? p1x : p2x;
 								dy = useP1 ? p1y : p2y;
 							} else {
-								// Unpaired base, go to the side AWAY from the structure centroid
+								// Unpaired base, go to the side away from the structure centroid
 								const vcx = centX - coords[i].x;
 								const vcy = centY - coords[i].y;
 								const useP1 = (p1x * vcx + p1y * vcy) < 0;
@@ -7977,7 +7939,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					grp.addEventListener('mouseleave', () => {
 						this._tooltip.style.display = 'none';
 					});
-					// PK endpoint bases go above PK lines; all others behind them
+					// PK endpoint bases go above PK lines, all others behind them
 					(pkEndpts.has(i) ? g_pk_top : g_base).appendChild(grp);
 				}
 				// 5' and 3' end labels for Stockholm structures
@@ -7992,7 +7954,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const cx = coords[idx].x, cy = coords[idx].y;
 						let dx, dy;
 						if (isNaview) {
-							// NAView: offset away from adjacent base - reliable in radial layouts
+							// NAView: offset away from adjacent base, reliable in radial layouts
 							const nx = coords[neighborIdx]?.x ?? cx;
 							const ny = coords[neighborIdx]?.y ?? cy;
 							dx = cx - nx; dy = cy - ny;
@@ -8157,8 +8119,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				color: '#888888',
 				label: '≥75%'
 			}, ];
-			const alCR = LSWH * 0.5; // circle radius
-			const alLblW = 32 * LS; // estimated label text width
+			const alCR = LSWH * 0.5; // Circle radius
+			const alLblW = 32 * LS; // Estimated label text width
 			const alCol1W = alCR * 2 + LX + alLblW;
 			const alCol2W = LFONT * 1.4 + LX + alLblW;
 			const alW = alCol1W + 2 * LX + alCol2W;
@@ -8170,7 +8132,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Extend viewBox width if legends would overflow the structure bounds
 			if (hasColorLegend && vbW < clW + 2 * pad) vbW = clW + 2 * pad;
 			// Combined width of aln + pa legends (placed side by side)
-			const paLblW = 52 * LS; // enough for 'Non-canonical' + swatch
+			const paLblW = 52 * LS; // Enough for 'Non-canonical' + swatch
 			const paW = hasPAnnotLegend ? LSWW + LX * 0.8 + paLblW : 0;
 			const totalLgndW = 2 * pad + (hasAlnLegend ? alW + (hasPAnnotLegend ? 2 * LX : 0) : 0) + paW;
 			if ((hasAlnLegend || hasPAnnotLegend) && vbW < totalLgndW) vbW = totalLgndW;
@@ -8202,7 +8164,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Font sizes, read from CSS, scaled up for SVG resolution
 			const labelFSz = _gvn('--rv-base-label-font-size', 13) * 1.6;
 			const indexFSz = _gvn('--rv-base-index-font-size', 12) * 1.6;
-			const rawLSz = indexFSz / 1.6; // unscaled, matches canvas font-size
+			const rawLSz = indexFSz / 1.6; // Unscaled, matches canvas font-size
 			const labelColor = C.baseText;
 			const indexColor = C.muted;
 			// Build SVG
@@ -8226,7 +8188,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			sc2.querySelectorAll('circle.rv-hit').forEach(c => c.remove());
 			sc2.querySelectorAll('circle.rv-eraser').forEach(c => {
 				const r = parseFloat(c.getAttribute('r')) || BASE_R;
-				c.setAttribute('r', r * 0.75); // ~1.1× baseR
+				c.setAttribute('r', r * 0.75); // About 1.1 times baseR
 			});
 			sc2.querySelectorAll('circle.rv-base-circle:not(.rv-eraser)').forEach(c => {
 				const r = parseFloat(c.getAttribute('r')) || BASE_R;
@@ -8235,7 +8197,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			sc2.querySelectorAll('text').forEach(t => {
 				t.setAttribute('dy', '0.3em');
 			});
-			// ss_cons labels: rebuild inline style - no stroke halo,
+			// SS_cons labels: rebuild the inline style, no stroke halo,
 			// font-size is scaled up (indexFSz = rawLSz * 1.6) for SVG resolution.
 			// We also rescale the bg rects and re-anchor the label positions to match.
 			const svgLScale = indexFSz / rawLSz; // = 1.6
@@ -8243,26 +8205,26 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const anchor = t.getAttribute('text-anchor') || 'middle';
 				// Shift the text anchor point to stay centred after font scale-up.
 				// The extra half-height added by the larger font is (indexFSz - rawLSz) * 0.5
-				// in the vertical direction; horizontal position is already at the anchor edge.
+				// in the vertical direction, the horizontal position is already at the anchor edge.
 				t.setAttribute('style',
 					`font-size:${indexFSz};font-weight:bold;fill:${indexColor};` +
 					`font-family:${C.indexFont};text-anchor:${anchor};dominant-baseline:middle`);
 				t.removeAttribute('dy'); // dominant-baseline handles vertical centering
 			});
-			// ss_cons bg rects: recompute size from scratch using SVG font metrics.
+			// SS_cons bg rects: recompute size from scratch using SVG font metrics.
 			// Paired with text elements by index (same two-pass emission order).
 			// Uses 0.6em char advance (Courier New monospace), tight bgPad for SVG scale.
 			{
 				const rects = Array.from(sc2.querySelectorAll('rect.rv-ss-cons-bg'));
 				const txts = Array.from(sc2.querySelectorAll('text.rv-ss-cons-label'));
-				const svgBgPad = indexFSz * 0.25; // tighter padding at SVG scale
-				const svgTh = indexFSz * 0.75; // cap-height approximation
-				const svgNh = svgTh + svgBgPad * 2; // total rect height
+				const svgBgPad = indexFSz * 0.25; // Tighter padding at SVG scale
+				const svgTh = indexFSz * 0.75; // Cap-height approximation
+				const svgNh = svgTh + svgBgPad * 2; // Total rect height
 				rects.forEach((r, i) => {
 					const t = txts[i];
 					if (!t) return;
 					const label = t.textContent || '';
-					const svgTw = label.length * indexFSz * 0.6; // true monospace advance
+					const svgTw = label.length * indexFSz * 0.6; // True monospace advance
 					const svgNw = svgTw + svgBgPad * 2;
 					// ly = vertical centre, recovered from the old rect
 					const oldY = parseFloat(r.getAttribute('y')) || 0;
@@ -8281,11 +8243,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					r.setAttribute('height', svgNh);
 				});
 			}
-			// ss_cons lines: use class styling
+			// SS_cons lines: use class styling
 			sc2.querySelectorAll('path.rv-ss-cons-line').forEach(p => {
 				p.removeAttribute('style');
 			});
-			// ss_cons leader lines: use class styling + tiny gap at label end
+			// SS_cons leader lines: use class styling + tiny gap at label end
 			sc2.querySelectorAll('line.rv-ss-cons-leader').forEach(l => {
 				const x1 = parseFloat(l.getAttribute('x1'));
 				const y1 = parseFloat(l.getAttribute('y1'));
@@ -8509,8 +8471,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const bpNW = LFONT * 1.4;
 				const bpBond = LFONT * 0.8;
 				// Place the two Ns at fixed centres so the bond sits exactly between them
-				const bpNcL = lx + alCR; // centre-x of left N (aligns with circle column)
-				const bpNcR = bpNcL + bpNW + bpBond; // centre-x of right N
+				const bpNcL = lx + alCR; // Centre-x of left N (aligns with circle column)
+				const bpNcR = bpNcL + bpNW + bpBond; // Centre-x of right N
 				[{
 						bond: 'wc',
 						label: 'Canonical'
@@ -8524,7 +8486,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					label
 				}, idx) => {
 					const ry = bpRow0Y + idx * LROW + alCR;
-					// left N - matches inset base letter pattern: y=ry, dy=0.35em
+					// Left N, matches the inset base letter pattern: y=ry, dy=0.35em
 					const nL = document.createElementNS(NS, 'text');
 					nL.setAttribute('x', bpNcL);
 					nL.setAttribute('y', ry);
@@ -8536,7 +8498,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					nL.setAttribute('fill', '#111111');
 					nL.textContent = 'N';
 					exp.appendChild(nL);
-					// bond at ry (same as inset bonds)
+					// Bond at ry (same as inset bonds)
 					const bx1 = bpNcL + bpNW * 0.5 + LX * 0.2;
 					const bx2 = bpNcR - bpNW * 0.5 - LX * 0.2;
 					if (bond === 'wc') {
@@ -8556,7 +8518,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						dot.setAttribute('fill', C.basepair || '#1f2328');
 						exp.appendChild(dot);
 					}
-					// right N
+					// Right N
 					const nR = document.createElementNS(NS, 'text');
 					nR.setAttribute('x', bpNcR);
 					nR.setAttribute('y', ry);
@@ -8568,7 +8530,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					nR.setAttribute('fill', '#111111');
 					nR.textContent = 'N';
 					exp.appendChild(nR);
-					// label
+					// Label
 					const bpLbl = document.createElementNS(NS, 'text');
 					bpLbl.setAttribute('x', bpNcR + bpNW * 0.5 + LX);
 					bpLbl.setAttribute('y', ry);
@@ -8590,7 +8552,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const gradH = LSWH;
 					const hdrY = rowY0 + ALN_LETT.length * LROW + LROW * 1.7;
 					const barY = hdrY + LROW * 0.85;
-					// sub-header
+					// Sub-header
 					const canonHdr = document.createElementNS(NS, 'text');
 					canonHdr.setAttribute('x', canonX + gradW * 0.5);
 					canonHdr.setAttribute('y', hdrY);
@@ -8602,7 +8564,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					canonHdr.setAttribute('fill', C.muted);
 					canonHdr.textContent = '% Canonical pairs';
 					exp.appendChild(canonHdr);
-					// gradient def
+					// Gradient def
 					const defs = document.createElementNS(NS, 'defs');
 					const grad = document.createElementNS(NS, 'linearGradient');
 					const gradId = 'rv-canon-grad';
@@ -8669,12 +8631,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Mirrors _render() which handles both pseudoPairs and ssConsPkPairs
 			const expIsStockholm = !!this._rna?.baseDisplay;
 			if (expIsStockholm && (this._showR3dInsets !== false || this._showR3dLabels !== false)) {
-				// One panel per distinct name (same names as on screen; same-named stems stacked in one panel)
+				// One panel per distinct name (same names as on screen, same-named stems stacked in one panel)
 				const expAllStems = this._insetGroups().map(({ label, stems }) => ({ featureName: label, stems }));
 
 				if (expAllStems.length && this._showR3dInsets !== false) {
 					// Panel geometry (same proportions as interactive panels)
-					const pk_baseR = BASE_R; // * Math.min(LS, 1.2) * 0.57 * 1.2;
+					const pk_baseR = BASE_R; // Previously scaled by Math.min(LS, 1.2) * 0.57 * 1.2
 					const pk_colSep = pk_baseR * 6;
 					const pk_rowStep = pk_baseR * 3.2;
 					const pk_col5x = pk_baseR * 2;
@@ -8685,14 +8647,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const pk_gap = pk_baseR * 4;
 					const pk_titleH = indexFSz * 1.8 + pk_baseR * 2.5;
 					// Per-panel width: each panel sized to its own title
-					const pk_titleCharW = indexFSz * 1.8 * 0.6; // approx monospace char width
-					const pk_stemW = pk_colSep + pk_baseR * 4; // minimum width for stem diagram
+					const pk_titleCharW = indexFSz * 1.8 * 0.6; // Approx monospace char width
+					const pk_stemW = pk_colSep + pk_baseR * 4; // Minimum width for stem diagram
 					const pk_panelWidths = expAllStems.map(({ featureName: lbl }) =>
 						Math.max(pk_stemW, (lbl?.length || 0) * pk_titleCharW + pk_baseR * 2)
 					);
 					const pk_totalW = pk_panelWidths.reduce((s, w) => s + w + pk_hPad, 0) - pk_hPad;
 					// Panel height: sum of all stems in the group + gap between stems
-					const pk_stemGap = pk_baseR * 5; // gap between stacked stems in one panel
+					const pk_stemGap = pk_baseR * 5; // Gap between stacked stems in one panel
 					const pk_maxH = Math.max(...expAllStems.map(({ stems }) => {
 						const totalRows = stems.reduce((s, stem) => s + stem.length, 0);
 						const stemGaps = (stems.length - 1) * pk_stemGap;
@@ -8740,8 +8702,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const pk_col3x_l = pk_col5x_l + pk_colSep;
 						const panelG = document.createElementNS(NS, 'g');
 						exp.appendChild(panelG);
-						// Layers as in the on-screen panels (bottom > top):
-						// backbone > erasers > helix boxes > pair / covariation / canon boxes > bases > bonds
+						// Layers as in the on-screen panels, from bottom to top:
+						// backbone, erasers, helix boxes, pair / covariation / canon boxes, bases, bonds
 						const [L_bb, L_era, L_hbox, L_abox, L_base, L_bp] = Array.from({ length: 6 }, () => document.createElementNS(NS, 'g'));
 
 						// Build inCoords and inPairs2 across all stems in this panel
@@ -8882,7 +8844,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							});
 
 							stemY += (stem.length - 1) * pk_rowStep + pk_baseR * 2 + pk_stemGap;
-						}); // end stems.forEach
+						}); // End stems.forEach
 
 						// 4. Pair annotation / covariation / % canonical boxes (across all stems)
 						for (const b of this._insetAnnotBoxes(stems.flat(), inPairs2)) {
@@ -8891,8 +8853,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							L_abox.appendChild(this._mkPairAnnotRect(ic5.x, ic5.y, ic3.x, ic3.y,
 								b.color, b.opacity ?? pAnnotOpa2, b.strokeWidth ?? pAnnotSW2, b.padding ?? pAnnotPad2, pk_baseR));
 						}
-					}); // end expAllStems.forEach
-				} // end if expAllStems.length
+					}); // End expAllStems.forEach
+				} // End if expAllStems.length
 			}
 			// Grow the viewBox to the real bounds of everything drawn: index labels, pseudoknot arcs,
 			// annotation boxes and SS_cons labels (including dragged ones, via their transforms) can
@@ -9028,7 +8990,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			} = this._rna;
 			const hi = helix.i;
 			for (let k = 0; k < hi; k++) {
-				if (pairs[k] > hi) return false; // a pair that encloses hi
+				if (pairs[k] > hi) return false; // A pair that encloses hi
 			}
 			return true;
 		}
@@ -9049,7 +9011,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				ny = dx / len;
 			return Math.sign((mx - ax) * nx + (my - ay) * ny);
 		}
-		// Reflect all bases strictly inside the helix (hi+1 … hj-1) across the
+		// Reflect all bases strictly inside the helix (hi+1 to hj-1) across the
 		// backbone axis (line through coords[hi] to coords[hj]).
 		_flipInteriorAcrossBackbone(helix, coords) {
 			const {
@@ -9062,14 +9024,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				dy = coords[hj].y - ay;
 			const len = Math.hypot(dx, dy) || 1;
 			const ux = dx / len,
-				uy = dy / len; // unit along backbone
+				uy = dy / len; // Unit along backbone
 			for (let k = hi + 1; k < hj; k++) {
 				const px = coords[k].x - ax,
 					py = coords[k].y - ay;
-				const t = px * ux + py * uy; // projection onto backbone
+				const t = px * ux + py * uy; // Projection onto backbone
 				const perpX = px - t * ux,
-					perpY = py - t * uy; // perpendicular component
-				coords[k].x = ax + t * ux - perpX; // negate perp = reflect
+					perpY = py - t * uy; // Perpendicular component
+				coords[k].x = ax + t * ux - perpX; // Negate perp = reflect
 				coords[k].y = ay + t * uy - perpY;
 			}
 		}
@@ -9092,7 +9054,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_onMouseDown(e) {
 			if (this._isAnimating) return;
 			if (e.button !== 0) return;
-			this._mouseDownPt = { x: e.clientX, y: e.clientY }; // a drag (pan) must not count as an outline click
+			this._mouseDownPt = { x: e.clientX, y: e.clientY }; // A drag (pan) must not count as an outline click
 			const grp = e.target.closest('[data-idx]');
 			if (grp) {
 				const idx = parseInt(grp.getAttribute('data-idx'));
@@ -9122,7 +9084,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						// Interior-loop helix, rotate around the loop centre
 						const pt = this._clientToScene(e.clientX, e.clientY);
 						// For NAView the loopCenter centroid can sit geometrically between the
-						// helix arms - use the midpoint of the flanking backbone positions instead.
+						// helix arms, use the midpoint of the flanking backbone positions instead.
 						let cx = helix.loopCenter.x,
 							cy = helix.loopCenter.y;
 						let navPath = null;
@@ -9171,7 +9133,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							};
 						}
 						const startAngle = Math.atan2(pt.y - cy, pt.x - cx);
-						// Snapshot loop centers of ALL helices so child loop centers
+						// Snapshot loop centers of all helices so child loop centers
 						// can be kept in sync as the drag progresses (see _onMouseMove).
 						const snapLCs = this._rna.helices.map(h => ({
 							x: h.loopCenter.x,
@@ -9238,7 +9200,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				helix.forEach(ps => helixColorMap.set(pairKey(ps.i, ps.j), col));
 			});
 
-			// Build occupancy grid from all base coords to guide arc direction.
+			// Build occupancy grid from all base coords to guide arc direction
 			const GRID = 30;
 			let minGX = Infinity,
 				maxGX = -Infinity,
@@ -9314,7 +9276,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				g_pk.appendChild(arc);
 			}
 		}
-		// Coalesce high-frequency redraws (helix drag / flip, colour pickers) into one per frame.
+		// Coalesce high-frequency redraws (helix drag / flip, colour pickers) into one per frame
 		_renderSoon() {
 			if (this._renderPending) return;
 			this._renderPending = requestAnimationFrame(() => {
@@ -9372,7 +9334,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						h.loopCenter.y = snap.y;
 					}
 				});
-				this._renderSoon(); // one redraw per animation frame while dragging
+				this._renderSoon(); // One redraw per animation frame while dragging
 				return;
 			}
 			if (this._rotState) {
@@ -9390,8 +9352,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					...c
 				}));
 				// For NAView path-sliding bypass VARNA entirely: its minDelta snap
-				// (0.25 rad) maps tiny rightward drags to delta≈maxDelta≈6.03, which
-				// after sign-conversion becomes -0.25 > helix moves backwards and
+				// (0.25 rad) maps tiny rightward drags to a delta close to maxDelta (about 6.03), which
+				// after sign-conversion becomes -0.25, so the helix moves backwards and
 				// snaps. Use the raw signed drag angle instead.
 				const {
 					navPath
@@ -9402,7 +9364,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (delta > Math.PI) delta -= 2 * Math.PI;
 					if (delta < -Math.PI) delta += 2 * Math.PI;
 				} else {
-					// applyHelixRotation returns the actual delta applied (post-hysteresis).
+					// applyHelixRotation returns the actual delta applied (post-hysteresis)
 					delta = applyHelixRotation(helix, dragAngle, startAngle, workCoords, this._rna.pairs, this._rna.n, cx, cy);
 				}
 				if (this._rna._algo === 'naview' && navPath && navPath.total > 1e-9) {
@@ -9418,7 +9380,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const nu = helix.nextUnpaired,
 						pu = helix.prevUnpaired;
 					const span = shj - shi;
-					// delta is already raw-signed. Cap R to total/π so short loops
+					// delta is already raw-signed. Cap R to total/pi so short loops
 					// (1 base) don't overshoot on the first tiny drag.
 					const R = Math.min(Math.hypot(snapCoords[hi].x - cx, snapCoords[hi].y - cy) || 1, total / Math.PI);
 					const nshi = Math.max(0, Math.min(shi + delta * R, total - span));
@@ -9445,7 +9407,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						oHj = snapCoords[hj];
 					const oDx = oHj.x - oHi.x,
 						oDy = oHj.y - oHi.y;
-					// Rigid transform: rotation only, NO scale - prevents the helix
+					// Rigid transform: rotation only, no scale, this prevents the helix
 					// from compressing when the path chord shortens.
 					const origLen = Math.hypot(oDx, oDy);
 					const nHj_path = interp(nshj);
@@ -9520,7 +9482,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._rna.coords[i].x = workCoords[i].x;
 					this._rna.coords[i].y = workCoords[i].y;
 				}
-				this._renderSoon(); // one redraw per animation frame while dragging
+				this._renderSoon(); // One redraw per animation frame while dragging
 				const r = parseFloat(this._rotCirc.getAttribute('r'));
 				this._rotLine.setAttribute('x2', cx + r * Math.cos(dragAngle));
 				this._rotLine.setAttribute('y2', cy + r * Math.sin(dragAngle));
@@ -9570,7 +9532,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const result = this._layoutAlgo === 'naview' ? this._autoRotateLayout(drawRNANAView(pairs, sequence.length)) : this._layoutAlgo === 'radiate' ? drawRNARadiate(pairs, sequence.length) : this._pickLayout(pairs, sequence.length);
 			const _usedAlgo = this._layoutAlgo === 'auto' ? this._lastPickedAlgo : this._layoutAlgo;
 			// If helixAnnotations are already resolved (have subHelices/pkPairs from loadHelixCov),
-			// skip re-resolution - they're in the final format already.
+			// Skip re-resolution, they're in the final format already.
 			const _alreadyResolved = helixAnnotations?.length && ('subHelices' in helixAnnotations[0] || 'pkPairs' in helixAnnotations[0]);
 			const resolvedHelixAnnotations = helixAnnotations?.length ?
 				(_alreadyResolved ? helixAnnotations : resolveHelixAnnotations(helixAnnotations, pairs, positionLabels)) :
@@ -9621,7 +9583,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._layoutAlgo = 'auto';
 			}
 			this._syncLayoutBtn(this._layoutAlgo);
-			// Helper: if structures already loaded, restore them and show a dialog; otherwise fatal error
+			// Helper: if structures already loaded, restore them and show a dialog, otherwise a fatal error
 			const reportError = (msg) => {
 				if (prev.rna) {
 					this._rna = prev.rna;
@@ -9640,7 +9602,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			const sharedValues = config.values || null;
 			const sharedColorMap = normalizeColorMap(config);
-			this._structures = config.structures; // enriched after layout loop below
+			this._structures = config.structures; // Enriched after layout loop below
 			this._structLayouts = [];
 			this._currentStructIdx = Math.min(config._startIdx ?? 0, config.structures.length - 1);
 			for (let idx = 0; idx < config.structures.length; idx++) {
@@ -9652,7 +9614,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					return;
 				}
 				// Per-structure sequence, change T to U.
-				// Fall back to shared config.sequence ONLY when it has the same length as the
+				// Fall back to shared config.sequence only when it has the same length as the
 				// structure, otherwise a wrong-length shared sequence causes a spurious error.
 				const perSeq = normalizeSeq(s.sequence);
 				const sharedSeq = normalizeSeq(config.sequence);
@@ -9742,7 +9704,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (config.weighting != null) this._useWeighting = config.weighting !== false;
 			this._buildStructSwitcher();
 			this._rna = this._structLayouts[this._currentStructIdx];
-			// Show % canonical toggle for Stockholm structures; mode starts from the showPercCanonical option
+			// Show % canonical toggle for Stockholm structures, the mode starts from the showPercCanonical option
 			this._covCanonMode = !!(config.showPercCanonical ?? this._constructorConfig?.showPercCanonical) && !!this._rna.pairCanonPct;
 			if (this._chkCovCanon) {
 				this._chkCovCanon.classList.toggle('rv--active', this._covCanonMode);
@@ -9775,7 +9737,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const shift = (this._showSsEnds && ends?.trimS > 0) ? ends.trimS : 0;
 
 			// Read from _base (the trimmed-index canonical), falling back to the layout itself
-			// (when ssEnds is off, _base is not set and the layout IS trimmed-index).
+			// (when ssEnds is off, _base is not set and the layout is trimmed-index).
 			const layout = this._structLayouts[idx];
 			if (!layout) return;
 			const src = layout._base || layout;
@@ -9821,19 +9783,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._drawCurrent(true);
 		}
 		// Update index visibility to match the given structure layout.
-		// Stockholm structures (with ssConsFeatures) hide indices; others restore them,
+		// Stockholm structures (with ssConsFeatures) hide indices, others restore them,
 		// unless the caller explicitly set showIndices:false in the config.
 		_applyStructIndices(rna, config) {
 			const isStockholm = !!(rna?.baseDisplay);
 			// switchToStructure already restored indices / SS-ends from the structure's saved state
 			const restored = !!rna?._toggleState;
 			if (restored) {
-				// keep restored values
+				// Keep restored values
 			} else if (isStockholm) {
 				this._showIndices = false;
 				if (this._chkIndices) this._chkIndices.classList.remove('rv--active');
 			} else {
-				// Restore indices - but only if the user hasn't explicitly disabled them.
+				// Restore indices, but only if the user hasn't explicitly disabled them.
 				// Check constructor config first (highest priority), then per-load config.
 				const constructorSaysOff = this._constructorConfig?.showIndices === false;
 				const loadSaysOff = (config ?? {}).showIndices === false;
@@ -9842,7 +9804,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (this._chkIndices) this._chkIndices.classList.add('rv--active');
 				}
 			}
-			// Reset ss-ends toggle to the config default when switching structures.
+			// Reset ss-ends toggle to the config default when switching structures
 			if (restored) {
 				if (!rna?.ssEnds) this._showSsEnds = false;
 			} else if (rna?.ssEnds) {
@@ -9853,7 +9815,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (this._chkSsEnds) this._chkSsEnds.classList.remove('rv--active');
 			}
 			// Show W button only for Stockholm structures with sequence weighting available.
-			// The W state is global: apply it to the structure being shown (data only - the
+			// The W state is global: apply it to the structure being shown (data only, the
 			// caller renders and re-applies canonical-pair colouring afterwards).
 			if (this._chkWeight) {
 				const idx = this._currentStructIdx >= 0 ? this._currentStructIdx : 0;
@@ -9879,7 +9841,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 
 		// Switch the current Stockholm structure between its weighted (R2R GSC/PB) and unweighted
 		// display variants. Both variants share the same columns, so only letters, colours, hover
-		// percentages and % canonical pairs change - the layout itself is untouched.
+		// percentages and % canonical pairs change, the layout itself is untouched.
 		// The active variant is written into the structure record (s, s.ssEnds) so every later
 		// rebuild (_rebuildCurrentLayout, SS-ends toggle) picks it up automatically.
 		_applyWeighting(render = true) {
@@ -9899,7 +9861,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			const layout = this._structLayouts?.[idx];
 			if (!layout) return;
-			// The live layout is either the trimmed one or the full (SS-ends) one.
+			// The live layout is either the trimmed one or the full (SS-ends) one
 			const isFull = !!(ends && layout.sequence?.length === ends.fullStruct.length);
 			layout.sequence = isFull ? ends.fullSeq.join('') : s.sequence;
 			layout.baseDisplay = isFull ? ends.fullBaseDisplay : s.baseDisplay;
@@ -9909,10 +9871,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				layout._base.baseDisplay = s.baseDisplay;
 				layout._base.pairCanonPct = s.pairCanonPct;
 			}
-			// Canonical-pair colours depend on pairCanonPct: drop the cached colouring.
+			// Canonical-pair colours depend on pairCanonPct: drop the cached colouring
 			this._clearCanonState(layout);
 			if (!render || this._alnActive) return;
-			if (this._covCanonMode && layout.pairCanonPct) this._applyCovCanonColoring(); // renders
+			if (this._covCanonMode && layout.pairCanonPct) this._applyCovCanonColoring(); // Renders
 			else this._render();
 		}
 		_readFileText(f) {
@@ -10001,7 +9963,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					setTimeout(updateArrows, 320);
 				};
 			}
-			this._structBar.onscroll = updateArrows; // property, not addEventListener: rebuilt on every load
+			this._structBar.onscroll = updateArrows; // Property, not addEventListener: rebuilt on every load
 			// Initial state after layout (scrollWidth not reliable until rendered)
 			requestAnimationFrame(() => {
 				// Scroll the active pill into view inside the bar
@@ -10070,7 +10032,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const T = _STRUCT_TOGGLES;
 			srcRna._toggleState = { covCanonMode: this._covCanonMode, layoutAlgo: srcRna._algo || this._layoutAlgo };
 			for (const [flag] of T) srcRna._toggleState[flag] = this[flag];
-			// Clear transient canon state from the source - it will be rebuilt on switch-back
+			// Clear transient canon state from the source, it will be rebuilt on switch-back
 			this._clearCanonState(srcRna);
 			// Restore toggle state from the target layout (if previously saved)
 			if (tgtRna._toggleState) {
@@ -10082,7 +10044,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._covCanonMode = st.covCanonMode ?? false;
 				if (st.layoutAlgo) { this._layoutAlgo = st.layoutAlgo; this._syncLayoutBtn(this._layoutAlgo); }
 			} else {
-				// No saved toggle state - restore layout algo from what was used to build this layout
+				// No saved toggle state, restore layout algo from what was used to build this layout
 				if (tgtRna._algo) { this._layoutAlgo = tgtRna._algo; this._syncLayoutBtn(this._layoutAlgo); }
 				// Reset covCanonMode for the new structure
 				this._covCanonMode = false;
@@ -10094,7 +10056,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 
 			this._currentStructIdx = idx;
-			// Animate only when both structures share the same sequence - different
+			// Animate only when both structures share the same sequence, different
 			// sequences mean different lengths / base identities which would corrupt
 			// the transition frame interpolation.
 			this._outlinePick = null;
@@ -10139,7 +10101,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				...c
 			}));
 			const tgtCoords = tgtRna.coords;
-			const ease = t => t * t * (3 - 2 * t); // smoothstep
+			const ease = t => t * t * (3 - 2 * t); // Smoothstep
 			this._isAnimating = true;
 			this._structBar?.classList.add('rv--animating');
 			const t0 = performance.now();
@@ -10164,8 +10126,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_renderTransitionFrame(coords, sequence, lostPairs, gainedPairs, commonPairs, pseudoPairs, fadeOut, fadeIn, values, colorMap, pairAnnotations = null, pairAnnotColorMap = null) {
 			this._scene.innerHTML = '';
 			const n = coords.length;
-			const g_helix = document.createElementNS(NS, 'g'); // helix cov boxes
-			const g_annot = document.createElementNS(NS, 'g'); // annotation boxes
+			const g_helix = document.createElementNS(NS, 'g'); // Helix cov boxes
+			const g_annot = document.createElementNS(NS, 'g'); // Annotation boxes
 			const g_bb = document.createElementNS(NS, 'g');
 			const g_bp = document.createElementNS(NS, 'g');
 			const g_base = document.createElementNS(NS, 'g');
@@ -10234,7 +10196,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				} else if (pair === 'AU' || pair === 'UA') {
 					mkL(x1, y1, x2, y2);
 				} else if (this._relaxedSequence) {
-					// Non-standard bases - single line
+					// Non-standard bases, single line
 					mkL(x1, y1, x2, y2);
 				} else {
 					// Non-canonical, dot only
@@ -10338,7 +10300,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			}
 		}
-		// refresh=true when the user leaves the view: apply toggles changed while it was open.
+		// refresh=true when the user leaves the view: apply toggles changed while it was open
 		_exitAlnView(refresh = false) {
 			this._alnActive = false;
 			if (this._alnViewEl) {
@@ -10398,7 +10360,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				n
 			} = this._rna;
 			const pseudoPairs = this._rna.pseudoPairs || [];
-			// Rendered-index > helix colour
+			// Rendered index to helix colour
 			const nHelices = helices?.length || 0;
 			const posColor = new Array(n).fill(null);
 			if (helices) {
@@ -10443,7 +10405,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}
 				});
 			}
-			// Original alignment column (0-based) > colour
+			// Original alignment column (0-based) to colour
 			const colColor = new Array(alnLen).fill(null);
 			if (positionLabels) positionLabels.forEach((origCol1, ri) => {
 				colColor[origCol1 - 1] = posColor[ri];
@@ -10545,13 +10507,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				updateRows();
 			});
 		}
-		// end of class
+		// End of class
 	}
 	// Export
 	if (typeof module !== 'undefined' && module.exports) {
 		module.exports = RFviewJS; // CommonJS
 	} else {
-		global.RFviewJS = RFviewJS; // browser global
+		global.RFviewJS = RFviewJS; // Browser global
 	}
 	// Static parser exports (useful for Electron renderer or server-side use)
 	RFviewJS.parseDbFile = parseDbFile;

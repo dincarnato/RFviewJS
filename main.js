@@ -273,14 +273,14 @@ ipcMain.handle('headless-done', async (_, svgText, outPath, pdfPath) => {
 // chunks of whole lines and feeds them to RFview's own Stockholm reader, so it is never held in
 // memory as a whole (RFview keeps the first 1000 sequences as text for the alignment view and uses
 // all of them, compactly, for the consensus: GSC up to 1000 sequences, PB above).
-// source: any readable byte stream (file stream, HTTPS response).
+// The source is any readable byte stream (file stream, HTTPS response).
 let structureStream = null;
 function lineChunks(source, minChars = 1024 * 1024) {
     const { StringDecoder } = require('string_decoder');
-    const decoder = new StringDecoder('utf8'); // keeps multi-byte characters split across reads intact
+    const decoder = new StringDecoder('utf8'); // Keeps multi-byte characters split across reads intact
     const it = source[Symbol.asyncIterator]();
     let carry = '', done = false;
-    const read = async () => { // append the next piece to carry; false at the end of the stream
+    const read = async () => { // Append the next piece to carry, false at the end of the stream
         const { value, done: end } = await it.next();
         if (end) { done = true; carry += decoder.end(); return false; }
         carry += decoder.write(value);
@@ -292,13 +292,13 @@ function lineChunks(source, minChars = 1024 * 1024) {
             while (!done && carry.length < n) await read();
             return carry.slice(0, n);
         },
-        // Next block of complete lines (at least minChars unless the stream ends; without the final
+        // Next block of complete lines (at least minChars unless the stream ends, without the final
         // line break), or null at the end of the stream
         async next() {
             while (!done && carry.length < minChars) await read();
             let cut = done ? carry.length : carry.lastIndexOf('\n');
             if (cut < 0) cut = carry.lastIndexOf('\r');
-            while (cut < 0 && !done) { // one line longer than minChars: read until it ends
+            while (cut < 0 && !done) { // One line longer than minChars: read until it ends
                 await read();
                 cut = done ? carry.length : carry.lastIndexOf('\n');
                 if (cut < 0) cut = carry.lastIndexOf('\r');
@@ -343,7 +343,7 @@ async function runHeadless(args) {
     }
 
     if (args.rfam && !/^RF\d+$/i.test(args.rfam)) {
-        console.error(`[!] Error: invalid Rfam ID "${args.rfam}" — must be RF followed by digits`); app.exit(1); return;
+        console.error(`[!] Error: invalid Rfam ID "${args.rfam}", must be RF followed by digits`); app.exit(1); return;
     }
 
     if (args.structureFile && !fs.existsSync(args.structureFile)) {
@@ -369,7 +369,7 @@ async function runHeadless(args) {
     }
 
     // Stockholm input (an Rfam alignment, or a --structureFile starting with '# STOCKHOLM') is
-    // streamed to the renderer (see lineChunks); other structure files are read whole.
+    // streamed to the renderer (see lineChunks), other structure files are read whole.
     let structureText = null, structureName, streamStructure = false;
     if (args.rfam) {
         const rfamId = args.rfam.toUpperCase();
@@ -381,7 +381,7 @@ async function runHeadless(args) {
             });
             if (res.statusCode !== 200) {
                 res.resume();
-                throw new Error(`HTTP ${res.statusCode} — family "${rfamId}" not found on Rfam`);
+                throw new Error(`HTTP ${res.statusCode}, family "${rfamId}" not found on Rfam`);
             }
             structureStream = lineChunks(res);
             if (!isStockholmHead(await structureStream.head())) {
@@ -475,8 +475,8 @@ async function runHeadless(args) {
   try {
     const d = ${payload};
 
-    /* Creates a fresh viewer. app.js already added a .rv div; RFviewJS adds
-       another and works entirely within its own root — no conflict.        */
+    // Creates a fresh viewer. app.js already added a .rv div, RFviewJS adds
+    // another and works entirely within its own root, so there is no conflict.
     const viewer = new RFviewJS(document.getElementById('viewer'), { statusBar: false });
     if (d.layout && d.layout !== 'auto') viewer.setLayoutAlgorithm(d.layout);
     if (d.noLegend) viewer._noLegend = true;
@@ -552,14 +552,14 @@ async function runHeadless(args) {
     /* Apply helix-level covariation post-load */
     if (d.helixCovText) {
       try {
-        viewer.loadCov(d.helixCovText); // auto-detects helixcov format
+        viewer.loadCov(d.helixCovText); // Auto-detects helixcov format
       } catch (e) {
         console.warn('[!] Warning: Cannot load helix annotations: ' + e.message);
       }
     }
 
     /* Export SVG (synchronous, no download dialog) */
-    viewer._render();  // re-render to apply any visibility flags (noPk, noLabels, noInsets)
+    viewer._render(); // Re-render to apply any visibility flags (noPk, noLabels, noInsets)
     const svgText = viewer.exportSVGString();
     if (!svgText) { window.electronAPI.headlessError('exportSVGString() returned empty.'); return; }
 
@@ -581,7 +581,7 @@ async function runHeadless(args) {
 
     setTimeout(() => {
 
-        console.error('[!] Error: timed out — renderer did not respond within 5 min.');
+        console.error('[!] Error: timed out, the renderer did not respond within 5 min.');
         app.exit(1);
 
     }, 300_000);

@@ -300,7 +300,7 @@ ipcMain.handle('fetch-rfam', async (_, rfamId) => {
 // Electron initialise the display, which fails on machines without one.
 function syncLineChunks(file, chunkSize = 4 * 1024 * 1024) {
     const { StringDecoder } = require('string_decoder');
-    const decoder = new StringDecoder('utf8'); // keeps multi-byte characters split across reads intact
+    const decoder = new StringDecoder('utf8'); // Keeps multi-byte characters split across reads intact
     const fd = fs.openSync(file, 'r');
     const buf = Buffer.allocUnsafe(chunkSize);
     let carry = '', done = false;
@@ -319,7 +319,7 @@ function syncLineChunks(file, chunkSize = 4 * 1024 * 1024) {
                 const text = carry + decoder.write(buf.subarray(0, bytesRead));
                 let cut = text.lastIndexOf('\n');
                 if (cut < 0) cut = text.lastIndexOf('\r');
-                if (cut < 0) { carry = text; continue; } // no line break yet: read more
+                if (cut < 0) { carry = text; continue; } // No line break yet: read more
                 carry = text.slice(cut + 1);
                 return text.slice(0, cut);
             }
@@ -366,7 +366,7 @@ async function runHeadless(args) {
     }
 
     if (args.rfam && !/^RF\d+$/i.test(args.rfam)) {
-        console.error(`[!] Error: invalid Rfam ID "${args.rfam}" — must be RF followed by digits`); process.exit(1);
+        console.error(`[!] Error: invalid Rfam ID "${args.rfam}", must be RF followed by digits`); process.exit(1);
     }
 
     if (args.structureFile && !fs.existsSync(args.structureFile)) {
@@ -392,9 +392,9 @@ async function runHeadless(args) {
     }
 
     // Stockholm input (an Rfam alignment, or a --structureFile starting with '# STOCKHOLM') is
-    // streamed into RFview's reader (see syncLineChunks); other structure files are read whole.
+    // streamed into RFview's reader (see syncLineChunks), other structure files are read whole.
     let structureText = null, structureName, structureStream = null;
-    let removeTmp = () => {}; // deletes the downloaded Rfam alignment (process.exit skips 'exit' handlers here)
+    let removeTmp = () => {}; // Deletes the downloaded Rfam alignment (process.exit skips 'exit' handlers here)
     if (args.rfam) {
         const rfamId = args.rfam.toUpperCase();
         console.log(`Fetching Rfam alignment: ${rfamId}`);
@@ -404,7 +404,7 @@ async function runHeadless(args) {
         const err = downloadSync(`https://rfam.org/family/${rfamId}/alignment/stockholm?gzip=0&download=0`, tmpFile);
         if (err) {
             removeTmp();
-            console.error(/^HTTP \d+$/.test(err) ? `[!] Error: ${err} — family "${rfamId}" not found on Rfam` : `[!] Error: ${err}`);
+            console.error(/^HTTP \d+$/.test(err) ? `[!] Error: ${err}, family "${rfamId}" not found on Rfam` : `[!] Error: ${err}`);
             process.exit(1);
         }
         if (!isStockholmFile(tmpFile)) {
@@ -445,7 +445,7 @@ async function runHeadless(args) {
 
     console.log(`Layout: ${layout}`);
 
-    // Run entirely in the main process using jsdom — no display needed on any platform
+    // Run entirely in the main process using jsdom, no display needed on any platform
     const { JSDOM } = require('jsdom');
     const rfviewSrc = fs.readFileSync(path.join(APP_ROOT, 'scripts', 'RFview.js'), 'utf8');
 
@@ -620,7 +620,7 @@ async function runHeadless(args) {
     process.exit(0);
 }
 
-// App lifecycle — in CLI mode run jsdom logic immediately without waiting for
+// App lifecycle, in CLI mode run jsdom logic immediately without waiting for
 // app.whenReady(), which would trigger display/GTK initialization on Linux.
 if (isCLI) {
 
