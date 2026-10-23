@@ -258,6 +258,7 @@ ipcMain.handle('headless-done', async (_, svgText, outPath, pdfPath) => {
             const pdfData = await hw.webContents.printToPDF({
                 printBackground: true,
                 margins: { marginType: 'none' },
+                preferCSSPageSize: true, // Use the @page size above (the SVG size) instead of Letter
             });
             fs.writeFileSync(pdfPath, pdfData);
             console.log(`PDF written to: ${pdfPath}`);

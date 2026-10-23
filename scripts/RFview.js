@@ -8635,6 +8635,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const expAllStems = this._insetGroups().map(({ label, stems }) => ({ featureName: label, stems }));
 
 				if (expAllStems.length && this._showR3dInsets !== false) {
+					// Stack the panels above everything drawn so far (labels, arcs and boxes can stick
+					// out above the topmost base), not just above the base coordinates
+					this._growExportViewBox(exp, pad / 2, maxPx);
 					// Panel geometry (same proportions as interactive panels)
 					const pk_baseR = BASE_R; // Previously scaled by Math.min(LS, 1.2) * 0.57 * 1.2
 					const pk_colSep = pk_baseR * 6;
@@ -8662,9 +8665,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					})) + pk_titleH + pk_vPad;
 
 					const pk_blockH = pk_maxH + pk_gap;
-					const oldVbY = parseFloat(exp.getAttribute('viewBox').split(' ')[1]);
+					let oldVbY, oldVbH;
+					[vbX, oldVbY, vbW, oldVbH] = exp.getAttribute('viewBox').split(' ').map(Number);
 					const newVbY = oldVbY - pk_blockH;
-					const oldVbH = parseFloat(exp.getAttribute('viewBox').split(' ')[3]);
 					// Extend width if panels are wider than the structure
 					const pk_panelsTotalW = pk_totalW + 2 * pad;
 					if (pk_panelsTotalW > vbW) {
@@ -8856,32 +8859,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					}); // End expAllStems.forEach
 				} // End if expAllStems.length
 			}
-			// Grow the viewBox to the real bounds of everything drawn: index labels, pseudoknot arcs,
-			// annotation boxes and SS_cons labels (including dragged ones, via their transforms) can
-			// all extend beyond the base centres used above. getBBox needs the SVG in the document.
-			{
-				const host = document.createElement('div');
-				host.style.cssText = 'position:absolute;left:-100000px;top:0;visibility:hidden';
-				host.appendChild(exp);
-				document.body.appendChild(host);
-				let bb = null;
-				try { bb = exp.getBBox(); } catch (_) { /* not rendered: keep the computed viewBox */ }
-				host.remove();
-				const [cvX, cvY, cvW, cvH] = exp.getAttribute('viewBox').split(' ').map(Number);
-				if (bb && bb.width > 0 && bb.height > 0) {
-					const m = pad / 2;
-					const newX = Math.min(cvX, bb.x - m);
-					const newY = Math.min(cvY, bb.y - m);
-					const newW = Math.max(cvX + cvW, bb.x + bb.width + m) - newX;
-					const newH = Math.max(cvY + cvH, bb.y + bb.height + m) - newY;
-					if (newX < cvX || newY < cvY || newW > cvW || newH > cvH) {
-						exp.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
-						const newScale = Math.min(1, maxPx / Math.max(newW, newH));
-						exp.setAttribute('width', Math.round(newW * newScale));
-						exp.setAttribute('height', Math.round(newH * newScale));
-					}
-				}
-			}
+			// Final safety growth (the inset panels and legends are placed inside the viewBox already)
+			this._growExportViewBox(exp, pad / 2, maxPx);
 			const exportId = this._id || this._structures?.[this._currentStructIdx]?.label || this._rna?._label || 'RF_structure';
 			const exportName = exportId.replace(/[^a-zA-Z0-9_\-\.]/g, '_') + '.svg';
 			const svgString = new XMLSerializer().serializeToString(exp);
@@ -8898,6 +8877,120 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 		}
 		// Return the current structure as a standalone SVG string (no download)
+		// Grow an export SVG's viewBox to the real bounds of its content: index labels, pseudoknot
+		// arcs, annotation boxes and SS_cons labels (including dragged ones, via their transforms) can
+		// all extend beyond the base centres the initial viewBox is built from. getBBox needs the SVG
+		// in the document and a layout engine, so without one (jsdom) the bounds are estimated from
+		// the element attributes instead.
+		_growExportViewBox(exp, margin, maxPx) {
+			let bb = null;
+			if (typeof exp.getBBox === 'function') {
+				const host = document.createElement('div');
+				host.style.cssText = 'position:absolute;left:-100000px;top:0;visibility:hidden';
+				host.appendChild(exp);
+				document.body.appendChild(host);
+				try { bb = exp.getBBox(); } catch (_) { bb = null; }
+				host.remove();
+			}
+			if (!bb || !(bb.width > 0) || !(bb.height > 0)) bb = this._svgContentBounds(exp);
+			if (!bb) return;
+			const [cvX, cvY, cvW, cvH] = exp.getAttribute('viewBox').split(' ').map(Number);
+			const newX = Math.min(cvX, bb.x - margin);
+			const newY = Math.min(cvY, bb.y - margin);
+			const newW = Math.max(cvX + cvW, bb.x + bb.width + margin) - newX;
+			const newH = Math.max(cvY + cvH, bb.y + bb.height + margin) - newY;
+			if (newX < cvX || newY < cvY || newW > cvW || newH > cvH) {
+				exp.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
+				const newScale = Math.min(1, maxPx / Math.max(newW, newH));
+				exp.setAttribute('width', Math.round(newW * newScale));
+				exp.setAttribute('height', Math.round(newH * newScale));
+			}
+		}
+		// Bounding box of the drawable elements under `root`, estimated from their attributes (rect,
+		// circle, ellipse, line, polyline, polygon, path and text) and honouring translate()
+		// transforms on the way down. Returns {x, y, width, height}, or null when nothing is drawn.
+		_svgContentBounds(root) {
+			let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+			const add = (x0, y0, x1, y1) => {
+				if (![x0, y0, x1, y1].every(Number.isFinite)) return;
+				minX = Math.min(minX, x0); minY = Math.min(minY, y0);
+				maxX = Math.max(maxX, x1); maxY = Math.max(maxY, y1);
+			};
+			const num = (el, a, d = 0) => { const v = parseFloat(el.getAttribute(a)); return Number.isFinite(v) ? v : d; };
+			const styleOf = (el, prop) => {
+				const st = el.getAttribute('style') || '';
+				const m = st.match(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`));
+				return m ? m[1].trim() : el.getAttribute(prop);
+			};
+			const walk = (el, tx, ty) => {
+				const tr = el.getAttribute('transform');
+				if (tr) {
+					const m = tr.match(/translate\(\s*([-+\d.eE]+)[\s,]*([-+\d.eE]*)\s*\)/);
+					if (m) { tx += parseFloat(m[1]) || 0; ty += parseFloat(m[2]) || 0; }
+				}
+				const tag = el.localName;
+				if (tag === 'rect') {
+					const x = num(el, 'x') + tx, y = num(el, 'y') + ty;
+					add(x, y, x + num(el, 'width'), y + num(el, 'height'));
+				} else if (tag === 'circle') {
+					const cx = num(el, 'cx') + tx, cy = num(el, 'cy') + ty, r = num(el, 'r');
+					add(cx - r, cy - r, cx + r, cy + r);
+				} else if (tag === 'ellipse') {
+					const cx = num(el, 'cx') + tx, cy = num(el, 'cy') + ty, rx = num(el, 'rx'), ry = num(el, 'ry');
+					add(cx - rx, cy - ry, cx + rx, cy + ry);
+				} else if (tag === 'line') {
+					add(Math.min(num(el, 'x1'), num(el, 'x2')) + tx, Math.min(num(el, 'y1'), num(el, 'y2')) + ty,
+						Math.max(num(el, 'x1'), num(el, 'x2')) + tx, Math.max(num(el, 'y1'), num(el, 'y2')) + ty);
+				} else if (tag === 'polyline' || tag === 'polygon') {
+					const v = (el.getAttribute('points') || '').match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g);
+					if (v) for (let i = 0; i + 1 < v.length; i += 2) add(+v[i] + tx, +v[i + 1] + ty, +v[i] + tx, +v[i + 1] + ty);
+				} else if (tag === 'path') {
+					const b = this._pathBounds(el.getAttribute('d') || '');
+					if (b) add(b[0] + tx, b[1] + ty, b[2] + tx, b[3] + ty);
+				} else if (tag === 'text') {
+					const fs = parseFloat(styleOf(el, 'font-size')) || 12;
+					const w = (el.textContent || '').length * fs * 0.6;
+					const anchor = styleOf(el, 'text-anchor') || 'start';
+					const base = styleOf(el, 'dominant-baseline') || 'auto';
+					const x = num(el, 'x') + tx, y = num(el, 'y') + ty;
+					const x0 = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
+					const y0 = (base === 'middle' || base === 'central') ? y - fs / 2 : y - fs * 0.8;
+					add(x0, y0, x0 + w, y0 + fs);
+				}
+				for (const c of el.children) walk(c, tx, ty);
+			};
+			walk(root, 0, 0);
+			return Number.isFinite(minX) ? { x: minX, y: minY, width: maxX - minX, height: maxY - minY } : null;
+		}
+		// Bounds [minX, minY, maxX, maxY] of a path's points (control points enclose the curves),
+		// following absolute and relative commands. Returns null for an empty path.
+		_pathBounds(d) {
+			let x = 0, y = 0, sx = 0, sy = 0, minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+			const pt = (px, py) => { minX = Math.min(minX, px); minY = Math.min(minY, py); maxX = Math.max(maxX, px); maxY = Math.max(maxY, py); };
+			const re = /([MmLlHhVvCcSsQqTtAaZz])|([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)/g;
+			const argc = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
+			let cmd = 'M', buf = [], m;
+			const flush = () => {
+				const C = cmd.toUpperCase(), rel = cmd !== C, n = argc[C];
+				if (C === 'Z') { x = sx; y = sy; buf = []; return; }
+				for (let i = 0; n && i + n <= buf.length; i += n) {
+					const a = buf.slice(i, i + n);
+					if (C === 'H') { x = rel ? x + a[0] : a[0]; pt(x, y); continue; }
+					if (C === 'V') { y = rel ? y + a[0] : a[0]; pt(x, y); continue; }
+					if (C === 'A') { x = rel ? x + a[5] : a[5]; y = rel ? y + a[6] : a[6]; pt(x, y); continue; }
+					for (let k = 0; k + 1 < a.length; k += 2) pt(rel ? x + a[k] : a[k], rel ? y + a[k + 1] : a[k + 1]);
+					x = rel ? x + a[n - 2] : a[n - 2]; y = rel ? y + a[n - 1] : a[n - 1];
+					if (C === 'M') { sx = x; sy = y; cmd = rel ? 'l' : 'L'; }
+				}
+				buf = [];
+			};
+			while ((m = re.exec(d))) {
+				if (m[1]) { flush(); cmd = m[1]; if (cmd === 'Z' || cmd === 'z') flush(); }
+				else buf.push(parseFloat(m[2]));
+			}
+			flush();
+			return Number.isFinite(minX) ? [minX, minY, maxX, maxY] : null;
+		}
 		exportSVGString() {
 			return this._saveSVG(true);
 		}

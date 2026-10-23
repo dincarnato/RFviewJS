@@ -458,27 +458,20 @@ async function runHeadless(args) {
     const { window } = dom;
     const { document } = window;
 
-    // Stub out browser APIs that RFview uses but jsdom doesn't provide
+    // Stub out browser APIs that RFview uses but jsdom doesn't provide. The CSS custom properties
+    // come from the default theme declared in RFview.js itself (the .rv{...} rule), so the headless
+    // build always draws with the same base radius, fonts, offsets and colours as the browser.
     window.requestAnimationFrame = cb => setTimeout(cb, 0);
     window.cancelAnimationFrame  = id => clearTimeout(id);
-    window.getComputedStyle = (el) => ({
-        getPropertyValue: (prop) => {
-            const map = {
-                '--rv-base-radius': '12', '--rv-basepair-width': '2',
-                '--rv-backbone-width': '2', '--rv-base-stroke-width': '2',
-                '--rv-pair-annot-opacity': '0.5', '--rv-pair-annot-stroke-width': '1.5',
-                '--rv-pair-annot-padding': '16', '--rv-helix-annot-padding': '25',
-                '--rv-helix-annot-opacity': '0.5', '--rv-noncanon-dot-r': '4.5',
-                '--rv-base-index-font-size': '11', '--rv-base-label-font-size': '13',
-                '--rv-base-index-offset': '3',
-                '--rv-backbone': '#1f2328', '--rv-basepair': '#1f2328',
-                '--rv-pseudopair': '#1f2328', '--rv-text': '#1f2328',
-                '--rv-base-fill': '#ffffff', '--rv-base-stroke': '#1f2328',
-                '--rv-bg': '#ffffff', '--rv-surface': '#f6f8fa',
-                '--rv-muted': '#656d76', '--rv-accent': '#0969da',
-            };
-            return map[prop] ?? '';
-        },
+    // jsdom has no layout, so every element measures 0 x 0. Report the size of the hidden window
+    // the desktop CLI renders in (1200 x 900), since the SS_cons label size follows the canvas size.
+    for (const [prop, px] of [['clientWidth', 1200], ['clientHeight', 900]])
+        Object.defineProperty(window.HTMLElement.prototype, prop, { get: () => px, configurable: true });
+    const cssVars = {};
+    const rvRule = rfviewSrc.match(/\.rv\{([^}]*)\}/);
+    if (rvRule) for (const m of rvRule[1].matchAll(/(--rv-[\w-]+)\s*:\s*([^;]+)/g)) cssVars[m[1]] = m[2].trim();
+    window.getComputedStyle = () => ({
+        getPropertyValue: prop => cssVars[prop] ?? '',
         cssText: '',
     });
 
@@ -595,7 +588,8 @@ async function runHeadless(args) {
                         .replace(/<\/svg>/, '</g></svg>');
                 }
             }
-            return result.replace(/′/g, "'");
+            // pdfkit's built-in fonts are WinAnsi only: map the glyphs they lack
+            return result.replace(/′/g, "'").replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/↔/g, '<->');
         };
 
         const strippedSvg = prepareSvgForPdf(svgText);
