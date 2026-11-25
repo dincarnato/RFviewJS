@@ -14,6 +14,7 @@ app.whenReady().then(async () => {
 	await win.loadFile(path.join(__dirname, 'index.html'));
 	const out = await win.webContents.executeJavaScript(`(() => {
 		const r = {};
+		if (typeof viewer !== 'undefined' && viewer) viewer.destroy(); // the app shell's own viewer
 		const v = new RFviewJS(document.getElementById('viewer'));
 		v.load({ fileText: '>t\\n${SEQ}\\n${DB}\\n' });
 		const svg = v._svgEl, coords = v._rna.coords;
@@ -69,16 +70,73 @@ app.whenReady().then(async () => {
 		r.freeErr = Math.max(...freeBefore.map(({ i, x, y }) => Math.hypot(coords[i].x - x, coords[i].y - y)));
 		r.rotCleared = v._selRot === null;
 
-		// Alt+click on a backbone link cuts it and makes the cut a rotation point
+		// Alt+click on a link puts a rotation point between the two nucleotides
 		const cut = 21;
-		const mid = s2c({ x: (coords[cut].x + coords[cut + 1].x) / 2, y: (coords[cut].y + coords[cut + 1].y) / 2 });
+		const midPt = { x: (coords[cut].x + coords[cut + 1].x) / 2, y: (coords[cut].y + coords[cut + 1].y) / 2 };
+		const mid = s2c(midPt);
 		drag(svg, mid, mid, { altKey: true });
-		r.cut = !!v._rna.chainBreaks?.has(cut);
-		r.cutDrawn = svg.querySelectorAll('.rv-bb-break').length;
+		r.cut = !!v._rna.hinges?.has(cut);
+		r.cutDrawn = svg.querySelectorAll('.rv-hinge').length;
 		r.cutSel = [...v._sel].sort((a, b) => a - b);
-		r.cutPivot = Math.hypot(v._selPivot.x - coords[cut + 1].x, v._selPivot.y - coords[cut + 1].y) < 1e-9;
-		drag(svg, mid, mid, { altKey: true }); // and Alt+click again glues it back
-		r.healed = !v._rna.chainBreaks.has(cut) && svg.querySelectorAll('.rv-bb-break').length === 0;
+		r.cutPivot = Math.hypot(v._selPivot.x - midPt.x, v._selPivot.y - midPt.y) < 1e-9;
+		// the rotation point can be dragged, and the link bends through it
+		const hEl = svg.querySelector('.rv-hinge');
+		drag(hEl, mid, { x: mid.x + 30, y: mid.y - 20 });
+		const hp = v._rna.hinges.get(cut);
+		r.hingeMoved = Math.hypot(hp.x - midPt.x, hp.y - midPt.y) > 5;
+		r.hingeBends = [...svg.querySelectorAll('.rv-backbone')].some(l =>
+			Math.abs(+l.getAttribute('x2') - hp.x) < 1e-6 && Math.abs(+l.getAttribute('y2') - hp.y) < 1e-6);
+		// Ctrl+Z puts it back where it was, Ctrl+Shift+Z moves it again
+		const key = (k, mod) => window.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key: k, bubbles: true, ctrlKey: true }, mod)));
+		key('z');
+		r.undone = Math.hypot(v._rna.hinges.get(cut).x - midPt.x, v._rna.hinges.get(cut).y - midPt.y) < 1e-9;
+		key('z', { shiftKey: true });
+		r.redone = Math.hypot(v._rna.hinges.get(cut).x - hp.x, v._rna.hinges.get(cut).y - hp.y) < 1e-9;
+		drag(svg, s2c(v._rna.hinges.get(cut)), s2c(v._rna.hinges.get(cut)), { altKey: true }); // Alt+click removes it
+		r.healed = !v._rna.hinges.has(cut) && svg.querySelectorAll('.rv-hinge').length === 0;
+
+		// Straightening: select a helix, click the handle, check the ladder is regular
+		v._sel = new Set(); v._selPivot = null; v._selHinge = null; v._pivotUser = false;
+		for (let i = 0; i <= 8; i++) v._sel.add(i);
+		v._render();
+		const st = svg.querySelector('.rv-sel-straight');
+		r.straightHandle = !!st;
+		const stPt = s2c({ x: +st.getAttribute('cx'), y: +st.getAttribute('cy') });
+		drag(st, stPt, stPt);
+		{
+			const mids = [0, 1, 2].map(k => ({ x: (coords[k].x + coords[8 - k].x) / 2, y: (coords[k].y + coords[8 - k].y) / 2 }));
+			const d01 = Math.hypot(mids[1].x - mids[0].x, mids[1].y - mids[0].y);
+			const d12 = Math.hypot(mids[2].x - mids[1].x, mids[2].y - mids[1].y);
+			const cross = (mids[1].x - mids[0].x) * (mids[2].y - mids[0].y) - (mids[1].y - mids[0].y) * (mids[2].x - mids[0].x);
+			r.evenRise = Math.abs(d01 - d12) < 1e-6;
+			r.collinear = Math.abs(cross) < 1e-6;
+			const widths = [0, 1, 2].map(k => Math.hypot(coords[k].x - coords[8 - k].x, coords[k].y - coords[8 - k].y));
+			r.evenWidth = Math.max(...widths) - Math.min(...widths) < 1e-6;
+			// and the perpendicular: the pair direction must be square to the axis
+			const dot = (coords[0].x - coords[8].x) * (mids[1].x - mids[0].x) + (coords[0].y - coords[8].y) * (mids[1].y - mids[0].y);
+			r.square = Math.abs(dot) < 1e-6;
+		}
+		key('z');
+		r.straightUndone = Math.abs(Math.hypot(coords[0].x - coords[8].x, coords[0].y - coords[8].y) - 0) >= 0;
+
+		// Domains: colour the backbone links, names and colours stay editable
+		v._sel = new Set(); for (let i = 12; i <= 20; i++) v._sel.add(i);
+		v._root.querySelector('.rv-btn-settings').click(); // builds the settings panel
+		const dom = v.addDomainFromSelection();
+		r.domain = dom && { name: dom.name, start: dom.start, end: dom.end, color: dom.color };
+		r.domainOn = v._domainColors;
+		const rgb = h => 'rgb(' + [1, 3, 5].map(k => parseInt(h.substr(k, 2), 16)).join(', ') + ')';
+		r.domainLinks = [...svg.querySelectorAll('.rv-backbone')].filter(l => l.style.stroke === rgb(dom.color)).length;
+		const row = v._root.querySelector('.rv-outline-row');
+		const nameIn = row.querySelector('.rv-outline-name'), colIn = row.querySelector('input[type=color]');
+		nameIn.value = 'P4-P6'; nameIn.dispatchEvent(new Event('input', { bubbles: true }));
+		colIn.value = '#123456'; colIn.dispatchEvent(new Event('input', { bubbles: true }));
+		v._render();
+		r.renamed = v.getOutlineDomains()[0].name === 'P4-P6';
+		r.recolored = [...svg.querySelectorAll('.rv-backbone')].filter(l => l.style.stroke === rgb('#123456')).length > 0;
+		r.legend = (v._outlineLegend?.textContent || '').includes('P4-P6');
+		v.setDomainColors(false);
+		r.domainOff = [...svg.querySelectorAll('.rv-backbone')].every(l => !l.style.stroke);
 
 		// Escape drops the selection and its overlay
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -98,11 +156,27 @@ app.whenReady().then(async () => {
 		assert.ok(out.rotErr < 2, `selection rotates about the pivot (max error ${out.rotErr})`);
 		assert.ok(out.freeErr < 1e-9, 'unselected bases stay where they are');
 		assert.ok(out.rotCleared, 'rotation state is released on mouseup');
-		assert.ok(out.cut, 'Alt+click cuts the backbone link');
-		assert.strictEqual(out.cutDrawn, 1, 'the cut link is drawn as a dotted leftover');
-		assert.deepStrictEqual(out.cutSel, [...Array(49).keys()].slice(22), 'the chunk after the cut is selected');
-		assert.ok(out.cutPivot, 'the cut is the rotation point of that chunk');
-		assert.ok(out.healed, 'Alt+click on a cut link restores it');
+		assert.ok(out.cut, 'Alt+click puts a rotation point on the link');
+		assert.strictEqual(out.cutDrawn, 1, 'the rotation point is drawn');
+		assert.deepStrictEqual(out.cutSel, [...Array(49).keys()].slice(22), 'the chunk after it is selected');
+		assert.ok(out.cutPivot, 'it is the rotation point of that chunk');
+		assert.ok(out.hingeMoved, 'the rotation point can be dragged');
+		assert.ok(out.hingeBends, 'the link bends through the rotation point');
+		assert.ok(out.undone, 'Ctrl+Z undoes the drag');
+		assert.ok(out.redone, 'Ctrl+Shift+Z redoes it');
+		assert.ok(out.healed, 'Alt+click removes the rotation point');
+		assert.ok(out.straightHandle, 'a selected helix gets a straighten handle');
+		assert.ok(out.evenRise, 'straighten: even rise between pairs');
+		assert.ok(out.collinear, 'straighten: pair midpoints on one axis');
+		assert.ok(out.evenWidth, 'straighten: even pair width');
+		assert.ok(out.square, 'straighten: pairs square to the axis');
+		assert.ok(out.domain && out.domain.start === 13 && out.domain.end === 21, `domain from the selection: ${JSON.stringify(out.domain)}`);
+		assert.ok(out.domainOn, 'adding a domain turns the colouring on');
+		assert.ok(out.domainLinks >= 8, `the domain colours its links (${out.domainLinks})`);
+		assert.ok(out.renamed, 'a domain can be renamed');
+		assert.ok(out.recolored, 'a domain can be recoloured');
+		assert.ok(out.legend, 'the domain name shows in the legend');
+		assert.ok(out.domainOff, 'turning the option off drops the colours');
 		assert.ok(out.cleared, 'Escape clears the selection and the overlay');
 		console.log('selection / pivot / rotation: all checks passed');
 		app.exit(0);

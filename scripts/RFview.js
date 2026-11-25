@@ -54,6 +54,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-canvas.rv--drop-hover{outline:2px dashed var(--rv-accent,#0969da);outline-offset:-2px}
 .rv-canvas.grabbing{cursor:grabbing}
 .rv-canvas.rotating{cursor:crosshair}
+.rv-canvas.rv-cut,.rv-canvas.rv-cut *{cursor:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><g fill="none" stroke="%23ffffff" stroke-width="3.6" stroke-linecap="round"><circle cx="6" cy="17" r="3"/><circle cx="16" cy="17" r="3"/><path d="M8 14.8 17 3M14 14.8 5 3"/></g><g fill="none" stroke="%23111111" stroke-width="1.7" stroke-linecap="round"><circle cx="6" cy="17" r="3"/><circle cx="16" cy="17" r="3"/><path d="M8 14.8 17 3M14 14.8 5 3"/></g></svg>') 11 9,crosshair}
 .rv-svg{width:100%;height:100%;display:block}
 .rv-backbone{stroke:var(--rv-backbone,#000);stroke-width:var(--rv-backbone-width,2);fill:none;stroke-linecap:round}
 .rv-basepair{stroke:var(--rv-basepair,#000);stroke-width:var(--rv-basepair-width,2.2);fill:none;stroke-linecap:round}
@@ -129,10 +130,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-rot-ring{pointer-events:none;display:none}
 .rv-rot-ring circle{fill:none;stroke:var(--rv-rot-ring,#0969da30);stroke-width:1;stroke-dasharray:4 3}
 .rv-rot-ring line{stroke:var(--rv-rot-line,#0969da80);stroke-width:1}
-.rv-bb-break{stroke:var(--rv-accent,#0969da)!important;stroke-dasharray:1.5 4;opacity:.5}
+.rv-hinge{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);stroke-width:1.6;pointer-events:all;cursor:move}
 .rv-sel-ui{pointer-events:none}
 .rv-sel-box{fill:none;stroke:var(--rv-accent,#0969da);stroke-dasharray:5 4;opacity:.8}
 .rv-sel-rot{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:grab}
+.rv-sel-straight{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:pointer}
 .rv-sel-rot-arrow{fill:none;stroke:var(--rv-accent,#0969da);stroke-linecap:round}
 .rv-sel-rot-head{fill:var(--rv-accent,#0969da);stroke:none}
 .rv-sel-pivot{fill:color-mix(in srgb,var(--rv-accent,#0969da) 12%,transparent);stroke:var(--rv-accent,#0969da);stroke-dasharray:3 2;pointer-events:all;cursor:move}
@@ -3090,10 +3092,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._sel = new Set(); // box-selected base indices (Ctrl+drag)
 			this._boxStart = null;
 			this._selPivot = null; // point the selection is rotated ("bent") around
+			this._selHinge = null; // set when that point is a rotation point placed on a link
 			this._pivotUser = false; // true once the user has dragged the pivot himself
 			this._selRot = null;
 			this._selClick = null;
 			this._pivotDrag = false;
+			this._domainColors = !!config.domainColors; // colour the backbone by domain, off by default
 			this._showPairTypes = !!config.showPairTypes; // Leontis-Westhof symbols, off by default
 			this._showPairAnnotations = config.showPairAnnotations !== false;
 			this._autoTolerance = config.autoLayoutTolerance ?? 0;
@@ -3327,6 +3331,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                   <input type="range" class="rv-set-lbl-font" min="1" max="30" step="1" value="16"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">Index font  <span class="rv-setting-val rv-val-idx-font">16</span></span>
                   <input type="range" class="rv-set-idx-font" min="1" max="30" step="1" value="16"></div>
+                <div class="rv-setting-row"><span class="rv-setting-label">Color domains <span style="color:var(--rv-muted,#656d76);font-size:11px">(Outline tab)</span></span>
+                  <input type="checkbox" class="rv-set-domcolors" style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">Color by nucleotide</span>
                   <input type="checkbox" class="rv-set-nuc-on" style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">A / C / G / U</span>
@@ -3366,6 +3372,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 <div class="rv-outline-cols"><span>Domain</span><span class="rv-outline-col-n">Start</span><span class="rv-outline-col-n">End</span><span style="width:30px"></span><span style="width:22px"></span></div>
                 <div class="rv-outline-list"></div>
                 <button class="rv-stop-add rv-outline-add">+ Add domain</button>
+                <button class="rv-stop-add rv-outline-add-sel">+ From selection</button>
               </div>
               <div class="rv-settings-pane" data-pane="general">
                 <div class="rv-setting-row" style="align-items:center;gap:8px">
@@ -3777,6 +3784,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._sel.clear();
 					this._render();
 				}
+				if ((e.metaKey || e.ctrlKey) && 'zyZY'.includes(e.key) && this._rna) {
+					if (_liveViewers.size > 1 && !this._root.matches(':hover') && !this._root.contains(document.activeElement)) return;
+					const tag0 = document.activeElement?.tagName?.toLowerCase();
+					if (tag0 === 'input' || tag0 === 'textarea') return;
+					e.preventDefault();
+					if (e.key.toLowerCase() === 'y' || e.shiftKey) this.redo();
+					else this.undo();
+					return;
+				}
 				if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 					// Several viewers on the page: only the hovered / focused one saves
 					if (_liveViewers.size > 1 && !this._root.matches(':hover') && !this._root.contains(document.activeElement)) return;
@@ -3788,6 +3804,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 			};
 			window.addEventListener('keydown', this._boundKeyDown);
+			// Alt turns the pointer into a pair of scissors: click a link to put a rotation point on it
+			this._boundAltCursor = e => this._canvas.classList.toggle('rv-cut', !!(e.altKey && e.type === 'keydown' && this._rna));
+			window.addEventListener('keydown', this._boundAltCursor);
+			window.addEventListener('keyup', this._boundAltCursor);
+			window.addEventListener('blur', this._boundAltCursor);
 			// Drag-and-drop structure files directly onto the canvas
 			const DB_EXTS = _DB_EXT_RE;
 			this._canvas.addEventListener('dragover', e => {
@@ -4484,7 +4505,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				'helixAnnotations', 'isCovAnnot', 'pseudoCovAnnotations',
 				'pseudoHelixCovAnnotations', 'ssConsFeatures', 'ssConsPkPairs', 'ssEnds',
 				'covRawPairs', 'pairCanonPct', '_canonAnnotations', '_canonPkAnnotations', 'lwPairs',
-				'chainBreaks',
+				'hinges',
 				'_savedPairAnnotColorMap',
 			];
 			for (const p of props)
@@ -6106,6 +6127,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			}
 
+			// Appearance tab: colour the backbone links by domain
+			const domChk = q('.rv-set-domcolors');
+			if (domChk) {
+				domChk.checked = this._domainColors;
+				domChk.addEventListener('change', () => this.setDomainColors(domChk.checked));
+			}
+			q('.rv-outline-add-sel').addEventListener('click', () => {
+				if (!this.addDomainFromSelection()) this._showErrorDialog?.('Select the bases of the domain first (Ctrl+drag a box around them).');
+			});
 			// General tab: Leontis-Westhof pair-type symbols
 			const ptChk = q('.rv-set-pairtypes');
 			if (ptChk) {
@@ -6161,6 +6191,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._showPairTypes = false;
 					const ptChk2 = q('.rv-set-pairtypes');
 					if (ptChk2) ptChk2.checked = false;
+					this._domainColors = false;
+					const domChk2 = q('.rv-set-domcolors');
+					if (domChk2) domChk2.checked = false;
+					this._syncOutlineTab();
+					this._updateOutlineLegend();
 					rerender();
 				});
 			}
@@ -7362,6 +7397,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			window.removeEventListener('mousemove', this._boundMove);
 			window.removeEventListener('mouseup', this._boundUp);
 			window.removeEventListener('keydown', this._boundKeyDown);
+			window.removeEventListener('keydown', this._boundAltCursor);
+			window.removeEventListener('keyup', this._boundAltCursor);
+			window.removeEventListener('blur', this._boundAltCursor);
 			this._cancelAnimation();
 			_liveViewers.delete(this);
 			this._resizeObserver?.disconnect();
@@ -7580,16 +7618,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const p = this._settingsPanel;
 			if (!p) return;
 			const tab = p.querySelector('.rv-tab-outline');
-			if (tab) tab.style.display = this._outlineMode ? '' : 'none';
-			if (!this._outlineMode && tab?.classList.contains('rv--active')) p.querySelector('.rv-settings-tab[data-tab="appearance"]')?.click();
-			if (this._outlineMode) this._refreshOutlineList();
+			const show = this._outlineMode || this._domainColors;
+			if (tab) tab.style.display = show ? '' : 'none';
+			if (!show && tab?.classList.contains('rv--active')) p.querySelector('.rv-settings-tab[data-tab="appearance"]')?.click();
+			if (show) this._refreshOutlineList();
 		}
 		// Everything that follows a change of the domain list
 		_outlineChanged() {
 			this._refreshOutlineList();
 			this._updateOutlineLegend();
 			this._updateOutlineBar();
-			if (this._outlineMode && !this._alnActive) this._renderSoon();
+			if ((this._outlineMode || this._domainColors) && !this._alnActive) this._renderSoon();
 		}
 		_cancelOutlinePick() {
 			if (!this._outlinePick) return;
@@ -7787,7 +7826,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_updateOutlineLegend() {
 			const el = this._outlineLegend;
 			if (!el) return;
-			const doms = (this._outlineMode && this._rna && !this._alnActive) ? this._outlineDomains(false) : [];
+			const doms = ((this._outlineMode || this._domainColors) && this._rna && !this._alnActive) ? this._outlineDomains(false) : [];
 			if (!doms.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
 			el.innerHTML = doms.map(d => `<div class="rv-outline-entry"><span class="rv-outline-swatch" style="background:${escHtml(d.color)}"></span><span class="rv-pal-key">${escHtml(d.name)}</span></div>`).join('');
 			el.style.display = 'block';
@@ -7812,6 +7851,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const name = document.createElement('input');
 				name.type = 'text'; name.className = 'rv-outline-name'; name.value = dom.name; name.title = 'Domain name';
 				name.addEventListener('input', () => { dom.name = name.value; this._updateOutlineLegend(); });
+				const repaint = () => { if (this._domainColors && !this._outlineMode && !this._alnActive) this._renderSoon(); };
 				let start, end;
 				const num = (key, title) => {
 					const inp = document.createElement('input');
@@ -7821,6 +7861,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						const v = parseInt(inp.value, 10);
 						if (!Number.isFinite(v)) return;
 						dom[key] = Math.min(b.max, Math.max(b.min, v));
+						repaint();
 						if (this._outlineMode && !this._alnActive) this._renderSoon();
 					});
 					inp.addEventListener('change', () => { // Settle: clamp, order start <= end, show the stored values
@@ -7835,7 +7876,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				start = num('start', 'Start'); end = num('end', 'End');
 				const col = document.createElement('input');
 				col.type = 'color'; col.value = dom.color; col.title = 'Domain colour';
-				col.addEventListener('input', () => { dom.color = col.value; this._updateOutlineLegend(); if (this._outlineMode && !this._alnActive) this._renderSoon(); });
+				col.addEventListener('input', () => { dom.color = col.value; this._updateOutlineLegend(); repaint(); if (this._outlineMode && !this._alnActive) this._renderSoon(); });
 				const del = document.createElement('button');
 				del.className = 'rv-stop-del'; del.title = 'Remove this domain'; del.textContent = '−';
 				del.addEventListener('click', () => this.removeOutlineDomain(i));
@@ -7978,18 +8019,43 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				for (let i = 0; i < n; i++) {
 					R = Math.max(R, Math.hypot(coords[i].x - centX, coords[i].y - centY));
 				}
-				// Backbone, skip segments where either endpoint is a skipped alignment position
+				// Backbone, skip segments where either endpoint is a skipped alignment position.
+				// A link bends through its rotation point, and is split in two when it crosses
+				// a domain boundary so that each half carries its own domain colour.
+				const hinges = this._rna?.hinges;
+				const domCol = this._domainColorByIndex();
+				const bbLine = (x1, y1, x2, y2, col) => {
+					const l = this._mkSvgLine(x1, y1, x2, y2, 'rv-backbone');
+					if (col) l.style.stroke = col; // inline, the .rv-backbone rule would win over an attribute
+					g_bb.appendChild(l);
+				};
 				for (let i = 0; i < n - 1; i++) {
 					const bd = this._rna?.baseDisplay;
 					if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
-					const l = document.createElementNS(NS, 'line');
-					l.setAttribute('class', this._rna?.chainBreaks?.has(i) ? 'rv-backbone rv-bb-break' : 'rv-backbone');
-					l.setAttribute('x1', coords[i].x);
-					l.setAttribute('y1', coords[i].y);
-					l.setAttribute('x2', coords[i + 1].x);
-					l.setAttribute('y2', coords[i + 1].y);
-					g_bb.appendChild(l);
+					const a = coords[i],
+						b = coords[i + 1],
+						hg = hinges?.get(i);
+					const ca = domCol?.[i] || null,
+						cb = domCol?.[i + 1] || null;
+					if (!hg && ca === cb) bbLine(a.x, a.y, b.x, b.y, ca);
+					else {
+						const m = hg || { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+						bbLine(a.x, a.y, m.x, m.y, ca);
+						bbLine(m.x, m.y, b.x, b.y, cb);
+					}
 				}
+				// Rotation points, drawn on the link they belong to
+				if (hinges)
+					for (const [i, hg] of hinges) {
+						if (i >= n - 1) continue;
+						const c = document.createElementNS(NS, 'circle');
+						c.setAttribute('class', 'rv-hinge');
+						c.setAttribute('data-link', i);
+						c.setAttribute('cx', hg.x);
+						c.setAttribute('cy', hg.y);
+						c.setAttribute('r', Math.max(3, baseR * 0.34));
+						g_bb.appendChild(c);
+					}
 				// Helper to make a line element
 				const dotR = this._gvn('--rv-noncanon-dot-r', 4.5);
 				const mkLine = (x1, y1, x2, y2, cls) => this._mkSvgLine(x1, y1, x2, y2, cls);
@@ -8479,7 +8545,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			exp.setAttribute('height', Math.round(vbH * scale));
 			// Stylesheet (user units, scales with circles)
 			const st = document.createElementNS(NS, 'style');
-			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`, `.rv-bb-break{stroke-dasharray:1.5 4;opacity:.5}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
+			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`, `.rv-hinge{fill:${C.bg};stroke:${C.backbone};stroke-width:1.4}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
 				`.rv-ss-cons-label{font-family:${C.indexFont};font-size:${_gvn('--rv-annot-label-font-size', 12) * 1.6};font-weight:bold;fill:${indexColor};paint-order:stroke fill}`,
 				`.rv-ss-cons-line{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round;stroke-linejoin:round}`,
 				`.rv-ss-cons-leader{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`,
@@ -9458,11 +9524,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const idx0 = grp ? parseInt(grp.getAttribute('data-idx')) : -1;
 			const ctrl = e.ctrlKey || e.metaKey;
 			// Selection overlay: rotate the selection around the pivot, or move the pivot itself
-			const handle = e.button === 0 && !e.altKey && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot') : null;
+			// A rotation point can also be dragged on its own, without selecting anything
+			const hingeEl = e.button === 0 && !e.altKey && this._rna ? e.target.closest('.rv-hinge') : null;
+			if (hingeEl) {
+				e.preventDefault();
+				this._beginUndo();
+				this._pivotDrag = { hinge: parseInt(hingeEl.getAttribute('data-link')), selPivot: false };
+				this._canvas.classList.add('grabbing');
+				return;
+			}
+			const handle = e.button === 0 && !e.altKey && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot,.rv-sel-straight') : null;
 			if (handle) {
 				e.preventDefault();
+				if (handle.classList.contains('rv-sel-straight')) {
+					this._straightenSelection();
+					return;
+				}
 				if (handle.classList.contains('rv-sel-pivot')) {
-					this._pivotDrag = true;
+					this._beginUndo();
+					this._pivotDrag = { hinge: this._selHinge, selPivot: true };
 					this._canvas.classList.add('grabbing');
 					return;
 				}
@@ -9486,7 +9566,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const link = this._nearestBackbone(pt.x, pt.y, this._gvn('--rv-base-radius', BASE_R) * 1.4);
 				if (link >= 0) {
 					e.preventDefault();
-					this._toggleChainBreak(link);
+					this._toggleHinge(link);
 					return;
 				}
 			}
@@ -9535,6 +9615,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						// Record which side of the backbone the helix interior is on.
 						const lc = helix.loopCenter;
 						const innerSide = this._getBackboneSide(helix, snapCoords, lc.x, lc.y);
+						this._beginUndo();
 						this._flipState = {
 							helix,
 							snapCoords,
@@ -9605,6 +9686,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							x: h.loopCenter.x,
 							y: h.loopCenter.y
 						}));
+						this._beginUndo();
 						this._rotState = {
 							helix,
 							cx,
@@ -9751,6 +9833,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			});
 		}
 		_startMove(idxs, e) {
+			this._beginUndo();
 			const coords = this._rna.coords;
 			idxs = idxs.filter(i => i < this._rna.n);
 			const set = new Set(idxs);
@@ -9766,6 +9849,64 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			};
 			this._canvas.classList.add('grabbing');
 		}
+		// Undo / redo of the manual layout edits (positions, loop centres and rotation points).
+		// A snapshot is taken when a drag starts and only kept if the drag changed something.
+		_snapshot() {
+			const r = this._rna;
+			if (!r) return null;
+			return {
+				rna: r,
+				coords: r.coords.map(c => ({ x: c.x, y: c.y })),
+				lcs: r.helices.map(h => ({ h, x: h.loopCenter.x, y: h.loopCenter.y })),
+				hinges: r.hinges ? new Map([...r.hinges].map(([k, v]) => [k, { x: v.x, y: v.y }])) : null,
+			};
+		}
+		_applySnapshot(s) {
+			const r = s.rna;
+			s.coords.forEach((c, i) => {
+				if (r.coords[i]) {
+					r.coords[i].x = c.x;
+					r.coords[i].y = c.y;
+				}
+			});
+			s.lcs.forEach(({ h, x, y }) => {
+				h.loopCenter.x = x;
+				h.loopCenter.y = y;
+			});
+			r.hinges = s.hinges ? new Map([...s.hinges].map(([k, v]) => [k, { x: v.x, y: v.y }])) : null;
+			if (this._selHinge != null && !r.hinges?.has(this._selHinge)) this._selHinge = null;
+		}
+		_beginUndo() {
+			this._pendingUndo = this._snapshot();
+		}
+		_commitUndo() {
+			if (!this._pendingUndo) return;
+			(this._undoStack ||= []).push(this._pendingUndo);
+			if (this._undoStack.length > 60) this._undoStack.shift();
+			this._pendingUndo = null;
+			this._redoStack = [];
+		}
+		// Step back / forward through the manual edits of the structure on screen
+		undo() {
+			const st = this._undoStack;
+			while (st?.length && st[st.length - 1].rna !== this._rna) st.pop();
+			const snap = st?.pop();
+			if (!snap) return false;
+			(this._redoStack ||= []).push(this._snapshot());
+			this._applySnapshot(snap);
+			this._render();
+			return true;
+		}
+		redo() {
+			const st = this._redoStack;
+			while (st?.length && st[st.length - 1].rna !== this._rna) st.pop();
+			const snap = st?.pop();
+			if (!snap) return false;
+			(this._undoStack ||= []).push(this._snapshot());
+			this._applySnapshot(snap);
+			this._render();
+			return true;
+		}
 		// Index i of the backbone link i -> i+1 closest to a scene point, -1 if none is within maxD
 		_nearestBackbone(x, y, maxD) {
 			const { coords, n } = this._rna;
@@ -9774,38 +9915,144 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				bestD = maxD;
 			for (let i = 0; i < n - 1; i++) {
 				if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
-				const ax = coords[i].x,
-					ay = coords[i].y,
-					dx = coords[i + 1].x - ax,
-					dy = coords[i + 1].y - ay;
-				const l2 = dx * dx + dy * dy;
-				const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0;
-				const d = Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
-				if (d < bestD) {
-					bestD = d;
-					best = i;
+				const hg = this._rna.hinges?.get(i);
+				const pts = hg ? [coords[i], hg, coords[i + 1]] : [coords[i], coords[i + 1]];
+				for (let k = 0; k < pts.length - 1; k++) {
+					const ax = pts[k].x,
+						ay = pts[k].y,
+						dx = pts[k + 1].x - ax,
+						dy = pts[k + 1].y - ay;
+					const l2 = dx * dx + dy * dy;
+					const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0;
+					const d = Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+					if (d < bestD) {
+						bestD = d;
+						best = i;
+					}
 				}
 			}
 			return best;
 		}
-		// Alt+click on a backbone link cuts it, which turns it into a rotation point: the chunk
-		// after the cut (up to the next one) becomes the selection, hinged on the cut. Alt+click
-		// the dotted leftover to glue the chain back together.
-		_toggleChainBreak(i) {
+		// Alt+click on a backbone link puts a rotation point between the two nucleotides: the link
+		// bends through it, it can be dragged anywhere, and the chunk that follows it (up to the
+		// next rotation point) becomes the selection hinged on it. Alt+click it again to remove it.
+		_toggleHinge(i) {
 			const rna = this._rna;
-			const br = rna.chainBreaks || (rna.chainBreaks = new Set());
-			if (br.has(i)) br.delete(i);
-			else {
-				br.add(i);
+			const hinges = rna.hinges || (rna.hinges = new Map());
+			this._beginUndo();
+			if (hinges.has(i)) {
+				hinges.delete(i);
+				if (this._selHinge === i) this._selHinge = null;
+			} else {
+				const a = rna.coords[i],
+					b = rna.coords[i + 1];
+				hinges.set(i, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 				this._sel.clear();
 				let hi = i + 1;
-				while (hi < rna.n - 1 && !br.has(hi)) hi++;
+				while (hi < rna.n - 1 && !hinges.has(hi)) hi++;
 				for (let k = i + 1; k <= hi; k++)
 					if (!rna.baseDisplay?.[k]?.skip) this._sel.add(k);
-				this._selPivot = null;
-				this._pivotUser = false;
+				this._selHinge = i;
+				this._selPivot = { ...hinges.get(i) };
 			}
+			this._commitUndo();
 			this._render();
+		}
+		// Colour of each base taken from the domains of the Outline tab (later domains win),
+		// null when domain colouring is off, has no domains, or the outline view draws them itself
+		_domainColorByIndex() {
+			if (!this._domainColors || this._outlineMode || !this._rna) return null;
+			const doms = this._outlineDomains(false);
+			if (!doms.length) return null;
+			const out = new Array(this._rna.n).fill(null);
+			for (const dom of doms) {
+				const r = this._outlineRange(dom);
+				if (!r) continue;
+				for (let i = r[0]; i <= r[1]; i++) out[i] = dom.color;
+			}
+			return out;
+		}
+		// Turn the current selection into a named, coloured domain
+		addDomainFromSelection() {
+			if (!this._rna || !this._sel.size) return null;
+			const labels = this._outlineLabels();
+			const idx = [...this._sel].filter(i => i < this._rna.n).sort((a, b) => a - b);
+			const doms = this._outlineDomains(false);
+			const pal = RFviewJS.OUTLINE_PALETTE;
+			const dom = this.addOutlineDomain({
+				start: labels[idx[0]],
+				end: labels[idx[idx.length - 1]],
+				color: pal[doms.length % pal.length],
+			});
+			if (dom && !this._domainColors) this.setDomainColors(true);
+			return dom;
+		}
+		// Show / hide the domain colours on the backbone
+		setDomainColors(on) {
+			this._domainColors = !!on;
+			const chk = this._settingsPanel?.querySelector('.rv-set-domcolors');
+			if (chk) chk.checked = this._domainColors;
+			this._syncOutlineTab();
+			this._updateOutlineLegend();
+			this._render();
+		}
+		// Number of stacked pairs of the helix that starts at (i, j)
+		_helixLen(i, j) {
+			const { pairs } = this._rna;
+			let len = 0;
+			while (i + len < j - len && pairs[i + len] === j - len) len++;
+			return len;
+		}
+		// Helices whose every base is in the selection
+		_selectedHelices() {
+			const r = this._rna;
+			if (!r || this._sel.size < 4) return [];
+			return r.helices.filter(h => {
+				const len = this._helixLen(h.i, h.j);
+				if (len < 2) return false;
+				for (let k = 0; k < len; k++)
+					if (!this._sel.has(h.i + k) || !this._sel.has(h.j - k)) return false;
+				return true;
+			});
+		}
+		// Re-lay those helices as a regular ladder: both ends of the axis stay where they are, the
+		// pairs in between are evenly spaced along it and squared up, at the helix' mean pair width.
+		_straightenSelection() {
+			const hs = this._selectedHelices();
+			if (!hs.length) return 0;
+			this._beginUndo();
+			const c = this._rna.coords;
+			for (const h of hs) {
+				const len = this._helixLen(h.i, h.j);
+				const i = h.i,
+					j = h.j;
+				const m0 = { x: (c[i].x + c[j].x) / 2, y: (c[i].y + c[j].y) / 2 };
+				const m1 = { x: (c[i + len - 1].x + c[j - len + 1].x) / 2, y: (c[i + len - 1].y + c[j - len + 1].y) / 2 };
+				const axLen = Math.hypot(m1.x - m0.x, m1.y - m0.y);
+				if (!axLen) continue;
+				const ax = (m1.x - m0.x) / axLen,
+					ay = (m1.y - m0.y) / axLen;
+				const px = -ay,
+					py = ax;
+				let w = 0;
+				for (let k = 0; k < len; k++) w += Math.hypot(c[i + k].x - c[j - k].x, c[i + k].y - c[j - k].y);
+				w /= 2 * len; // half width
+				const side = ((c[i].x - m0.x) * px + (c[i].y - m0.y) * py) >= 0 ? 1 : -1;
+				const rise = axLen / (len - 1);
+				for (let k = 0; k < len; k++) {
+					const mx = m0.x + ax * rise * k,
+						my = m0.y + ay * rise * k;
+					c[i + k].x = mx + px * side * w;
+					c[i + k].y = my + py * side * w;
+					c[j - k].x = mx - px * side * w;
+					c[j - k].y = my - py * side * w;
+				}
+				h.loopCenter.x = m1.x;
+				h.loopCenter.y = m1.y;
+			}
+			this._commitUndo();
+			this._render();
+			return hs.length;
 		}
 		// Hinge of a selection: the end that stays attached to the rest of the chain,
 		// so that rotating bends the backbone there. Falls back to the box center.
@@ -9829,6 +10076,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!idxs.length) {
 				this._selPivot = null;
 				this._pivotUser = false;
+				this._selHinge = null;
 				return;
 			}
 			const coords = this._rna.coords;
@@ -9876,6 +10124,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					[ex - Math.cos(a1) * tw, ey - Math.sin(a1) * tw]
 				].map(q => q.join(',')).join(' ')
 			});
+			// Straighten handle, only when the selection holds a full helix
+			if (this._selectedHelices().length) {
+				const sx = bb.minX - hr,
+					sy = bb.minY - hr;
+				mk('line', 'rv-sel-box', { x1: bb.minX, y1: bb.minY, x2: sx, y2: sy, 'stroke-width': 1.2 * s });
+				mk('circle', 'rv-sel-straight', { cx: sx, cy: sy, r: hr, 'stroke-width': 1.5 * s });
+				const lw = hr * 0.52;
+				mk('path', 'rv-sel-rot-arrow', {
+					d: `M${sx - lw},${sy - lw}L${sx - lw},${sy + lw}M${sx + lw},${sy - lw}L${sx + lw},${sy + lw}` +
+						`M${sx - lw},${sy - lw * 0.45}L${sx + lw},${sy - lw * 0.45}M${sx - lw},${sy + lw * 0.45}L${sx + lw},${sy + lw * 0.45}`,
+					'stroke-width': 1.3 * s
+				});
+			}
 			// Pivot: where the bend happens, draggable
 			const pv = this._selPivot;
 			mk('circle', 'rv-sel-pivot', { cx: pv.x, cy: pv.y, r: 8 * s, 'stroke-width': 1.5 * s });
@@ -9892,12 +10153,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		_onMouseMove(e) {
 			if (this._pivotDrag) {
 				const pt = this._clientToScene(e.clientX, e.clientY);
-				this._selPivot = { x: pt.x, y: pt.y };
-				this._pivotUser = true;
-				this._refreshSelUI();
+				const { hinge, selPivot } = this._pivotDrag;
+				if (hinge != null) {
+					this._commitUndo();
+					this._rna.hinges.set(hinge, { x: pt.x, y: pt.y });
+				}
+				if (selPivot) {
+					this._selPivot = { x: pt.x, y: pt.y };
+					this._pivotUser = true;
+				}
+				if (hinge != null) this._render();
+				else this._refreshSelUI();
 				return;
 			}
 			if (this._selRot) {
+				this._commitUndo();
 				const { idxs, px, py, startAngle, snapCoords, lcs } = this._selRot;
 				const pt = this._clientToScene(e.clientX, e.clientY);
 				let a = Math.atan2(pt.y - py, pt.x - px) - startAngle;
@@ -9935,6 +10205,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				return;
 			}
 			if (this._stretchState) {
+				this._commitUndo();
 				const { idxs, start, snapCoords, lcs, pivot } = this._stretchState;
 				const pt = this._clientToScene(e.clientX, e.clientY);
 				const dx = pt.x - start.x,
@@ -9953,6 +10224,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			}
 			if (this._outlineMode && this._outlinePick && !this._panStart && !this._rotState && !this._flipState) this._refreshOutlinePreview(e);
 			if (this._flipState) {
+				this._commitUndo();
 				const {
 					helix,
 					snapCoords,
@@ -10004,6 +10276,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				return;
 			}
 			if (this._rotState) {
+				this._commitUndo();
 				const pt = this._clientToScene(e.clientX, e.clientY);
 				const {
 					helix,
@@ -10163,7 +10436,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		_onMouseUp(e) {
 			if (this._pivotDrag) {
-				this._pivotDrag = false;
+				this._pivotDrag = null;
+				this._pendingUndo = null;
 				this._canvas.classList.remove('grabbing');
 				return;
 			}
@@ -10175,7 +10449,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._canvas.classList.remove('grabbing');
 					if (this._sel.has(idx)) this._sel.delete(idx);
 					else this._sel.add(idx);
-					if (!this._pivotUser) this._selPivot = null; // hinge follows the selection
+					if (!this._pivotUser && this._selHinge == null) this._selPivot = null;
 					this._render();
 					return;
 				}
@@ -10191,12 +10465,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						else this._sel.add(i);
 					}
 				});
+				this._selHinge = null; // a fresh box selection starts from its own hinge again
 				if (!this._pivotUser) this._selPivot = null;
 				this._boxStart = null;
 				this._selRect.style.display = 'none';
 				this._render();
 				return;
 			}
+			this._pendingUndo = null;
 			const wasActive = !!(this._rotState || this._flipState || this._stretchState || this._selRot);
 			this._selRot = null;
 			this._stretchState = null;
@@ -10848,7 +11124,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const bd = this._rna?.baseDisplay;
 				if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
 				const l = document.createElementNS(NS, 'line');
-				l.setAttribute('class', this._rna?.chainBreaks?.has(i) ? 'rv-backbone rv-bb-break' : 'rv-backbone');
+				l.setAttribute('class', 'rv-backbone');
 				l.setAttribute('x1', coords[i].x);
 				l.setAttribute('y1', coords[i].y);
 				l.setAttribute('x2', coords[i + 1].x);
