@@ -129,6 +129,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-rot-ring{pointer-events:none;display:none}
 .rv-rot-ring circle{fill:none;stroke:var(--rv-rot-ring,#0969da30);stroke-width:1;stroke-dasharray:4 3}
 .rv-rot-ring line{stroke:var(--rv-rot-line,#0969da80);stroke-width:1}
+.rv-bb-break{stroke:var(--rv-accent,#0969da)!important;stroke-dasharray:1.5 4;opacity:.5}
 .rv-sel-ui{pointer-events:none}
 .rv-sel-box{fill:none;stroke:var(--rv-accent,#0969da);stroke-dasharray:5 4;opacity:.8}
 .rv-sel-rot{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:grab}
@@ -4483,6 +4484,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				'helixAnnotations', 'isCovAnnot', 'pseudoCovAnnotations',
 				'pseudoHelixCovAnnotations', 'ssConsFeatures', 'ssConsPkPairs', 'ssEnds',
 				'covRawPairs', 'pairCanonPct', '_canonAnnotations', '_canonPkAnnotations', 'lwPairs',
+				'chainBreaks',
 				'_savedPairAnnotColorMap',
 			];
 			for (const p of props)
@@ -7981,7 +7983,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const bd = this._rna?.baseDisplay;
 					if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
 					const l = document.createElementNS(NS, 'line');
-					l.setAttribute('class', 'rv-backbone');
+					l.setAttribute('class', this._rna?.chainBreaks?.has(i) ? 'rv-backbone rv-bb-break' : 'rv-backbone');
 					l.setAttribute('x1', coords[i].x);
 					l.setAttribute('y1', coords[i].y);
 					l.setAttribute('x2', coords[i + 1].x);
@@ -8477,7 +8479,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			exp.setAttribute('height', Math.round(vbH * scale));
 			// Stylesheet (user units, scales with circles)
 			const st = document.createElementNS(NS, 'style');
-			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
+			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`, `.rv-bb-break{stroke-dasharray:1.5 4;opacity:.5}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
 				`.rv-ss-cons-label{font-family:${C.indexFont};font-size:${_gvn('--rv-annot-label-font-size', 12) * 1.6};font-weight:bold;fill:${indexColor};paint-order:stroke fill}`,
 				`.rv-ss-cons-line{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round;stroke-linejoin:round}`,
 				`.rv-ss-cons-leader{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`,
@@ -9456,7 +9458,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const idx0 = grp ? parseInt(grp.getAttribute('data-idx')) : -1;
 			const ctrl = e.ctrlKey || e.metaKey;
 			// Selection overlay: rotate the selection around the pivot, or move the pivot itself
-			const handle = e.button === 0 && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot') : null;
+			const handle = e.button === 0 && !e.altKey && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot') : null;
 			if (handle) {
 				e.preventDefault();
 				if (handle.classList.contains('rv-sel-pivot')) {
@@ -9478,6 +9480,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				};
 				this._canvas.classList.add('rotating');
 				return;
+			}
+			if (this._rna && e.button === 0 && e.altKey && !ctrl) {
+				const pt = this._clientToScene(e.clientX, e.clientY);
+				const link = this._nearestBackbone(pt.x, pt.y, this._gvn('--rv-base-radius', BASE_R) * 1.4);
+				if (link >= 0) {
+					e.preventDefault();
+					this._toggleChainBreak(link);
+					return;
+				}
 			}
 			// Ctrl+click on a base adds it to / removes it from the selection, Ctrl+drag on a
 			// selected base moves the selection, and Ctrl+drag elsewhere draws a selection box
@@ -9754,6 +9765,47 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				lcs: this._rna.helices.filter(h => set.has(h.i) && set.has(h.j)).map(h => ({ lc: h.loopCenter, x: h.loopCenter.x, y: h.loopCenter.y })),
 			};
 			this._canvas.classList.add('grabbing');
+		}
+		// Index i of the backbone link i -> i+1 closest to a scene point, -1 if none is within maxD
+		_nearestBackbone(x, y, maxD) {
+			const { coords, n } = this._rna;
+			const bd = this._rna.baseDisplay;
+			let best = -1,
+				bestD = maxD;
+			for (let i = 0; i < n - 1; i++) {
+				if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
+				const ax = coords[i].x,
+					ay = coords[i].y,
+					dx = coords[i + 1].x - ax,
+					dy = coords[i + 1].y - ay;
+				const l2 = dx * dx + dy * dy;
+				const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0;
+				const d = Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+				if (d < bestD) {
+					bestD = d;
+					best = i;
+				}
+			}
+			return best;
+		}
+		// Alt+click on a backbone link cuts it, which turns it into a rotation point: the chunk
+		// after the cut (up to the next one) becomes the selection, hinged on the cut. Alt+click
+		// the dotted leftover to glue the chain back together.
+		_toggleChainBreak(i) {
+			const rna = this._rna;
+			const br = rna.chainBreaks || (rna.chainBreaks = new Set());
+			if (br.has(i)) br.delete(i);
+			else {
+				br.add(i);
+				this._sel.clear();
+				let hi = i + 1;
+				while (hi < rna.n - 1 && !br.has(hi)) hi++;
+				for (let k = i + 1; k <= hi; k++)
+					if (!rna.baseDisplay?.[k]?.skip) this._sel.add(k);
+				this._selPivot = null;
+				this._pivotUser = false;
+			}
+			this._render();
 		}
 		// Hinge of a selection: the end that stays attached to the rest of the chain,
 		// so that rotating bends the backbone there. Falls back to the box center.
@@ -10796,7 +10848,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				const bd = this._rna?.baseDisplay;
 				if (bd?.[i]?.skip || bd?.[i + 1]?.skip) continue;
 				const l = document.createElementNS(NS, 'line');
-				l.setAttribute('class', 'rv-backbone');
+				l.setAttribute('class', this._rna?.chainBreaks?.has(i) ? 'rv-backbone rv-bb-break' : 'rv-backbone');
 				l.setAttribute('x1', coords[i].x);
 				l.setAttribute('y1', coords[i].y);
 				l.setAttribute('x2', coords[i + 1].x);

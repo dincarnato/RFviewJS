@@ -69,6 +69,17 @@ app.whenReady().then(async () => {
 		r.freeErr = Math.max(...freeBefore.map(({ i, x, y }) => Math.hypot(coords[i].x - x, coords[i].y - y)));
 		r.rotCleared = v._selRot === null;
 
+		// Alt+click on a backbone link cuts it and makes the cut a rotation point
+		const cut = 21;
+		const mid = s2c({ x: (coords[cut].x + coords[cut + 1].x) / 2, y: (coords[cut].y + coords[cut + 1].y) / 2 });
+		drag(svg, mid, mid, { altKey: true });
+		r.cut = !!v._rna.chainBreaks?.has(cut);
+		r.cutDrawn = svg.querySelectorAll('.rv-bb-break').length;
+		r.cutSel = [...v._sel].sort((a, b) => a - b);
+		r.cutPivot = Math.hypot(v._selPivot.x - coords[cut + 1].x, v._selPivot.y - coords[cut + 1].y) < 1e-9;
+		drag(svg, mid, mid, { altKey: true }); // and Alt+click again glues it back
+		r.healed = !v._rna.chainBreaks.has(cut) && svg.querySelectorAll('.rv-bb-break').length === 0;
+
 		// Escape drops the selection and its overlay
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		r.cleared = v._sel.size === 0 && v._selPivot === null && svg.querySelector('.rv-sel-ui').childElementCount === 0;
@@ -87,6 +98,11 @@ app.whenReady().then(async () => {
 		assert.ok(out.rotErr < 2, `selection rotates about the pivot (max error ${out.rotErr})`);
 		assert.ok(out.freeErr < 1e-9, 'unselected bases stay where they are');
 		assert.ok(out.rotCleared, 'rotation state is released on mouseup');
+		assert.ok(out.cut, 'Alt+click cuts the backbone link');
+		assert.strictEqual(out.cutDrawn, 1, 'the cut link is drawn as a dotted leftover');
+		assert.deepStrictEqual(out.cutSel, [...Array(49).keys()].slice(22), 'the chunk after the cut is selected');
+		assert.ok(out.cutPivot, 'the cut is the rotation point of that chunk');
+		assert.ok(out.healed, 'Alt+click on a cut link restores it');
 		assert.ok(out.cleared, 'Escape clears the selection and the overlay');
 		console.log('selection / pivot / rotation: all checks passed');
 		app.exit(0);
