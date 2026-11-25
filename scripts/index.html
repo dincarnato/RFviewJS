@@ -9,10 +9,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100vw; height: 100vh; overflow: hidden; background: #f6f8fa; }
     #viewer { position: absolute; inset: 0; }
+    #drop-overlay { position: absolute; inset: 0; display: none; pointer-events: none;
+      background: rgba(9, 105, 218, .08); border: 2px dashed #0969da; }
+    #drop-overlay.active { display: block; }
+    #toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 8px);
+      max-width: 80vw; padding: 8px 14px; border-radius: 6px; background: #1f2328; color: #fff;
+      font: 13px/1.4 system-ui, sans-serif; opacity: 0; pointer-events: none;
+      transition: opacity .15s, transform .15s; }
+    #toast.show { opacity: .95; transform: translate(-50%, 0); }
   </style>
 </head>
 <body>
   <div id="viewer"></div>
+  <div id="drop-overlay"></div>
+  <div id="toast"></div>
   <script src="RFview.js"></script>
   <script src="app.js"></script>
 </body>

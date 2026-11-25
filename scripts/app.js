@@ -12,6 +12,7 @@ let toastTimer;
 
 function showToast(msg, ms = 2500) {
 
+    if (!toast) return void console.log(msg);
     toast.textContent = msg;
     toast.classList.add('show');
     clearTimeout(toastTimer);
@@ -128,12 +129,12 @@ document.addEventListener('keydown', e => {
 });
 
 // Drag & drop from OS 
-document.addEventListener('dragover', e => { e.preventDefault(); dropOverlay.classList.add('active'); });
-document.addEventListener('dragleave', e => { if (!e.relatedTarget) dropOverlay.classList.remove('active'); });
+document.addEventListener('dragover', e => { e.preventDefault(); dropOverlay?.classList.add('active'); });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) dropOverlay?.classList.remove('active'); });
 document.addEventListener('drop', async e => {
 
     e.preventDefault();
-    dropOverlay.classList.remove('active');
+    dropOverlay?.classList.remove('active');
 
     for (const file of Array.from(e.dataTransfer.files)) {
 
