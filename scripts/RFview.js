@@ -3798,34 +3798,35 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// since both tools write plain .csv / .json / .txt. They apply to the structure
 				// already on screen, so they are handled here and not in the upload panel.
 				const lwFiles = [];
-				if (this._rna)
-					for (const f of allFiles.filter(f => /\.(csv|json|lw|bp|out|dssr|txt)$/i.test(f.name))) {
-						const text = await f.text();
-						if (looksLikeLw(text)) lwFiles.push({ name: f.name, text });
+				for (const f of allFiles.filter(f => /\.(csv|json|lw|bp|out|dssr|txt)$/i.test(f.name))) {
+					const text = await f.text();
+					if (looksLikeLw(text)) lwFiles.push({ file: f, text });
+				}
+				const rest = allFiles.filter(f => !lwFiles.some(l => l.file === f));
+				const dbFiles = rest.filter(f => DB_EXTS.test(f.name));
+				const xmlFiles = rest.filter(f => /\.xml$/i.test(f.name));
+				// Silently ignore XML files for Stockholm structures
+				const effectiveXmlFiles = this._rna?.baseDisplay ? [] : xmlFiles;
+				const covFiles = rest.filter(f => /\.(cov|helixcov)$/i.test(f.name));
+				// Pair types dropped without a structure: apply them to what is on screen.
+				// Dropped together with one, they ride along with the annotation files below.
+				if (lwFiles.length && !dbFiles.length) {
+					if (!this._rna) {
+						this._showError(`Load a structure before "${lwFiles[0].file.name}"`);
+						return;
 					}
-				const rest = allFiles.filter(f => !lwFiles.some(l => l.name === f.name));
-				if (lwFiles.length && !rest.length) {
 					let warn = '';
-					for (const f of lwFiles) {
+					for (const l of lwFiles) {
 						try {
-							warn = this.loadPairTypes(f.text) || warn;
+							warn = this.loadPairTypes(l.text) || warn;
 						} catch (err) {
-							this._showErrorDialog(`"${f.name}": ${err.message}`);
+							this._showErrorDialog(`"${l.file.name}": ${err.message}`);
 							return;
 						}
 					}
 					if (warn) this._showErrorDialog(warn);
 					return;
 				}
-				if (lwFiles.length) {
-					this._showErrorDialog(`"${lwFiles[0].name}" holds base-pair types: drop it on its own, once the structure is loaded.`);
-					return;
-				}
-				const dbFiles = rest.filter(f => DB_EXTS.test(f.name));
-				const xmlFiles = rest.filter(f => /\.xml$/i.test(f.name));
-				// Silently ignore XML files for Stockholm structures
-				const effectiveXmlFiles = this._rna?.baseDisplay ? [] : xmlFiles;
-				const covFiles = rest.filter(f => /\.(cov|helixcov)$/i.test(f.name));
 				if (!dbFiles.length && !effectiveXmlFiles.length && !covFiles.length) {
 					const unrecognized = rest.filter(f =>
 						!DB_EXTS.test(f.name) && !/\.(xml|cov|helixcov)$/i.test(f.name)
@@ -3886,7 +3887,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				}
 				// Reactivity (.xml) and covariation files dropped together with the structures
 				if (xmlFiles.length) { this._accumulatedXmlFiles = [...xmlFiles]; await this._previewXmlFiles(); }
-				if (covFiles.length) { this._accumulatedAnnotFiles = [...covFiles]; await this._previewAnnotFiles(); }
+				if (covFiles.length || lwFiles.length) {
+					this._accumulatedAnnotFiles = [...covFiles, ...lwFiles.map(l => l.file)];
+					await this._previewAnnotFiles();
+				}
 				await this._loadFromFiles();
 			});
 		}
@@ -8044,7 +8048,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					for (const { i, j, lw } of this._rna.lwPairs) {
 						if (i >= n || j >= n || pairs[i] === j) continue;
 						if (this._rna.baseDisplay?.[i]?.skip || this._rna.baseDisplay?.[j]?.skip) continue;
-						if (!pkDrawn.has(pairKey(i, j)))
+						const bonded = pkDrawn.has(pairKey(i, j));
+						// A canonical cWW pseudoknot pair keeps its plain dashed bond, just as a
+						// canonical nested pair keeps its plain line
+						if (bonded && lw === 'cWW' && this._isCanonPair(sequence[i], sequence[j])) continue;
+						if (!bonded)
 							g_bp.appendChild(mkLine(coords[i].x, coords[i].y, coords[j].x, coords[j].y, 'rv-lw-extra'));
 						this._mkLwSymbol(coords[i].x, coords[i].y, coords[j].x, coords[j].y, lw, baseR)
 							.forEach(el => g_bp.appendChild(el));

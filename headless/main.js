@@ -531,7 +531,9 @@ async function runHeadless(args) {
     if (!viewer._rna) { console.error('[!] Error: Structure failed to render.'); process.exit(1); }
 
     if (annotText) {
-        try { viewer.loadCov(annotText); }
+        // RNApolis annotator / DSSR pair types are recognized by content, like in the GUI
+        const isLw = RFviewJS.looksLikeLw?.(annotText);
+        try { isLw ? viewer.loadPairTypes(annotText) : viewer.loadCov(annotText); }
         catch (e) { console.warn('[!] Warning: Cannot load annotations: ' + e.message); }
     }
     if (args.percCanonical && viewer._rna?.pairCanonPct) {

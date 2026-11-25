@@ -540,7 +540,9 @@ async function runHeadless(args) {
        any pairs that are not present in the consensus structure.            */
     if (d.annotText) {
       try {
-        viewer.loadCov(d.annotText);
+        /* RNApolis annotator / DSSR pair types are recognized by content, as in the GUI */
+        if (RFviewJS.looksLikeLw && RFviewJS.looksLikeLw(d.annotText)) viewer.loadPairTypes(d.annotText);
+        else viewer.loadCov(d.annotText);
       } catch (e) {
         console.warn('[!] Warning: Cannot load annotations: ' + e.message);
       }
