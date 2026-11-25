@@ -25,7 +25,60 @@ function ensureViewer() {
 
     if (viewer) return;
     viewer = new RFviewJS(container, { statusBar: true });
-    
+    // The library downloads these; in the app they go through a native save dialog instead
+    const grab = (sel, fn) => viewer._root.querySelector(sel)?.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        fn();
+    }, true);
+    grab('.rv-save-layout', saveLayout);
+    grab('.rv-save-png', savePng);
+
+}
+
+function defaultName(ext) {
+
+    const id = viewer?._id || viewer?._structures?.[viewer?._currentStructIdx]?.label || 'RFview_structure';
+    return id.replace(/[^a-zA-Z0-9_\-\.]/g, '_') + ext;
+
+}
+
+async function saveLayout() {
+
+    try {
+
+        const data = viewer?.exportLayout();
+        if (!data) return void showToast('[!] Load a structure first', 3000);
+        const filePath = await window.electronAPI.saveFileDialog(defaultName('.rfv.json'),
+            [{ name: 'RFview layout', extensions: ['json'] }]);
+        if (!filePath) return;
+        await window.electronAPI.writeFile(filePath, JSON.stringify(data, null, 1));
+        showToast(`Saved ${filePath.split(/[\\/]/).pop()}`);
+
+    }
+    catch (err) { showToast(`[!] ${err.message}`, 4000); }
+
+}
+
+async function savePng() {
+
+    try {
+
+        const blob = await viewer?.toPNG();
+        if (!blob) return void showToast('[!] Load a structure first', 3000);
+        const filePath = await window.electronAPI.saveFileDialog(defaultName('.png'),
+            [{ name: 'PNG image', extensions: ['png'] }]);
+        if (!filePath) return;
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let bin = '';
+        for (let i = 0; i < bytes.length; i += 8192)
+            bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+        await window.electronAPI.writeFileB64(filePath, btoa(bin));
+        showToast(`Saved ${filePath.split(/[\\/]/).pop()}`);
+
+    }
+    catch (err) { showToast(`[!] ${err.message}`, 4000); }
+
 }
 
 ensureViewer(); // Shows the empty interface right away
@@ -38,6 +91,13 @@ async function handleIncomingFile({ type, content, name }) {
         ensureViewer();
         const file = new File([content], name, { type: 'text/plain' });
 
+        if (type === 'layout') {
+
+            const msg = viewer.loadLayout(content);
+            showToast(msg || `Layout "${name}" applied`, msg ? 5000 : 2500);
+            return;
+
+        }
         if (type === 'db') {
 
             if (!viewer._accumulatedDbFiles) viewer._accumulatedDbFiles = [];
@@ -142,8 +202,11 @@ document.addEventListener('drop', async e => {
         const ext = file.name.split('.').pop().toLowerCase();
         // RNApolis / DSSR pair types are recognized by content: both tools write plain
         // .csv / .json / .txt, so the extension alone cannot tell them from a structure.
-        const isLw = ext !== 'xml' && RFviewJS.looksLikeLw?.(content);
-        const type = ext === 'xml' ? 'xml' : (isLw || ['tsv','csv','cov','helixcov','json'].includes(ext)) ? 'tsv' : 'db';
+        const isLayout = ext !== 'xml' && RFviewJS.looksLikeLayout?.(content);
+        const isLw = !isLayout && ext !== 'xml' && RFviewJS.looksLikeLw?.(content);
+        const type = isLayout ? 'layout'
+            : ext === 'xml' ? 'xml'
+            : (isLw || ['tsv','csv','cov','helixcov','json'].includes(ext)) ? 'tsv' : 'db';
         await handleIncomingFile({ type, content, name: file.name });
 
     }

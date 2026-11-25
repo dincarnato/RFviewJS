@@ -6,13 +6,14 @@ const { app, BrowserWindow } = require('electron');
 
 const SEQ = 'GGGAAACCCUUUGGGAAACCCUUUGGGAAACCCUUUAAGGGAAACCCUU';
 const DB  = '(((...)))...(((...)))...(((...)))....(((...)))...';
+const DB2 = '(((...)))...(((...)))...((.....))....(((...)))...'; // the third hairpin pairs differently
 
 app.whenReady().then(async () => {
 
 	const win = new BrowserWindow({ width: 1000, height: 800, show: false });
 	win.webContents.on('console-message', (_e, _l, m) => console.log('  [page]', m));
 	await win.loadFile(path.join(__dirname, 'index.html'));
-	const out = await win.webContents.executeJavaScript(`(() => {
+	const out = await win.webContents.executeJavaScript(`(async () => {
 		const r = {};
 		if (typeof viewer !== 'undefined' && viewer) viewer.destroy(); // the app shell's own viewer
 		const v = new RFviewJS(document.getElementById('viewer'));
@@ -285,8 +286,90 @@ app.whenReady().then(async () => {
 			window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', bubbles: true, ctrlKey: true }));
 			r.relaxUndone = v._clashPairs().length === r.clashBefore;
 		}
+		// Layout files: save what was done by hand, put it back, and move it to another structure
+		v.load({ fileText: '>t\\n${SEQ}\\n${DB}\\n' });
+		{
+			const c = v._rna.coords;
+			c[20].x += 60; c[20].y -= 40;                       // a hand-placed base
+			v._toggleHinge(10);                                 // a rotation point
+			v._sel = new Set([24, 25, 26, 27, 28, 29, 30, 31, 32]);
+			v._root.querySelector('.rv-btn-settings').click();
+			const dom = v.addDomainFromSelection();
+			dom.name = 'P3'; dom.locked = true;
+			v._sel.clear(); v._render();
+			const saved = JSON.parse(JSON.stringify(v.exportLayout()));
+			r.savedKeys = Object.keys(saved).sort().join(',');
+			r.savedLooks = RFviewJS.looksLikeLayout(JSON.stringify(saved));
+			const moved = { x: c[20].x, y: c[20].y };
+			// wipe it: a fresh load of the same structure
+			v.load({ fileText: '>t\\n${SEQ}\\n${DB}\\n' });
+			r.wiped = Math.hypot(v._rna.coords[20].x - moved.x, v._rna.coords[20].y - moved.y) > 10 &&
+				!v._rna.hinges?.size && v.getOutlineDomains().length === 0;
+			r.loadMsg = v.loadLayout(JSON.stringify(saved));
+			const c2 = v._rna.coords;
+			r.restored = Math.hypot(c2[20].x - moved.x, c2[20].y - moved.y) < 0.02 &&
+				!!v._rna.hinges?.has(10) &&
+				v.getOutlineDomains()[0]?.name === 'P3' && v.getOutlineDomains()[0]?.locked === true;
+			// the same layout on a different folding of the same sequence
+			const DB2 = '${DB2}';
+			v.load({ fileText: '>t2\\n${SEQ}\\n' + DB2 + '\\n' });
+			r.transfer = v.loadLayout(JSON.stringify(saved));
+			r.transferKept = Math.hypot(v._rna.coords[20].x - moved.x, v._rna.coords[20].y - moved.y) < 0.02;
+			r.transferRedrew = v._rna.coords.length === 49 && v._clashPairs().length === 0;
+			r.transferDomains = v.getOutlineDomains().length;
+		}
+
+		// A locked domain moves as one block
+		v.load({ fileText: '>t\\n${SEQ}\\n${DB}\\n' });
+		{
+			const c = v._rna.coords;
+			v._sel = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+			const dom = v.addDomainFromSelection();
+			dom.locked = true;
+			v._sel.clear(); v._render();
+			const was = [0, 4, 8].map(i => ({ x: c[i].x, y: c[i].y }));
+			const p0 = s2c(c[4]);
+			drag(baseEl(4), p0, { x: p0.x + 40, y: p0.y }, { shiftKey: true });
+			const d = [0, 4, 8].map((i, k) => +(c[i].x - was[k].x).toFixed(3));
+			r.lockedBlock = d[0] === d[1] && d[1] === d[2] && d[0] > 20;
+			r.lockedRigid = v._lockedBlocks().length === 1 && v._lockedBlocks()[0].length === 9;
+		}
+
+		// Leontis-Westhof: legend while the symbols are on, and the pair type in the tooltip
+		v.loadPairTypes('nt1,nt2,type,classification-1,classification-2\\n' +
+			'A.G1,A.U49,base pair,tSW,n/a\\nA.A4,A.A17,base pair,cHS,n/a\\n');
+		r.lwLegend = v._lwLegend.classList.contains('rv-visible') &&
+			v._lwLegend.querySelectorAll('svg').length;
+		v._showTooltip ? 0 : 0;
+		{
+			const el = baseEl(0);
+			el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 10, clientY: 10 }));
+			el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 10, clientY: 10 }));
+			r.tooltip = v._tooltip.innerHTML;
+		}
+		v._showPairTypes = false; v._render();
+		r.lwLegendOff = !v._lwLegend.classList.contains('rv-visible');
+
+		// PNG export
+		{
+			const blob = await v.toPNG(1);
+			r.pngSize = blob ? blob.size : 0;
+			r.pngMagic = blob ? [...new Uint8Array(await blob.slice(0, 4).arrayBuffer())].join(',') : '';
+		}
+
+		// The strip scrolls to a selection made in the drawing
+		v._seqViewOn = true;
+		v._seqView.style.width = '120px';
+		v._sel = new Set([44, 45, 46]);
+		v._seqScrollKey = null;
+		v._render();
+		r.seqScrolled = v._seqView.scrollLeft > 0;
+
 		return r;
-	})()`);
+	})()`).catch(err => {
+		console.error('page error: ' + err.message);
+		app.exit(1);
+	});
 
 	try {
 
@@ -357,6 +440,22 @@ app.whenReady().then(async () => {
 		assert.ok(out.outlineNoSideEffect, 'and does not switch the backbone colouring on there');
 		assert.ok(out.editOpens, 'Edit domains opens the domain list');
 		assert.ok(out.cleared, 'Escape clears the selection and the overlay');
+		assert.ok(out.savedLooks && out.savedKeys.includes('coords') && out.savedKeys.includes('hinges'),
+			`the layout file holds the drawing (${out.savedKeys})`);
+		assert.ok(out.wiped, 'reloading the structure drops the hand-made layout');
+		assert.strictEqual(out.loadMsg, '', 'putting it back on the same structure is silent');
+		assert.ok(out.restored, 'positions, rotation points and domains all come back');
+		assert.match(out.transfer, /47 of 49/, `transferring says what was kept: "${out.transfer}"`);
+		assert.ok(out.transferKept, 'the positions that still pair the same keep their place');
+		assert.ok(out.transferRedrew, 'the rest is laid out again, without overlaps');
+		assert.strictEqual(out.transferDomains, 1, 'the domains come along');
+		assert.ok(out.lockedBlock, 'dragging one base of a locked domain moves the whole domain');
+		assert.ok(out.lockedRigid, 'the locked domain is one rigid block');
+		assert.ok(out.lwLegend >= 6, `the Leontis-Westhof legend shows while the symbols do (${out.lwLegend})`);
+		assert.match(out.tooltip, /tSW with U49/, `the tooltip names the pair type: "${out.tooltip}"`);
+		assert.ok(out.lwLegendOff, 'and goes away with them');
+		assert.ok(out.pngSize > 1000 && out.pngMagic === '137,80,78,71', `the PNG export writes a PNG (${out.pngSize} bytes)`);
+		assert.ok(out.seqScrolled, 'the strip scrolls to a selection made in the drawing');
 		console.log('selection / pivot / rotation: all checks passed');
 		app.exit(0);
 

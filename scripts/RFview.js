@@ -95,6 +95,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-pal-entry{display:flex;align-items:center;gap:7px;margin:2px 0}
 .rv-pal-swatch{width:20px;height:11px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);opacity:var(--rv-pair-annot-opacity,0.5)}
 .rv-pal-key{font-size:13px}
+.rv-lw-legend{position:absolute;bottom:16px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 12px;font-size:12px;display:none;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;z-index:10;line-height:1.5}
+.rv-lw-legend.rv-visible{display:block}
+.rv-lw-legend div{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.rv-lw-legend svg{flex-shrink:0}
 .rv-outline-legend{position:absolute;top:52px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:10px 14px;font-size:13px;display:none;color:var(--rv-text,#1f2328);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;min-width:120px;z-index:10}
 .rv-outline-entry{display:flex;align-items:center;gap:7px;margin:2px 0}
 .rv-outline-swatch{width:20px;height:11px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.15)}
@@ -1067,6 +1071,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	}
 	// Cheap content sniff, so pair-type files are recognized by what they hold rather
 	// than by their extension (RNApolis writes .csv/.json, DSSR .txt/.out/.json).
+	function looksLikeLayout(text) {
+		return /"rfview"\s*:\s*1/.test(String(text).slice(0, 4096));
+	}
 	function looksLikeLw(text) {
 		const head = String(text).slice(0, 8192);
 		return /(^|[\s,"'])[ct][WHS]{2}([\s,"']|$)/.test(head) || /"(lw|LW)"\s*:/.test(head);
@@ -3111,6 +3118,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._selRot = null;
 			this._selClick = null;
 			this._pivotDrag = false;
+			this._pngScale = +config.pngScale || 2; // PNG export size, 1 = the SVG's own size
 			this._seqViewOn = !!config.sequenceView; // the sequence strip at the bottom, off by default
 			this._domainColors = !!config.domainColors; // colour the backbone by domain, off by default
 			this._showPairTypes = !!config.showPairTypes; // Leontis-Westhof symbols, off by default
@@ -3164,6 +3172,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				reset: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8a6 6 0 1 1 1.4 3.8"/><path d="M2 14V9h5"/></svg>`,
 				save: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 1v5h6V1M8 10v4M6 12l2 2 2-2"/></svg>`,
 			};
+			const ICON_PNG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M1.8 10.5l3.4-3.2 2.6 2.4 2.3-2 4.1 3.6"/><circle cx="5.4" cy="6.1" r="1.1" fill="currentColor" stroke="none"/></svg>`;
+			const ICON_LAYOUT = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="6.5" r="2"/><circle cx="6.5" cy="12.5" r="2"/><path d="M5.7 5.2l4.6 0.6M5.2 5.9l0.8 4.8"/></svg>`;
 			const ICON_INDICES = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 2l-2 12M12 2l-2 12M3 6h11M3 10h11"/></svg>`;
 			const ICON_COLORMAP = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="5" width="3.2" height="6" rx="1" opacity=".28"/><rect x="6.4" y="5" width="3.2" height="6" rx="1" opacity=".6"/><rect x="10.8" y="5" width="3.2" height="6" rx="1" opacity=".92"/></svg>`;
 			// NAView icon: two concentric arcs with spokes, suggests a radial layout
@@ -3197,7 +3207,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					b.reset ? btnHTML('rv-reset', '', ICONS.reset, 'Reset layout') : '',
 					b.autoRefit ? `<button class="rv-btn rv-btn-toggle rv-chk-autofit${this._autoRefit ? ' rv--active' : ''}" title="Auto-refit on helix move"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5.5 12L8 5l2.5 7M6.4 9.5h3.2"/></svg><span class="rv-btn-label">Auto-refit</span></button>` : '',
 				].join('')],
-				[b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') : ''],
+				[b.save, b.save ? btnHTML('rv-save', 'rv-btn-primary', ICONS.save, 'Save SVG') +
+					btnHTML('rv-save-png', '', ICON_PNG, 'Save PNG') +
+					btnHTML('rv-save-layout', '', ICON_LAYOUT, 'Save this layout (positions, rotation points, domains)') : ''],
 				[b.indices || b.colorMap || b.pairAnnotations || b.pseudoknots || b.insets || b.labels || b.ssEnds || b.weighting || b.outline, [
 					b.indices ? `<button class="rv-btn rv-btn-toggle rv-chk-indices" title="Indices">${ICON_INDICES}<span class="rv-btn-label">Indices</span></button>` : '',
 					b.colorMap ? `<button class="rv-btn rv-btn-toggle rv-chk-colors" title="Reactivity" style="display:none"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="7" width="3" height="6" rx="0.5"/><rect x="5.5" y="4" width="3" height="9" rx="0.5"/><rect x="10" y="1" width="3" height="12" rx="0.5"/></svg><span class="rv-btn-label">Reactivity</span></button>` : '',
@@ -3300,6 +3312,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
           </div>
           <div class="rv-pal-legend"></div>
           <div class="rv-outline-legend"></div>
+          <div class="rv-lw-legend"></div>
           <div class="rv-outline-bar">
             <input type="color" class="rv-outline-color" value="#e6194b" title="Colour of the next domain">
             <span class="rv-outline-hint"></span>
@@ -3349,6 +3362,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                   <input type="range" class="rv-set-lbl-font" min="1" max="30" step="1" value="16"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">Index font  <span class="rv-setting-val rv-val-idx-font">16</span></span>
                   <input type="range" class="rv-set-idx-font" min="1" max="30" step="1" value="16"></div>
+                <div class="rv-setting-row"><span class="rv-setting-label">PNG export scale  <span class="rv-setting-val rv-val-png">2</span>x</span>
+                  <input type="range" class="rv-set-png" min="1" max="8" step="1" value="2"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">Color domains <span style="color:var(--rv-muted,#656d76);font-size:11px">(Outline tab)</span></span>
                   <input type="checkbox" class="rv-set-domcolors" style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)"></div>
                 <div class="rv-setting-row"><span class="rv-setting-label">Color by nucleotide</span>
@@ -3515,6 +3530,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._sbPairs = q('.rv-sb-pairs');
 			this._chkOutline = q('.rv-chk-outline');
 			this._outlineLegend = q('.rv-outline-legend');
+			this._lwLegend = q('.rv-lw-legend');
 			this._outlineBar = q('.rv-outline-bar');
 			this._outlineColorIn = q('.rv-outline-color');
 			this._chkIndices = q('.rv-chk-indices');
@@ -3587,6 +3603,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			});
 			on('.rv-reset', 'click', () => this.reset());
 			on('.rv-save', 'click', () => this._saveSVG());
+			on('.rv-save-png', 'click', () => this.savePNG());
+			on('.rv-save-layout', 'click', () => this.saveLayout());
 			if (this._layoutBtn) {
 				this._layoutBtn.addEventListener('click', () => this.toggleLayout());
 			}
@@ -3867,17 +3885,39 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// Pair-type annotations (RNApolis annotator / DSSR) are recognized by content,
 				// since both tools write plain .csv / .json / .txt. They apply to the structure
 				// already on screen, so they are handled here and not in the upload panel.
-				const lwFiles = [];
+				const lwFiles = [],
+					layoutFiles = [];
 				for (const f of allFiles.filter(f => /\.(csv|json|lw|bp|out|dssr|txt)$/i.test(f.name))) {
 					const text = await f.text();
-					if (looksLikeLw(text)) lwFiles.push({ file: f, text });
+					if (looksLikeLayout(text)) layoutFiles.push({ file: f, text });
+					else if (looksLikeLw(text)) lwFiles.push({ file: f, text });
 				}
-				const rest = allFiles.filter(f => !lwFiles.some(l => l.file === f));
+				const rest = allFiles.filter(f => !lwFiles.some(l => l.file === f) && !layoutFiles.some(l => l.file === f));
 				const dbFiles = rest.filter(f => DB_EXTS.test(f.name));
 				const xmlFiles = rest.filter(f => /\.xml$/i.test(f.name));
 				// Silently ignore XML files for Stockholm structures
 				const effectiveXmlFiles = this._rna?.baseDisplay ? [] : xmlFiles;
 				const covFiles = rest.filter(f => /\.(cov|helixcov)$/i.test(f.name));
+				// A saved layout applies to the structure on screen, after any structure in the
+				// same drop has been loaded
+				const applyLayouts = () => {
+					for (const l of layoutFiles) {
+						try {
+							const msg = this.loadLayout(l.text);
+							if (msg) this._showErrorDialog(msg);
+						} catch (err) {
+							this._showErrorDialog(`"${l.file.name}": ${err.message}`);
+						}
+					}
+				};
+				if (layoutFiles.length && !dbFiles.length) {
+					if (!this._rna) {
+						this._showError(`Load a structure before "${layoutFiles[0].file.name}"`);
+						return;
+					}
+					applyLayouts();
+					if (!lwFiles.length) return;
+				}
 				// Pair types dropped without a structure: apply them to what is on screen.
 				// Dropped together with one, they ride along with the annotation files below.
 				if (lwFiles.length && !dbFiles.length) {
@@ -3897,6 +3937,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					if (warn) this._showErrorDialog(warn);
 					return;
 				}
+				if (layoutFiles.length && dbFiles.length) this._pendingLayouts = layoutFiles;
 				if (!dbFiles.length && !effectiveXmlFiles.length && !covFiles.length) {
 					const unrecognized = rest.filter(f =>
 						!DB_EXTS.test(f.name) && !/\.(xml|cov|helixcov)$/i.test(f.name)
@@ -6161,6 +6202,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			}
 
+			// Appearance tab: PNG export scale
+			const pngIn = q('.rv-set-png'),
+				pngVal = q('.rv-val-png');
+			if (pngIn) {
+				pngIn.value = this._pngScale;
+				if (pngVal) pngVal.textContent = this._pngScale;
+				pngIn.addEventListener('input', () => {
+					this._pngScale = +pngIn.value || 2;
+					if (pngVal) pngVal.textContent = this._pngScale;
+				});
+			}
 			// Appearance tab: colour the backbone links by domain
 			const domChk = q('.rv-set-domcolors');
 			if (domChk) {
@@ -6977,6 +7029,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					isXmlOnly ? '(reactivity added)' : (prevStructCount > 0 && allStructures.length > prevStructCount ? '(appended)' : ''),
 					hasReact && this._pendingXmlData.length ? `· reactivity matched` : '',
 				].filter(Boolean);
+				// A layout dropped together with its structure is applied once the structure is in
+				if (this._pendingLayouts?.length) {
+					const pend = this._pendingLayouts;
+					this._pendingLayouts = null;
+					for (const l of pend) {
+						try {
+							const msg = this.loadLayout(l.text);
+							if (msg) annotWarnings.push(msg);
+						} catch (e) {
+							annotWarnings.push(`"${l.file.name}": ${e.message}`);
+						}
+					}
+				}
 				setStatus([parts.join(' '), ...annotWarnings].join(' · '), 'rv--ok');
 				this._hideUploadPanel();
 			} catch (err) {
@@ -7590,6 +7655,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				start: Number.isFinite(+d.start) && d.start !== null && d.start !== '' ? +d.start : (prevEnd != null && prevEnd < b.max ? prevEnd + 1 : b.min),
 				end: Number.isFinite(+d.end) && d.end !== null && d.end !== '' ? +d.end : b.max,
 				color: /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color.toLowerCase() : '#000000',
+				locked: !!d.locked,
 			};
 			this._clampOutlineDomain(dom, s);
 			return dom;
@@ -7930,13 +7996,23 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					return inp;
 				};
 				start = num('start', 'Start'); end = num('end', 'End');
+				const lock = document.createElement('button');
+				lock.className = 'rv-stop-del rv-dom-lock';
+				lock.textContent = dom.locked ? '\u{1F512}' : '\u{1F513}';
+				lock.title = dom.locked ? 'Locked: moves as one block, and Unclutter leaves it alone' : 'Lock this domain';
+				lock.addEventListener('click', () => {
+					dom.locked = !dom.locked;
+					lock.textContent = dom.locked ? '\u{1F512}' : '\u{1F513}';
+					this._renderSoon();
+					this._refreshOutlineList();
+				});
 				const col = document.createElement('input');
 				col.type = 'color'; col.value = dom.color; col.title = 'Domain colour';
 				col.addEventListener('input', () => { dom.color = col.value; this._updateOutlineLegend(); repaint(); if (this._outlineMode && !this._alnActive) this._renderSoon(); });
 				const del = document.createElement('button');
 				del.className = 'rv-stop-del'; del.title = 'Remove this domain'; del.textContent = '−';
 				del.addEventListener('click', () => this.removeOutlineDomain(i));
-				row.append(name, start, end, col, del);
+				row.append(name, start, end, lock, col, del);
 				list.appendChild(row);
 			});
 		}
@@ -8440,6 +8516,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._refreshSelUI();
 			this._renderSeqView();
 			this._updateOverlapStatus();
+			this._updateLwLegend();
 		}
 		_saveSVG(returnString = false) {
 			if (!this._rna) return returnString ? null : undefined;
@@ -9311,6 +9388,45 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			document.body.removeChild(a);
 			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 		}
+		// The drawing as a PNG blob, scale 1 being the SVG's own size
+		async toPNG(scale = this._pngScale || 2) {
+			const svgText = this._saveSVG(true);
+			if (!svgText) return null;
+			const m = svgText.match(/viewBox="\s*([-\d.]+)[ ,]+([-\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/);
+			const w = m ? parseFloat(m[3]) : 1000,
+				h = m ? parseFloat(m[4]) : 1000;
+			// A data: URL, not a blob: one - the Electron shell's img-src policy allows data: only
+			const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
+			{
+				const img = new Image();
+				await new Promise((res, rej) => {
+					img.onload = res;
+					img.onerror = () => rej(new Error('Could not render the drawing to an image.'));
+					img.src = url;
+				});
+				const cv = document.createElement('canvas');
+				cv.width = Math.max(1, Math.round(w * scale));
+				cv.height = Math.max(1, Math.round(h * scale));
+				const ctx = cv.getContext('2d');
+				ctx.fillStyle = this._gv('--rv-bg') || '#ffffff';
+				ctx.fillRect(0, 0, cv.width, cv.height);
+				ctx.drawImage(img, 0, 0, cv.width, cv.height);
+				return await new Promise(res => cv.toBlob(res, 'image/png'));
+			}
+		}
+		savePNG(scale) {
+			return this.toPNG(scale).then(blob => {
+				if (!blob) return;
+				const id = this._id || this._structures?.[this._currentStructIdx]?.label || 'RFview_structure';
+				const a = document.createElement('a');
+				a.href = URL.createObjectURL(blob);
+				a.download = id.replace(/[^a-zA-Z0-9_\-\.]/g, '_') + '.png';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+			}).catch(e => this._showErrorDialog?.(e.message));
+		}
 		// Return the current structure as a standalone SVG string (no download)
 		// Grow an export SVG's viewBox to the real bounds of its content: index labels, pseudoknot
 		// arcs, annotation boxes and SS_cons labels (including dragged ones, via their transforms) can
@@ -9464,6 +9580,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (ps) {
 					const pk = ps.i === idx ? ps.j : ps.i;
 					html += ` ↔ ${sequence[pk]}${positionLabels?.[pk] ?? (pk + 1)}`;
+				}
+				const lw = this._rna.lwPairs?.filter(q => q.i === idx || q.j === idx) || [];
+				for (const q of lw) {
+					const o = q.i === idx ? q.j : q.i;
+					html += `<br>${escHtml(q.lw)} with ${sequence[o] || ''}${positionLabels?.[o] ?? (o + 1)}`;
 				}
 				if (values && values[idx] != null) html += `<br>Value: ${values[idx].toFixed(3)}`;
 			}
@@ -9673,6 +9794,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (grp && this._rna && (e.button === 2 || (e.button === 0 && e.shiftKey))) {
 				e.preventDefault();
 				if (this._sel.has(idx0)) return this._startMove([...this._sel], e);
+				const block = this._lockedBlockOf(idx0);
+				if (block) return this._startMove(block, e);
 				const helix0 = this._findDirectHelix(idx0);
 				const [lo, hi] = helix0 ? [helix0.i, helix0.j] : [idx0, idx0];
 				this._startMove(Array.from({ length: hi - lo + 1 }, (_, k) => lo + k), e);
@@ -10065,11 +10188,268 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._commitUndo();
 			this._render();
 		}
+		// What the Leontis-Westhof symbols mean, shown while they are on screen
+		_updateLwLegend() {
+			const el = this._lwLegend;
+			if (!el) return;
+			const on = this._showPairTypes && !this._outlineMode && !this._alnActive && !!this._rna?.lwPairs?.length;
+			el.classList.toggle('rv-visible', !!on);
+			if (!on) {
+				el.innerHTML = '';
+				return;
+			}
+			const col = this._gv('--rv-basepair') || '#1f2328';
+			const bg = this._gv('--rv-bg') || '#ffffff';
+			const shape = (d, fill) => `<svg width="14" height="14" viewBox="0 0 14 14">${d(fill)}</svg>`;
+			const circ = f => `<circle cx="7" cy="7" r="4.6" fill="${f}" stroke="${col}" stroke-width="1.6"/>`;
+			const sq = f => `<rect x="2.6" y="2.6" width="8.8" height="8.8" fill="${f}" stroke="${col}" stroke-width="1.6"/>`;
+			const tri = f => `<polygon points="7,2 12,11 2,11" fill="${f}" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>`;
+			el.innerHTML = [
+				['Watson-Crick edge', circ],
+				['Hoogsteen edge', sq],
+				['Sugar edge', tri],
+			].map(([t, f]) => `<div>${shape(f, col)}${shape(f, bg)}<span>${t}</span></div>`).join('') +
+				`<div style="margin-top:4px;color:var(--rv-muted,#656d76)">filled = cis &nbsp; hollow = trans</div>`;
+		}
 		_updateOverlapStatus() {
 			if (!this._sbOverlap) return;
 			const c = this._lastClashes || 0;
 			this._sbOverlap.style.display = c ? '' : 'none';
 			if (this._sbClash) this._sbClash.textContent = `${c} overlap${c !== 1 ? 's' : ''}`;
+		}
+		// A hand-made layout, as a plain object: positions, rotation points, domains and the
+		// options that go with them. RFviewJS.looksLikeLayout(text) recognises the saved file.
+		exportLayout() {
+			const r = this._rna;
+			if (!r) return null;
+			const f = v => Math.round(v * 100) / 100;
+			return {
+				rfview: 1,
+				id: this._id || this._structures?.[this._currentStructIdx]?.label || null,
+				n: r.n,
+				algo: r._algo || this._layoutAlgo || null,
+				sequence: r.sequence,
+				pairs: Array.from(r.pairs),
+				coords: r.coords.map(c => [f(c.x), f(c.y)]),
+				loopCenters: r.helices.map(h => [h.i, h.j, f(h.loopCenter.x), f(h.loopCenter.y)]),
+				hinges: r.hinges ? [...r.hinges].map(([k, q]) => [k, f(q.x), f(q.y)]) : [],
+				domains: this._outlineDomains(false).map(d => ({ ...d })),
+				options: {
+					domainColors: this._domainColors,
+					showPairTypes: this._showPairTypes,
+					sequenceView: this._seqViewOn,
+				},
+			};
+		}
+		saveLayout() {
+			const data = this.exportLayout();
+			if (!data) return;
+			const name = (data.id || 'RFview_structure').replace(/[^a-zA-Z0-9_\-\.]/g, '_') + '.rfv.json';
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+			a.download = name;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+		}
+		// Put a saved layout back on the structure on screen. When the pairing is not the same -
+		// another structure of the same length, another folding of it - the positions whose
+		// pairing did not change are kept and the rest comes from a fresh layout of the structure
+		// on screen, rigidly fitted onto the kept ones; overlaps that leaves are then relaxed.
+		loadLayout(data) {
+			if (typeof data === 'string') data = JSON.parse(data);
+			if (!data || data.rfview !== 1 || !Array.isArray(data.coords))
+				throw new Error('Not an RFview layout file.');
+			const r = this._rna;
+			if (!r) throw new Error('No structure loaded - load one first, then its layout.');
+			if (data.n !== r.n)
+				throw new Error(`This layout is for ${data.n} nucleotides, the structure on screen has ${r.n}.`);
+			this._beginUndo();
+			const target = data.coords.map(([x, y]) => ({ x, y }));
+			const same = Array.isArray(data.pairs) && data.pairs.every((q, i) => q === r.pairs[i]);
+			let kept = r.n;
+			if (same) {
+				r.coords.forEach((c, i) => {
+					c.x = target[i].x;
+					c.y = target[i].y;
+				});
+			} else {
+				const keep = [];
+				for (let i = 0; i < r.n; i++)
+					if (!Array.isArray(data.pairs) || data.pairs[i] === r.pairs[i]) keep.push(i);
+				kept = keep.length;
+				const fresh = this._freshCoords();
+				const T = fresh && keep.length > 1 ? this._fitPoints(keep.map(i => fresh[i]), keep.map(i => target[i])) : null;
+				const keepSet = new Set(keep);
+				r.coords.forEach((c, i) => {
+					const q = keepSet.has(i) || !T ? target[i] : T(fresh[i]);
+					c.x = q.x;
+					c.y = q.y;
+				});
+				if (T) {
+					const free = new Set();
+					for (let i = 0; i < r.n; i++)
+						if (!keepSet.has(i)) free.add(i);
+					this._pullTogether(free, fresh.map(q => T(q)));
+				}
+			}
+			const lc = new Map((data.loopCenters || []).map(([i, j, x, y]) => [i + ',' + j, { x, y }]));
+			for (const h of r.helices) {
+				const q = lc.get(h.i + ',' + h.j);
+				if (q) {
+					h.loopCenter.x = q.x;
+					h.loopCenter.y = q.y;
+				} else {
+					const t = Math.max(0, this._helixLen(h.i, h.j) - 1);
+					h.loopCenter.x = (r.coords[h.i + t].x + r.coords[h.j - t].x) / 2;
+					h.loopCenter.y = (r.coords[h.i + t].y + r.coords[h.j - t].y) / 2;
+				}
+			}
+			r.hinges = (data.hinges || []).length ?
+				new Map(data.hinges.filter(([k]) => k < r.n - 1).map(([k, x, y]) => [k, { x, y }])) : null;
+			if (Array.isArray(data.domains)) this.setOutlineDomains(data.domains);
+			const o = data.options || {};
+			if (o.showPairTypes != null) this._showPairTypes = !!o.showPairTypes;
+			if (o.sequenceView != null) this._seqViewOn = !!o.sequenceView;
+			if (o.domainColors != null) this.setDomainColors(!!o.domainColors);
+			this._sel.clear();
+			this._selPivot = null;
+			this._selHinge = null;
+			this._commitUndo();
+			this._render();
+			if (!same) this.relaxLayout();
+			this.fit();
+			return same ? '' :
+				`Layout transferred: ${kept} of ${r.n} positions pair as they did, the other ${r.n - kept} were laid out again`;
+		}
+		// After a transfer: the stretches that were laid out again start wherever the fresh layout
+		// put them, which is rarely next to the kept ends they have to join. Pull them onto those
+		// ends - bonds at the length the engine gives them, the helices among them kept rigid.
+		_pullTogether(free, ref, iters = 200) {
+			const { coords, n, pairs } = this._rna;
+			const d0 = (i, j) => Math.hypot(ref[i].x - ref[j].x, ref[i].y - ref[j].y);
+			const bonds = [];
+			for (let i = 0; i < n - 1; i++)
+				if (free.has(i) || free.has(i + 1)) bonds.push([i, i + 1, d0(i, i + 1)]);
+			for (let i = 0; i < n; i++)
+				if (pairs[i] > i && (free.has(i) || free.has(pairs[i]))) bonds.push([i, pairs[i], d0(i, pairs[i])]);
+			if (!bonds.length) return;
+			const blocks = this._rna.helices.map(h => {
+				const len = this._helixLen(h.i, h.j);
+				const idx = [];
+				for (let k = 0; k < len; k++) idx.push(h.i + k, h.j - k);
+				return idx;
+			}).filter(idx => idx.length > 3 && idx.every(i => free.has(i)))
+				.map(idx => ({ idx, home: idx.map(i => ({ x: coords[i].x, y: coords[i].y })) }));
+			for (let it = 0; it < iters; it++) {
+				for (const [i, j, rest] of bonds) {
+					const dx = coords[j].x - coords[i].x,
+						dy = coords[j].y - coords[i].y;
+					const d = Math.hypot(dx, dy) || 1e-6;
+					const fi = free.has(i),
+						fj = free.has(j);
+					const k = (d - rest) / d * (fi && fj ? 0.5 : 1);
+					if (fi) {
+						coords[i].x += dx * k;
+						coords[i].y += dy * k;
+					}
+					if (fj) {
+						coords[j].x -= dx * k;
+						coords[j].y -= dy * k;
+					}
+				}
+				for (const b of blocks) this._fitBlock(b, 1);
+			}
+		}
+		// Move the bases of a rigid block back onto a rigid copy of its shape (2D shape matching)
+		_fitBlock(b, w = 0.8, free = null) {
+			const coords = this._rna.coords;
+			const m = b.idx.length;
+			let cx = 0, cy = 0, hx = 0, hy = 0;
+			for (let k = 0; k < m; k++) {
+				cx += coords[b.idx[k]].x;
+				cy += coords[b.idx[k]].y;
+				hx += b.home[k].x;
+				hy += b.home[k].y;
+			}
+			cx /= m;
+			cy /= m;
+			hx /= m;
+			hy /= m;
+			let num = 0, den = 0;
+			for (let k = 0; k < m; k++) {
+				const ax = b.home[k].x - hx,
+					ay = b.home[k].y - hy,
+					bx = coords[b.idx[k]].x - cx,
+					by = coords[b.idx[k]].y - cy;
+				num += ax * by - ay * bx;
+				den += ax * bx + ay * by;
+			}
+			const th = Math.atan2(num, den),
+				ct = Math.cos(th),
+				st = Math.sin(th);
+			for (let k = 0; k < m; k++) {
+				const i = b.idx[k];
+				if (free && !free(i)) continue;
+				const ax = b.home[k].x - hx,
+					ay = b.home[k].y - hy;
+				coords[i].x += (cx + ax * ct - ay * st - coords[i].x) * w;
+				coords[i].y += (cy + ax * st + ay * ct - coords[i].y) * w;
+			}
+		}
+		// Coordinates the layout engine gives for the structure on screen, untouched by any edit
+		_freshCoords() {
+			const rec = this._structures?.[this._currentStructIdx];
+			if (!rec?.structure) return null;
+			try {
+				return this._computeLayout(rec.sequence, rec.structure, null, null)?.coords || null;
+			} catch (e) {
+				return null;
+			}
+		}
+		// Rigid transform (rotation, uniform scale, translation) taking the points a onto b
+		_fitPoints(a, b) {
+			const mean = ps => ps.reduce((m, q) => (m.x += q.x / ps.length, m.y += q.y / ps.length, m), { x: 0, y: 0 });
+			const ca = mean(a),
+				cb = mean(b);
+			let num = 0, den = 0, sa = 0, sb = 0;
+			for (let k = 0; k < a.length; k++) {
+				const ax = a[k].x - ca.x,
+					ay = a[k].y - ca.y,
+					bx = b[k].x - cb.x,
+					by = b[k].y - cb.y;
+				num += ax * by - ay * bx;
+				den += ax * bx + ay * by;
+				sa += ax * ax + ay * ay;
+				sb += bx * bx + by * by;
+			}
+			const th = Math.atan2(num, den),
+				ct = Math.cos(th),
+				st = Math.sin(th);
+			const sc = Math.min(2, Math.max(0.5, sa > 1e-9 ? Math.sqrt(sb / sa) : 1));
+			return q => ({
+				x: cb.x + sc * ((q.x - ca.x) * ct - (q.y - ca.y) * st),
+				y: cb.y + sc * ((q.x - ca.x) * st + (q.y - ca.y) * ct),
+			});
+		}
+		// Index lists of the domains that are locked: each one moves as a single rigid block
+		_lockedBlocks() {
+			if (!this._rna) return [];
+			const out = [];
+			for (const dom of this._outlineDomains(false)) {
+				if (!dom.locked) continue;
+				const r = this._outlineRange(dom);
+				if (!r) continue;
+				const idx = [];
+				for (let i = r[0]; i <= r[1]; i++)
+					if (!this._rna.baseDisplay?.[i]?.skip) idx.push(i);
+				if (idx.length > 1) out.push(idx);
+			}
+			return out;
+		}
+		_lockedBlockOf(i) {
+			return this._lockedBlocks().find(b => b[0] <= i && i <= b[b.length - 1]) || null;
 		}
 		// Bases drawn on top of each other. Neighbours along the backbone and paired bases are
 		// meant to sit close, so only the others count. Uniform grid, so this stays O(n).
@@ -10112,6 +10492,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const minD = this._gvn('--rv-base-radius', BASE_R) * 2 * 1.05;
 			const bd = r.baseDisplay;
 			const pinned = this._sel.size > 1 ? this._sel : null; // what the user placed stays put
+			const locked = this._lockedBlocks();
 			this._beginUndo();
 			const start = coords.map(c => ({ x: c.x, y: c.y }));
 			const free = i => !(pinned?.has(i) || bd?.[i]?.skip);
@@ -10149,6 +10530,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					for (let k = 0; k < len; k++) idx.push(h.i + k, h.j - k);
 					return { idx, home: idx.map(i => ({ x: coords[i].x, y: coords[i].y })) };
 				}).filter(h => h.idx.length > 3);
+				// A locked domain is rigid too, and comes last so that it wins over its helices
+				for (const idx of locked) helices.push({ idx, home: idx.map(i => ({ x: coords[i].x, y: coords[i].y })) });
 				group.fill(-1);
 				helices.forEach((h, k) => h.idx.forEach(i => group[i] = k));
 			};
@@ -10393,6 +10776,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				chars.push(`<span class="${cls}" data-sidx="${i}"${col}>${escHtml(sequence[i] || '-')}</span>`);
 			}
 			el.innerHTML = `<div class="rv-seq-ruler">${escHtml(cells.join(''))}</div><div>${chars.join('')}</div>`;
+			// Follow a selection made in the drawing, but never fight the user scrolling the strip
+			const key = this._sel.size ? Math.min(...this._sel) + ':' + this._sel.size : '';
+			if (key && key !== this._seqScrollKey && !this._seqDrag) {
+				const first = el.querySelector('.rv-seq-sel');
+				if (first && el.scrollWidth > el.clientWidth)
+					el.scrollLeft = Math.max(0, first.offsetLeft - el.clientWidth / 2);
+			}
+			this._seqScrollKey = key;
 		}
 		// Colour of each base taken from the domains of the Outline tab (later domains win),
 		// null when domain colouring is off, has no domains, or the outline view draws them itself
@@ -12017,6 +12408,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	RFviewJS.parsePairAnnotFile = parsePairAnnotFile;
 	RFviewJS.parseLwFile = parseLwFile;
 	RFviewJS.looksLikeLw = looksLikeLw;
+	RFviewJS.looksLikeLayout = looksLikeLayout;
 	RFviewJS.parseCovFile = parseCovFile;
 	RFviewJS.parseHelixCovFile = parseHelixCovFile;
 	RFviewJS.buildAnnotColorMap = buildAnnotColorMap;
