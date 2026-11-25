@@ -135,6 +135,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-sel-box{fill:none;stroke:var(--rv-accent,#0969da);stroke-dasharray:5 4;opacity:.8}
 .rv-sel-rot{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:grab}
 .rv-sel-straight{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:pointer}
+.rv-sel-move{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:move}
+.rv-sel-move-ico{fill:var(--rv-accent,#0969da);stroke:none;pointer-events:none}
 .rv-sel-rot-arrow{fill:none;stroke:var(--rv-accent,#0969da);stroke-linecap:round}
 .rv-sel-rot-head{fill:var(--rv-accent,#0969da);stroke:none}
 .rv-sel-pivot{fill:color-mix(in srgb,var(--rv-accent,#0969da) 12%,transparent);stroke:var(--rv-accent,#0969da);stroke-dasharray:3 2;pointer-events:all;cursor:move}
@@ -3781,7 +3783,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					return;
 				}
 				if (e.key === 'Escape' && this._sel.size) {
+					this._beginUndo();
 					this._sel.clear();
+					this._commitUndo();
 					this._render();
 				}
 				if ((e.metaKey || e.ctrlKey) && 'zyZY'.includes(e.key) && this._rna) {
@@ -9534,11 +9538,15 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._canvas.classList.add('grabbing');
 				return;
 			}
-			const handle = e.button === 0 && !e.altKey && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot,.rv-sel-straight') : null;
+			const handle = e.button === 0 && !e.altKey && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot,.rv-sel-straight,.rv-sel-move') : null;
 			if (handle) {
 				e.preventDefault();
 				if (handle.classList.contains('rv-sel-straight')) {
 					this._straightenSelection();
+					return;
+				}
+				if (handle.classList.contains('rv-sel-move')) {
+					this._startMove([...this._sel], e);
 					return;
 				}
 				if (handle.classList.contains('rv-sel-pivot')) {
@@ -9600,7 +9608,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (e.button !== 0) return;
 			this._mouseDownPt = { x: e.clientX, y: e.clientY }; // A drag (pan) must not count as an outline click
 			if (this._sel.size) {
+				this._beginUndo(); // Ctrl+Z brings the selection back
 				this._sel.clear();
+				this._commitUndo();
 				this._render();
 			}
 			if (grp) {
@@ -9860,6 +9870,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				coords: r.coords.map(c => ({ x: c.x, y: c.y })),
 				lcs: r.helices.map(h => ({ h, x: h.loopCenter.x, y: h.loopCenter.y })),
 				hinges: r.hinges ? new Map([...r.hinges].map(([k, v]) => [k, { x: v.x, y: v.y }])) : null,
+				sel: new Set(this._sel),
+				selPivot: this._selPivot ? { x: this._selPivot.x, y: this._selPivot.y } : null,
+				selHinge: this._selHinge,
+				pivotUser: this._pivotUser,
 			};
 		}
 		_applySnapshot(s) {
@@ -9875,6 +9889,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				h.loopCenter.y = y;
 			});
 			r.hinges = s.hinges ? new Map([...s.hinges].map(([k, v]) => [k, { x: v.x, y: v.y }])) : null;
+			this._sel = new Set(s.sel);
+			this._selPivot = s.selPivot ? { x: s.selPivot.x, y: s.selPivot.y } : null;
+			this._selHinge = s.selHinge;
+			this._pivotUser = s.pivotUser;
 			if (this._selHinge != null && !r.hinges?.has(this._selHinge)) this._selHinge = null;
 		}
 		_beginUndo() {
@@ -10019,16 +10037,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			while (i + len < j - len && pairs[i + len] === j - len) len++;
 			return len;
 		}
-		// Helices whose every base is in the selection
+		// Helices the selection reaches into (one selected base is enough: a box drawn around a
+		// hairpin rarely covers both strands of its stem down to the last pair)
 		_selectedHelices() {
 			const r = this._rna;
-			if (!r || this._sel.size < 4) return [];
+			if (!r || !this._sel.size) return [];
 			return r.helices.filter(h => {
 				const len = this._helixLen(h.i, h.j);
 				if (len < 2) return false;
 				for (let k = 0; k < len; k++)
-					if (!this._sel.has(h.i + k) || !this._sel.has(h.j - k)) return false;
-				return true;
+					if (this._sel.has(h.i + k) || this._sel.has(h.j - k)) return true;
+				return false;
 			});
 		}
 		// Re-lay those helices as a regular ladder: both ends of the axis stay where they are, the
@@ -10038,6 +10057,50 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (!hs.length) return 0;
 			this._beginUndo();
 			const c = this._rna.coords;
+			const mid = (a, b) => ({ x: (c[a].x + c[b].x) / 2, y: (c[a].y + c[b].y) / 2 });
+			// First square the axis of the leading helix to the nearest 45 degrees and swing
+			// everything that is selected with it - the layouts already draw regular ladders, so
+			// without this the button would do nothing at all on a freshly laid out structure.
+			const a0 = hs[0],
+				aLen = this._helixLen(a0.i, a0.j);
+			const p0 = mid(a0.i, a0.j),
+				p1 = mid(a0.i + aLen - 1, a0.j - aLen + 1);
+			const step = Math.PI / 4;
+			const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+			const da = Math.round(ang / step) * step - ang;
+			if (Math.abs(da) > 1e-4) {
+				const idx = new Set(this._sel);
+				for (const h of hs) {
+					const L = this._helixLen(h.i, h.j);
+					for (let k = 0; k < L; k++) {
+						idx.add(h.i + k);
+						idx.add(h.j - k);
+					}
+				}
+				const ca = Math.cos(da),
+					sa = Math.sin(da);
+				const rot = q => ({
+					x: p0.x + (q.x - p0.x) * ca - (q.y - p0.y) * sa,
+					y: p0.y + (q.x - p0.x) * sa + (q.y - p0.y) * ca
+				});
+				for (const i of idx) {
+					const q = rot(c[i]);
+					c[i].x = q.x;
+					c[i].y = q.y;
+				}
+				for (const h of this._rna.helices) {
+					if (!idx.has(h.i) || !idx.has(h.j)) continue;
+					const q = rot(h.loopCenter);
+					h.loopCenter.x = q.x;
+					h.loopCenter.y = q.y;
+				}
+				if (this._rna.hinges)
+					for (const [k, hg] of this._rna.hinges)
+						if (idx.has(k) && idx.has(k + 1)) this._rna.hinges.set(k, rot(hg));
+				if (this._selHinge != null && this._rna.hinges?.has(this._selHinge))
+					this._selPivot = { ...this._rna.hinges.get(this._selHinge) };
+				else if (this._selPivot) this._selPivot = rot(this._selPivot);
+			}
 			for (const h of hs) {
 				const len = this._helixLen(h.i, h.j);
 				const i = h.i,
@@ -10152,6 +10215,24 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						`M${sx - lw},${sy - lw * 0.45}L${sx + lw},${sy - lw * 0.45}M${sx - lw},${sy + lw * 0.45}L${sx + lw},${sy + lw * 0.45}`,
 					'stroke-width': 1.3 * s
 				});
+			}
+			// Drag cross, bottom-left: moves the selection (so does dragging a selected base)
+			{
+				const mx = bb.minX - hr,
+					my = bb.maxY + hr;
+				mk('line', 'rv-sel-box', { x1: bb.minX, y1: bb.maxY, x2: mx, y2: my, 'stroke-width': 1.2 * s });
+				mk('circle', 'rv-sel-move', { cx: mx, cy: my, r: hr, 'stroke-width': 1.5 * s });
+				const L = hr * 0.74,
+					hh = L * 0.40,
+					aw = L * 0.10,
+					bw = L * 0.40;
+				const pts = [
+					[0, -L], [bw, -(L - hh)], [aw, -(L - hh)], [aw, -aw], [L - hh, -aw], [L - hh, -bw],
+					[L, 0], [L - hh, bw], [L - hh, aw], [aw, aw], [aw, L - hh], [bw, L - hh],
+					[0, L], [-bw, L - hh], [-aw, L - hh], [-aw, aw], [-(L - hh), aw], [-(L - hh), bw],
+					[-L, 0], [-(L - hh), -bw], [-(L - hh), -aw], [-aw, -aw], [-aw, -(L - hh)], [-bw, -(L - hh)]
+				];
+				mk('polygon', 'rv-sel-move-ico', { points: pts.map(([px0, py0]) => `${mx + px0},${my + py0}`).join(' ') });
 			}
 			// Pivot: where the bend happens, draggable
 			const pv = this._selPivot;
@@ -10463,14 +10544,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				if (Math.abs(e.clientX - x) + Math.abs(e.clientY - y) < 4) {
 					this._stretchState = null;
 					this._canvas.classList.remove('grabbing');
+					this._beginUndo();
 					if (this._sel.has(idx)) this._sel.delete(idx);
 					else this._sel.add(idx);
 					if (!this._pivotUser && this._selHinge == null) this._selPivot = null;
+					this._commitUndo();
 					this._render();
 					return;
 				}
 			}
 			if (this._boxStart) {
+				this._beginUndo();
 				const a = this._clientToScene(this._boxStart.x, this._boxStart.y),
 					b = this._clientToScene(e.clientX, e.clientY);
 				const [x0, x1] = [Math.min(a.x, b.x), Math.max(a.x, b.x)],
@@ -10483,6 +10567,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 				this._selHinge = null; // a fresh box selection starts from its own hinge again
 				if (!this._pivotUser) this._selPivot = null;
+				this._commitUndo();
 				this._boxStart = null;
 				this._selRect.style.display = 'none';
 				this._render();

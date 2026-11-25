@@ -70,6 +70,17 @@ app.whenReady().then(async () => {
 		r.freeErr = Math.max(...freeBefore.map(({ i, x, y }) => Math.hypot(coords[i].x - x, coords[i].y - y)));
 		r.rotCleared = v._selRot === null;
 
+		// The drag cross in the corner moves the selection, like dragging a selected base does
+		{
+			const i0 = [...v._sel][0], was = coords[i0].x;
+			const mv = svg.querySelector('.rv-sel-move');
+			r.moveCross = !!mv;
+			const p = s2c({ x: +mv.getAttribute('cx'), y: +mv.getAttribute('cy') });
+			drag(mv, p, { x: p.x + 40, y: p.y });
+			r.crossDx = +(coords[i0].x - was).toFixed(2);
+			r.crossKeptSel = v._sel.has(i0);
+		}
+
 		// Alt+click on a link puts a rotation point between the two nucleotides
 		const cut = 21;
 		const midPt = { x: (coords[cut].x + coords[cut + 1].x) / 2, y: (coords[cut].y + coords[cut + 1].y) / 2 };
@@ -117,8 +128,22 @@ app.whenReady().then(async () => {
 			const dot = (coords[0].x - coords[8].x) * (mids[1].x - mids[0].x) + (coords[0].y - coords[8].y) * (mids[1].y - mids[0].y);
 			r.square = Math.abs(dot) < 1e-6;
 		}
+		{
+			const m0 = { x: (coords[0].x + coords[8].x) / 2, y: (coords[0].y + coords[8].y) / 2 };
+			const m1 = { x: (coords[2].x + coords[6].x) / 2, y: (coords[2].y + coords[6].y) / 2 };
+			const deg = Math.atan2(m1.y - m0.y, m1.x - m0.x) * 180 / Math.PI;
+			r.snapped = Math.abs(deg / 45 - Math.round(deg / 45)) < 1e-9;
+		}
+		// Ctrl+Z brings back a selection dropped by clicking somewhere else
+		{
+			const was = [...v._sel].sort((a, b) => a - b).join(',');
+			const far = s2c({ x: coords[0].x + 900, y: coords[0].y + 900 });
+			drag(svg, far, far);
+			r.clickCleared = v._sel.size === 0;
+			key('z');
+			r.reselected = [...v._sel].sort((a, b) => a - b).join(',') === was;
+		}
 		key('z');
-		r.straightUndone = Math.abs(Math.hypot(coords[0].x - coords[8].x, coords[0].y - coords[8].y) - 0) >= 0;
 
 		// Domains: colour the backbone links, names and colours stay editable
 		v._sel = new Set(); for (let i = 12; i <= 20; i++) v._sel.add(i);
@@ -188,7 +213,11 @@ app.whenReady().then(async () => {
 		assert.ok(out.undone, 'Ctrl+Z undoes the drag');
 		assert.ok(out.redone, 'Ctrl+Shift+Z redoes it');
 		assert.ok(out.healed, 'Alt+click removes the rotation point');
+		assert.ok(out.moveCross, 'the selection box has a drag cross');
+		assert.ok(out.crossDx > 20 && out.crossKeptSel, `the drag cross moves the selection (${out.crossDx})`);
 		assert.ok(out.straightHandle, 'a selected helix gets a straighten handle');
+		assert.ok(out.snapped, 'straighten squares the helix axis to a multiple of 45 degrees');
+		assert.ok(out.clickCleared && out.reselected, 'Ctrl+Z brings back a selection cleared by a click');
 		assert.ok(out.evenRise, 'straighten: even rise between pairs');
 		assert.ok(out.collinear, 'straighten: pair midpoints on one axis');
 		assert.ok(out.evenWidth, 'straighten: even pair width');
