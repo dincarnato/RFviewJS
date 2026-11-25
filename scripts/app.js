@@ -139,7 +139,10 @@ document.addEventListener('drop', async e => {
 
         const content = await file.text();
         const ext = file.name.split('.').pop().toLowerCase();
-        const type = ext === 'xml' ? 'xml' : ['tsv','csv','cov','helixcov'].includes(ext) ? 'tsv' : 'db';
+        // RNApolis / DSSR pair types are recognized by content: both tools write plain
+        // .csv / .json / .txt, so the extension alone cannot tell them from a structure.
+        const isLw = ext !== 'xml' && RFviewJS.looksLikeLw?.(content);
+        const type = ext === 'xml' ? 'xml' : (isLw || ['tsv','csv','cov','helixcov','json'].includes(ext)) ? 'tsv' : 'db';
         await handleIncomingFile({ type, content, name: file.name });
 
     }

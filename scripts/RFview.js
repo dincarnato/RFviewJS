@@ -3406,9 +3406,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
               <div class="rv-xml-target-list"></div>
             </div>
             <div class="rv-upload-section" style="margin-top:12px">
-              <div class="rv-upload-lbl">Pair annotations <span>(TSV, or R-scape's .cov/.helixcov file)</span></div>
+              <div class="rv-upload-lbl">Pair annotations <span>(TSV, R-scape's .cov/.helixcov, or RNApolis/DSSR pair types)</span></div>
               <div class="rv-upload-drop rv-upload-drop-annot">
-                <input type="file" class="rv-file-annot" accept=".tsv,.txt,.cov,.helixcov" multiple>
+                <input type="file" class="rv-file-annot" accept=".tsv,.txt,.cov,.helixcov,.csv,.json,.out" multiple>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/><line x1="5" y1="9" x2="7" y2="9"/><line x1="9" y1="9" x2="11" y2="9"/><line x1="5" y1="11.5" x2="7" y2="11.5"/><line x1="9" y1="11.5" x2="11" y2="11.5"/></svg>
                 Drop tab-separated annotation files here or click to browse
               </div>
@@ -4051,12 +4051,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Apply one annotation file parsed by the upload panel / canvas drop to structure idx:
 		// .cov / .helixcov with covariation semantics (loadCov), other files as pair annotations.
 		// Returns a warning ('' when none).
-		_applyAnnotFile(idx, { filename, rawText, pairs, isCov, isHelixCov }) {
+		_applyAnnotFile(idx, { filename, rawText, pairs, isCov, isHelixCov, isLw }) {
 			this._selectStructure(idx);
 			if (isCov || isHelixCov) {
 				this.loadCov(rawText);
 				return '';
 			}
+			if (isLw) return this.loadPairTypes(rawText);
 			const { invalid } = this._applyPairAnnotations(this._rna, pairs, filename);
 			this._syncBaseAnnotations();
 			this._enablePairAnnotToggle();
@@ -6604,6 +6605,14 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 							helices,
 							isHelixCov: true,
 							pairs: []
+						});
+					} else if (!isCov && looksLikeLw(text)) {
+						// RNApolis annotator / DSSR pair types (.csv, .json, .txt, ...)
+						this._pendingAnnotData.push({
+							filename: file.name,
+							rawText: text,
+							pairs: parseLwFile(text),
+							isLw: true
 						});
 					} else {
 						const pairs = isCov ? parseCovFile(text) : parsePairAnnotFile(text);
