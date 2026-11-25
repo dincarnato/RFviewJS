@@ -8545,7 +8545,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			exp.setAttribute('height', Math.round(vbH * scale));
 			// Stylesheet (user units, scales with circles)
 			const st = document.createElementNS(NS, 'style');
-			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`, `.rv-hinge{fill:${C.bg};stroke:${C.backbone};stroke-width:1.4}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
+			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`,  `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
 				`.rv-ss-cons-label{font-family:${C.indexFont};font-size:${_gvn('--rv-annot-label-font-size', 12) * 1.6};font-weight:bold;fill:${indexColor};paint-order:stroke fill}`,
 				`.rv-ss-cons-line{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round;stroke-linejoin:round}`,
 				`.rv-ss-cons-leader{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`,
@@ -8555,6 +8555,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const sc2 = this._scene.cloneNode(true);
 			sc2.removeAttribute('transform');
 			sc2.querySelectorAll('circle.rv-hit').forEach(c => c.remove());
+			sc2.querySelectorAll('circle.rv-hinge').forEach(c => c.remove()); // editing aid only
 			sc2.querySelectorAll('circle.rv-eraser').forEach(c => {
 				const r = parseFloat(c.getAttribute('r')) || BASE_R;
 				c.setAttribute('r', r * 0.75); // About 1.1 times baseR
@@ -9878,6 +9879,21 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		_beginUndo() {
 			this._pendingUndo = this._snapshot();
+			this._outsideAtStart = this._anyOutsideView();
+		}
+		// Does any base sit outside the visible part of the canvas?
+		_anyOutsideView() {
+			if (!this._rna) return false;
+			const { coords, n } = this._rna;
+			const pw = this._canvas.clientWidth,
+				ph = this._canvas.clientHeight,
+				pad = 30;
+			for (let i = 0; i < n; i++) {
+				const px = coords[i].x * this._vscale + this._vx;
+				const py = coords[i].y * this._vscale + this._vy;
+				if (px < pad || px > pw - pad || py < pad || py > ph - pad) return true;
+			}
+			return false;
 		}
 		_commitUndo() {
 			if (!this._pendingUndo) return;
@@ -10481,25 +10497,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._flipState = null;
 			this._canvas.classList.remove('grabbing', 'rotating');
 			this._rotRing.style.display = 'none';
-			if (wasActive && this._rna) {
-				const {
-					coords,
-					n
-				} = this._rna;
-				const pw = this._canvas.clientWidth,
-					ph = this._canvas.clientHeight,
-					pad = 30;
-				let outside = false;
-				for (let i = 0; i < n; i++) {
-					const px = coords[i].x * this._vscale + this._vx;
-					const py = coords[i].y * this._vscale + this._vy;
-					if (px < pad || px > pw - pad || py < pad || py > ph - pad) {
-						outside = true;
-						break;
-					}
-				}
-				if (outside && this._autoRefit) this.fit();
-			}
+			// Refit only when this edit is what pushed the structure out of view: when part of it
+			// was already outside (the user panned or zoomed in), their view is left alone.
+			if (wasActive && this._rna && this._autoRefit && !this._outsideAtStart && this._anyOutsideView()) this.fit();
 		}
 		// Multi-structure support
 		// Compute a full rna layout object for one structure (without touching this._rna).

@@ -86,6 +86,7 @@ app.whenReady().then(async () => {
 		r.hingeMoved = Math.hypot(hp.x - midPt.x, hp.y - midPt.y) > 5;
 		r.hingeBends = [...svg.querySelectorAll('.rv-backbone')].some(l =>
 			Math.abs(+l.getAttribute('x2') - hp.x) < 1e-6 && Math.abs(+l.getAttribute('y2') - hp.y) < 1e-6);
+		r.expHinge = !(v._saveSVG(true) || '').includes('rv-hinge'); // an editing aid, never exported
 		// Ctrl+Z puts it back where it was, Ctrl+Shift+Z moves it again
 		const key = (k, mod) => window.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key: k, bubbles: true, ctrlKey: true }, mod)));
 		key('z');
@@ -138,6 +139,28 @@ app.whenReady().then(async () => {
 		v.setDomainColors(false);
 		r.domainOff = [...svg.querySelectorAll('.rv-backbone')].every(l => !l.style.stroke);
 
+		// A move must not throw away the pan the user set, but an edit that pushes the
+		// structure out of a fitted view still refits
+		v._sel.clear(); v._render();
+		v.fit();
+		{
+			const vx = v._vx - 150, vy = v._vy + 110;
+			v._vx = vx; v._vy = vy; v._applyTransform();
+			r.pannedOutside = v._anyOutsideView();
+			const p0 = s2c(coords[5]);
+			drag(baseEl(5), p0, { x: p0.x + 25, y: p0.y + 15 }, { shiftKey: true });
+			r.panKept = v._vx === vx && v._vy === vy;
+		}
+		v.fit();
+		{
+			const vx = v._vx, vy = v._vy;
+			r.fittedInside = !v._anyOutsideView();
+			const p0 = s2c(coords[5]);
+			drag(baseEl(5), p0, { x: p0.x + 2000, y: p0.y + 2000 }, { shiftKey: true });
+			r.refitted = v._vx !== vx || v._vy !== vy;
+		}
+		key('z');
+
 		// Escape drops the selection and its overlay
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		r.cleared = v._sel.size === 0 && v._selPivot === null && svg.querySelector('.rv-sel-ui').childElementCount === 0;
@@ -177,6 +200,9 @@ app.whenReady().then(async () => {
 		assert.ok(out.recolored, 'a domain can be recoloured');
 		assert.ok(out.legend, 'the domain name shows in the legend');
 		assert.ok(out.domainOff, 'turning the option off drops the colours');
+		assert.ok(out.expHinge, 'rotation points are left out of the SVG export');
+		assert.ok(out.pannedOutside && out.panKept, 'a move keeps the pan the user set');
+		assert.ok(out.fittedInside && out.refitted, 'a move out of a fitted view still refits');
 		assert.ok(out.cleared, 'Escape clears the selection and the overlay');
 		console.log('selection / pivot / rotation: all checks passed');
 		app.exit(0);
