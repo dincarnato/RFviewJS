@@ -148,7 +148,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-hinge{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);stroke-width:1.6;pointer-events:all;cursor:move}
 .rv-sel-ui{pointer-events:none}
 .rv-sel-box{fill:none;stroke:var(--rv-accent,#0969da);stroke-dasharray:5 4;opacity:.8}
-.rv-rotatable{cursor:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><g fill="none" stroke="%23ffffff" stroke-width="3.6" stroke-linecap="round"><path d="M7.17 5.75A6.5 6.5 0 1 1 9.52 17.33"/></g><polygon points="6.99,16.74 9.11,19.08 9.93,15.58" fill="%23ffffff" stroke="%23ffffff" stroke-width="2.6" stroke-linejoin="round"/><g fill="none" stroke="%23111111" stroke-width="1.8" stroke-linecap="round"><path d="M7.17 5.75A6.5 6.5 0 1 1 9.52 17.33"/></g><polygon points="6.99,16.74 9.11,19.08 9.93,15.58" fill="%23111111"/></svg>') 11 11,grab}
+.rv-rotatable,.rv-rotatable *{cursor:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><g fill="none" stroke="%23ffffff" stroke-width="3.6" stroke-linecap="round"><path d="M7.17 5.75A6.5 6.5 0 1 1 9.52 17.33"/></g><polygon points="6.99,16.74 9.11,19.08 9.93,15.58" fill="%23ffffff" stroke="%23ffffff" stroke-width="2.6" stroke-linejoin="round"/><g fill="none" stroke="%23111111" stroke-width="1.8" stroke-linecap="round"><path d="M7.17 5.75A6.5 6.5 0 1 1 9.52 17.33"/></g><polygon points="6.99,16.74 9.11,19.08 9.93,15.58" fill="%23111111"/></svg>') 11 11,grab}
 .rv-sel-rot{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:grab}
 .rv-sel-straight{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:pointer}
 .rv-sel-move{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:move}
@@ -10493,9 +10493,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const bd = r.baseDisplay;
 			const pinned = this._sel.size > 1 ? this._sel : null; // what the user placed stays put
 			const locked = this._lockedBlocks();
+			// First pass holds everything that is paired still, so that only the loops and the
+			// linkers move: a crowded corner usually opens up without touching the structure at
+			// all. Only if overlaps are left does the second pass let the helices move too.
+			const loopsOnly = new Set(pinned || []);
+			for (let i = 0; i < n; i++)
+				if (pairs[i] >= 0) loopsOnly.add(i);
+			let held = loopsOnly;
 			this._beginUndo();
 			const start = coords.map(c => ({ x: c.x, y: c.y }));
-			const free = i => !(pinned?.has(i) || bd?.[i]?.skip);
+			const free = i => !(held?.has(i) || bd?.[i]?.skip);
 			const move = (i, dx, dy) => {
 				if (!free(i)) return;
 				coords[i].x += dx;
@@ -10523,21 +10530,28 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// at the start of every round: that releases the strain the constraints have built up,
 			// which is what gets the solver off a half-resolved overlap.
 			const capture = () => {
-				bonds = bondIdx.map(([i, j], k) => [i, j, dist(coords[i], coords[j])]);
-				helices = r.helices.map(h => {
-					const len = this._helixLen(h.i, h.j);
-					const idx = [];
-					for (let k = 0; k < len; k++) idx.push(h.i + k, h.j - k);
-					return { idx, home: idx.map(i => ({ x: coords[i].x, y: coords[i].y })) };
-				}).filter(h => h.idx.length > 3);
-				// A locked domain is rigid too, and comes last so that it wins over its helices
-				for (const idx of locked) helices.push({ idx, home: idx.map(i => ({ x: coords[i].x, y: coords[i].y })) });
-				group.fill(-1);
-				helices.forEach((h, k) => h.idx.forEach(i => group[i] = k));
+				// Re-reading the rest length from the drawing would let the pushing stretch a loop
+				// a little further every round: a loose bond is capped at LOOSE_MAX of the length
+				// it had when the relaxation started.
+				bonds = bondIdx.map(([i, j, loose], k) => {
+					const cur = dist(coords[i], coords[j]);
+					return [i, j, loose ? Math.min(cur, natural[k] * LOOSE_MAX) : cur];
+				});
 			};
+			// The shape a helix is held to is read once, before anything moves: re-reading it
+			// every round would let each round's small deformation become the new truth.
+			helices = r.helices.map(h => {
+				const len = this._helixLen(h.i, h.j);
+				const idx = [];
+				for (let k = 0; k < len; k++) idx.push(h.i + k, h.j - k);
+				return { idx, home: idx.map(i => ({ x: start[i].x, y: start[i].y })) };
+			}).filter(h => h.idx.length > 3);
+			// A locked domain is rigid too, and comes last so that it wins over its helices
+			for (const idx of locked) helices.push({ idx, home: idx.map(i => ({ x: start[i].x, y: start[i].y })) });
+			helices.forEach((h, k) => h.idx.forEach(i => group[i] = k));
 			const satisfy = () => {
 				// 2. put the backbone and the pairs back to the lengths they had
-				for (let pass = 0; pass < 3; pass++)
+				for (let pass = 0; pass < 6; pass++)
 					for (const [i, j, rest] of bonds) {
 						const dx = coords[j].x - coords[i].x,
 							dy = coords[j].y - coords[i].y;
@@ -10586,77 +10600,95 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// Overlaps inside one helix cannot be undone by pushing, since a helix is kept rigid:
 			// stop as soon as a round stops making progress instead of spinning to the cap.
 			let stuck = 0;
-			for (let done = 0; done < iterations && clashes.length; done += ROUND) {
-				const was = clashes.length;
-				capture();
-				for (let it = 0; it < ROUND && clashes.length; it++) {
-					// 1. push the overlapping parts apart
-					const gc = helices.map(h => {
-						let x = 0, y = 0;
-						for (const i of h.idx) {
-							x += coords[i].x;
-							y += coords[i].y;
-						}
-						return { x: x / h.idx.length, y: y / h.idx.length };
-					});
-					const dsp = new Float64Array(2 * n);
-					for (const [i, j] of clashes) {
-						let dx = coords[j].x - coords[i].x,
-							dy = coords[j].y - coords[i].y;
-						const d = Math.hypot(dx, dy);
-						if (d < minD * 0.2) { // (almost) on top of each other: separate the two pieces
-							const a = group[i] >= 0 ? gc[group[i]] : coords[i],
-								b = group[j] >= 0 ? gc[group[j]] : coords[j];
-							dx = b.x - a.x;
-							dy = b.y - a.y;
-							const g = Math.hypot(dx, dy);
-							if (g > 1e-6) {
-								dx /= g;
-								dy /= g;
-							} else {
-								dx = Math.cos(i * 2.399);
-								dy = Math.sin(i * 2.399);
+			for (let phase = 0; phase < 2 && clashes.length; phase++) {
+				held = phase ? pinned : loopsOnly;
+				stuck = 0;
+				const atPhaseStart = phase ? null : coords.map(c => ({ x: c.x, y: c.y }));
+				const clashesAtStart = clashes.length;
+				for (let done = 0; done < iterations && clashes.length; done += ROUND) {
+					const was = clashes.length;
+					capture();
+					for (let it = 0; it < ROUND && clashes.length; it++) {
+						// 1. push the overlapping parts apart
+						const gc = helices.map(h => {
+							let x = 0, y = 0;
+							for (const i of h.idx) {
+								x += coords[i].x;
+								y += coords[i].y;
 							}
-						} else {
-							dx /= d;
-							dy /= d;
+							return { x: x / h.idx.length, y: y / h.idx.length };
+						});
+						const dsp = new Float64Array(2 * n);
+						for (const [i, j] of clashes) {
+							let dx = coords[j].x - coords[i].x,
+								dy = coords[j].y - coords[i].y;
+							const d = Math.hypot(dx, dy);
+							if (d < minD * 0.2) { // (almost) on top of each other: separate the two pieces
+								const a = group[i] >= 0 ? gc[group[i]] : coords[i],
+									b = group[j] >= 0 ? gc[group[j]] : coords[j];
+								dx = b.x - a.x;
+								dy = b.y - a.y;
+								const g = Math.hypot(dx, dy);
+								if (g > 1e-6) {
+									dx /= g;
+									dy /= g;
+								} else {
+									dx = Math.cos(i * 2.399);
+									dy = Math.sin(i * 2.399);
+								}
+							} else {
+								dx /= d;
+								dy /= d;
+							}
+							const push = (minD * 1.25 - d) * 0.6; // aim past the limit, so it settles clear of it
+							dsp[2 * i] -= dx * push;
+							dsp[2 * i + 1] -= dy * push;
+							dsp[2 * j] += dx * push;
+							dsp[2 * j + 1] += dy * push;
 						}
-						const push = (minD * 1.25 - d) * 0.6; // aim past the limit, so it settles clear of it
-						dsp[2 * i] -= dx * push;
-						dsp[2 * i + 1] -= dy * push;
-						dsp[2 * j] += dx * push;
-						dsp[2 * j + 1] += dy * push;
-					}
-					const gsum = helices.map(() => ({ x: 0, y: 0 }));
-					for (let i = 0; i < n; i++) {
-						const g = group[i];
-						if (g >= 0) {
-							gsum[g].x += dsp[2 * i];
-							gsum[g].y += dsp[2 * i + 1];
+						const gsum = helices.map(() => ({ x: 0, y: 0 }));
+						for (let i = 0; i < n; i++) {
+							const g = group[i];
+							if (g >= 0) {
+								gsum[g].x += dsp[2 * i];
+								gsum[g].y += dsp[2 * i + 1];
+							}
+						}
+						for (let i = 0; i < n; i++) {
+							const g = group[i];
+							if (g < 0) move(i, dsp[2 * i], dsp[2 * i + 1]);
+							else move(i, gsum[g].x / helices[g].idx.length, gsum[g].y / helices[g].idx.length);
+						}
+						satisfy();
+						clashes = this._clashPairs(minD);
+						// Give the loops and linkers around what is still overlapping a little more
+						// slack, so a crowded corner opens up instead of only shoving bases around.
+						// Only there, and never past LOOSE_MAX of the length they had.
+						const hot = new Set();
+						for (const [i, j] of clashes) {
+							hot.add(i);
+							hot.add(j);
+						}
+						for (let k = 0; k < bonds.length; k++) {
+							if (!bondIdx[k][2] || (!hot.has(bonds[k][0]) && !hot.has(bonds[k][1]))) continue;
+							if (bonds[k][2] < natural[k] * LOOSE_MAX)
+								bonds[k][2] = Math.min(natural[k] * LOOSE_MAX, bonds[k][2] * 1.05);
 						}
 					}
-					for (let i = 0; i < n; i++) {
-						const g = group[i];
-						if (g < 0) move(i, dsp[2 * i], dsp[2 * i + 1]);
-						else move(i, gsum[g].x / helices[g].idx.length, gsum[g].y / helices[g].idx.length);
-					}
-					satisfy();
-					clashes = this._clashPairs(minD);
-					// Give the loops and linkers around what is still overlapping a little more
-					// slack, so a crowded corner opens up instead of only shoving bases around.
-					// Only there, and never past LOOSE_MAX of the length they had.
-					const hot = new Set();
-					for (const [i, j] of clashes) {
-						hot.add(i);
-						hot.add(j);
-					}
-					for (let k = 0; k < bonds.length; k++) {
-						if (!bondIdx[k][2] || (!hot.has(bonds[k][0]) && !hot.has(bonds[k][1]))) continue;
-						bonds[k][2] = Math.min(Math.max(natural[k] * LOOSE_MAX, bonds[k][2]), bonds[k][2] * 1.05);
-					}
+					// The first pass gives up at once when it makes no headway: it cannot separate
+					// two helices, and there is no point stretching the loops around them for it.
+					if (clashes.length >= was && ++stuck > (phase ? 1 : 0)) break;
+					if (clashes.length < was) stuck = 0;
 				}
-				if (clashes.length >= was && ++stuck > 1) break;
-				if (clashes.length < was) stuck = 0;
+				// The loops could not do it on their own: put them back where they were rather
+				// than leave them stretched for nothing, and let the second pass start clean.
+				if (atPhaseStart && clashes.length >= clashesAtStart) {
+					atPhaseStart.forEach((q, i) => {
+						coords[i].x = q.x;
+						coords[i].y = q.y;
+					});
+					clashes = this._clashPairs(minD);
+				}
 			}
 			// Settle: with nothing left to push apart, let the bonds and the helices finish
 			// restoring themselves, or the last push leaves the loops slightly stretched. Any
@@ -10678,6 +10710,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 						c.y = coords[i].y;
 					});
 				}
+			}
+			// Finish with an exact rigid fit, so that no ladder is left slightly out of shape by
+			// the damped passes above. Rolled back if it would bring an overlap back.
+			{
+				const snap = coords.map(c => ({ x: c.x, y: c.y }));
+				for (const h of helices) this._fitBlock(h, 1, free);
+				if (this._clashPairs(minD).length > clashes.length)
+					snap.forEach((q, i) => {
+						coords[i].x = q.x;
+						coords[i].y = q.y;
+					});
 			}
 			// Loop centres and rotation points follow their helix / their link
 			for (const h of r.helices) {
