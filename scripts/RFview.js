@@ -129,6 +129,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-rot-ring{pointer-events:none;display:none}
 .rv-rot-ring circle{fill:none;stroke:var(--rv-rot-ring,#0969da30);stroke-width:1;stroke-dasharray:4 3}
 .rv-rot-ring line{stroke:var(--rv-rot-line,#0969da80);stroke-width:1}
+.rv-sel-ui{pointer-events:none}
+.rv-sel-box{fill:none;stroke:var(--rv-accent,#0969da);stroke-dasharray:5 4;opacity:.8}
+.rv-sel-rot{fill:var(--rv-bg,#fff);stroke:var(--rv-accent,#0969da);pointer-events:all;cursor:grab}
+.rv-sel-rot-arrow{fill:none;stroke:var(--rv-accent,#0969da);stroke-linecap:round}
+.rv-sel-rot-head{fill:var(--rv-accent,#0969da);stroke:none}
+.rv-sel-pivot{fill:color-mix(in srgb,var(--rv-accent,#0969da) 12%,transparent);stroke:var(--rv-accent,#0969da);stroke-dasharray:3 2;pointer-events:all;cursor:move}
+.rv-sel-pivot-dot{fill:var(--rv-accent,#0969da);stroke:none}
 .rv-loading{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:10px;padding:20px 28px;text-align:center;z-index:400;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.25);min-width:180px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif}
 .rv-loading.rv-visible{display:block}
 .rv-loading-spinner{display:inline-block;width:22px;height:22px;border:3px solid var(--rv-border,#d0d7de);border-top-color:var(--rv-accent,#0969da);border-radius:50%;animation:rv-spin .8s linear infinite;margin-bottom:8px}
@@ -3081,6 +3088,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._stretchState = null;
 			this._sel = new Set(); // box-selected base indices (Ctrl+drag)
 			this._boxStart = null;
+			this._selPivot = null; // point the selection is rotated ("bent") around
+			this._pivotUser = false; // true once the user has dragged the pivot himself
+			this._selRot = null;
+			this._selClick = null;
+			this._pivotDrag = false;
 			this._showPairTypes = !!config.showPairTypes; // Leontis-Westhof symbols, off by default
 			this._showPairAnnotations = config.showPairAnnotations !== false;
 			this._autoTolerance = config.autoLayoutTolerance ?? 0;
@@ -3200,6 +3212,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
               <line   class="rv-rot-line" x1="0" y1="0" x2="50" y2="0"/>
             </g>
             <g class="rv-scene"></g>
+            <g class="rv-sel-ui"></g>
           </svg>
           <div class="rv-loading"><div class="rv-loading-spinner"></div><div class="rv-loading-msg"></div></div>
           <div class="rv-error"></div>
@@ -3462,6 +3475,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._resizeObserver.observe(this._canvas || this._root);
 			}
 			this._rotRing = q('.rv-rot-ring');
+			this._selUI = q('.rv-sel-ui');
 			this._rotCirc = q('.rv-rot-circ');
 			this._rotLine = q('.rv-rot-line');
 			this._sbSeq = q('.rv-sb-seq');
@@ -7407,7 +7421,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const t = `translate(${this._vx},${this._vy}) scale(${this._vscale})`;
 			this._scene.setAttribute('transform', t);
 			this._rotRing.setAttribute('transform', t);
+			this._selUI.setAttribute('transform', t);
 			this._zoomLbl.textContent = Math.round(this._vscale * 100) + '%';
+			if (this._sel.size) this._refreshSelUI(); // handles keep their on-screen size
 		}
 		_zoomBy(factor) {
 			const cx = this._canvas.clientWidth / 2,
@@ -8290,6 +8306,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// XML upload section: hide for Stockholm
 			const xmlSection = this._root?.querySelector('.rv-upload-drop-xml')?.closest('.rv-upload-section');
 			if (xmlSection) xmlSection.style.display = isStockholm ? 'none' : '';
+			this._refreshSelUI();
 		}
 		_saveSVG(returnString = false) {
 			if (!this._rna) return returnString ? null : undefined;
@@ -9438,12 +9455,40 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const grp = e.target.closest('[data-idx]');
 			const idx0 = grp ? parseInt(grp.getAttribute('data-idx')) : -1;
 			const ctrl = e.ctrlKey || e.metaKey;
-			// Ctrl+drag on a selected base moves the selection; elsewhere it draws a selection box.
+			// Selection overlay: rotate the selection around the pivot, or move the pivot itself
+			const handle = e.button === 0 && this._rna && this._sel.size ? e.target.closest('.rv-sel-rot,.rv-sel-pivot') : null;
+			if (handle) {
+				e.preventDefault();
+				if (handle.classList.contains('rv-sel-pivot')) {
+					this._pivotDrag = true;
+					this._canvas.classList.add('grabbing');
+					return;
+				}
+				const pv = this._selPivot,
+					pt = this._clientToScene(e.clientX, e.clientY);
+				const idxs = [...this._sel].filter(i => i < this._rna.n),
+					set = new Set(idxs);
+				this._selRot = {
+					idxs,
+					px: pv.x,
+					py: pv.y,
+					startAngle: Math.atan2(pt.y - pv.y, pt.x - pv.x),
+					snapCoords: idxs.map(i => ({ x: this._rna.coords[i].x, y: this._rna.coords[i].y })),
+					lcs: this._rna.helices.filter(h => set.has(h.i) && set.has(h.j)).map(h => ({ lc: h.loopCenter, x: h.loopCenter.x, y: h.loopCenter.y })),
+				};
+				this._canvas.classList.add('rotating');
+				return;
+			}
+			// Ctrl+click on a base adds it to / removes it from the selection, Ctrl+drag on a
+			// selected base moves the selection, and Ctrl+drag elsewhere draws a selection box
+			// (hold Alt to subtract the box from the selection instead of adding to it).
 			if (this._rna && e.button === 0 && ctrl) {
 				e.preventDefault();
-				if (this._sel.has(idx0)) this._startMove([...this._sel], e);
-				else {
-					this._boxStart = { x: e.clientX, y: e.clientY };
+				if (idx0 >= 0) {
+					this._selClick = { idx: idx0, x: e.clientX, y: e.clientY };
+					if (this._sel.has(idx0)) this._startMove([...this._sel], e);
+				} else {
+					this._boxStart = { x: e.clientX, y: e.clientY, sub: e.altKey };
 					this._updateSelRect(e);
 					this._selRect.style.display = 'block';
 				}
@@ -9698,13 +9743,91 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const coords = this._rna.coords;
 			idxs = idxs.filter(i => i < this._rna.n);
 			const set = new Set(idxs);
+			// Moving the whole selection takes its rotation pivot along
+			const pivot = this._selPivot && idxs.length === this._sel.size && idxs.every(i => this._sel.has(i)) ?
+				{ x: this._selPivot.x, y: this._selPivot.y } : null;
 			this._stretchState = {
 				idxs,
+				pivot,
 				start: this._clientToScene(e.clientX, e.clientY),
 				snapCoords: idxs.map(i => ({ x: coords[i].x, y: coords[i].y })),
 				lcs: this._rna.helices.filter(h => set.has(h.i) && set.has(h.j)).map(h => ({ lc: h.loopCenter, x: h.loopCenter.x, y: h.loopCenter.y })),
 			};
 			this._canvas.classList.add('grabbing');
+		}
+		// Hinge of a selection: the end that stays attached to the rest of the chain,
+		// so that rotating bends the backbone there. Falls back to the box center.
+		_defaultPivot(sorted, bb) {
+			const coords = this._rna.coords;
+			for (const i of sorted)
+				if (i > 0 && !this._sel.has(i - 1)) return { x: coords[i].x, y: coords[i].y };
+			for (let k = sorted.length - 1; k >= 0; k--) {
+				const i = sorted[k];
+				if (i < this._rna.n - 1 && !this._sel.has(i + 1)) return { x: coords[i].x, y: coords[i].y };
+			}
+			return { x: (bb.minX + bb.maxX) / 2, y: (bb.minY + bb.maxY) / 2 };
+		}
+		// Dashed box around the current selection, with a rotation handle and a draggable pivot.
+		// Lives outside .rv-scene (which _render() empties), under the same pan/zoom transform.
+		_refreshSelUI() {
+			const g = this._selUI;
+			if (!g) return;
+			g.innerHTML = '';
+			const idxs = this._rna ? [...this._sel].filter(i => i < this._rna.n).sort((a, b) => a - b) : [];
+			if (!idxs.length) {
+				this._selPivot = null;
+				this._pivotUser = false;
+				return;
+			}
+			const coords = this._rna.coords;
+			let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+			for (const i of idxs) {
+				minX = Math.min(minX, coords[i].x);
+				maxX = Math.max(maxX, coords[i].x);
+				minY = Math.min(minY, coords[i].y);
+				maxY = Math.max(maxY, coords[i].y);
+			}
+			const pad = BASE_R * 1.7;
+			const bb = { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
+			if (!this._selPivot) this._selPivot = this._defaultPivot(idxs, bb);
+			const s = 1 / (this._vscale || 1); // handles keep a constant on-screen size
+			const mk = (tag, cls, attrs) => {
+				const el = document.createElementNS(NS, tag);
+				el.setAttribute('class', cls);
+				for (const k in attrs) el.setAttribute(k, attrs[k]);
+				g.appendChild(el);
+				return el;
+			};
+			mk('rect', 'rv-sel-box', {
+				x: bb.minX, y: bb.minY, width: bb.maxX - bb.minX, height: bb.maxY - bb.minY, 'stroke-width': 1.2 * s
+			});
+			// Rotation handle, just outside the top-right corner
+			const hr = 10 * s,
+				hx = bb.maxX + hr,
+				hy = bb.minY - hr;
+			mk('line', 'rv-sel-box', { x1: bb.maxX, y1: bb.minY, x2: hx, y2: hy, 'stroke-width': 1.2 * s });
+			mk('circle', 'rv-sel-rot', { cx: hx, cy: hy, r: hr, 'stroke-width': 1.5 * s });
+			const ar = hr * 0.52,
+				a0 = -2.2,
+				a1 = 1.8;
+			mk('path', 'rv-sel-rot-arrow', {
+				d: `M${hx + ar * Math.cos(a0)},${hy + ar * Math.sin(a0)}A${ar},${ar} 0 1 1 ${hx + ar * Math.cos(a1)},${hy + ar * Math.sin(a1)}`,
+				'stroke-width': 1.5 * s
+			});
+			const ex = hx + ar * Math.cos(a1),
+				ey = hy + ar * Math.sin(a1),
+				tw = hr * 0.42;
+			mk('polygon', 'rv-sel-rot-head', {
+				points: [
+					[ex - Math.sin(a1) * tw * 1.5, ey + Math.cos(a1) * tw * 1.5],
+					[ex + Math.cos(a1) * tw, ey + Math.sin(a1) * tw],
+					[ex - Math.cos(a1) * tw, ey - Math.sin(a1) * tw]
+				].map(q => q.join(',')).join(' ')
+			});
+			// Pivot: where the bend happens, draggable
+			const pv = this._selPivot;
+			mk('circle', 'rv-sel-pivot', { cx: pv.x, cy: pv.y, r: 8 * s, 'stroke-width': 1.5 * s });
+			mk('circle', 'rv-sel-pivot-dot', { cx: pv.x, cy: pv.y, r: 2 * s });
 		}
 		_updateSelRect(e) {
 			const o = this._svgEl.getBoundingClientRect();
@@ -9715,12 +9838,52 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._selRect.setAttribute('height', Math.abs(e.clientY - b.y));
 		}
 		_onMouseMove(e) {
+			if (this._pivotDrag) {
+				const pt = this._clientToScene(e.clientX, e.clientY);
+				this._selPivot = { x: pt.x, y: pt.y };
+				this._pivotUser = true;
+				this._refreshSelUI();
+				return;
+			}
+			if (this._selRot) {
+				const { idxs, px, py, startAngle, snapCoords, lcs } = this._selRot;
+				const pt = this._clientToScene(e.clientX, e.clientY);
+				let a = Math.atan2(pt.y - py, pt.x - px) - startAngle;
+				if (e.shiftKey) a = Math.round(a / (Math.PI / 12)) * (Math.PI / 12); // 15 degree steps
+				const ca = Math.cos(a),
+					sa = Math.sin(a);
+				const rot = (x, y) => ({
+					x: px + (x - px) * ca - (y - py) * sa,
+					y: py + (x - px) * sa + (y - py) * ca
+				});
+				snapCoords.forEach((c, k) => {
+					const r = rot(c.x, c.y);
+					this._rna.coords[idxs[k]].x = r.x;
+					this._rna.coords[idxs[k]].y = r.y;
+				});
+				for (const h of lcs) {
+					const r = rot(h.x, h.y);
+					h.lc.x = r.x;
+					h.lc.y = r.y;
+				}
+				this._render();
+				return;
+			}
+			// Ctrl+drag that started on an unselected base: turn it into a box drag
+			if (this._selClick && !this._stretchState) {
+				if (Math.abs(e.clientX - this._selClick.x) + Math.abs(e.clientY - this._selClick.y) < 4) return;
+				this._boxStart = { x: this._selClick.x, y: this._selClick.y, sub: e.altKey };
+				this._selClick = null;
+				this._updateSelRect(e);
+				this._selRect.style.display = 'block';
+				return;
+			}
 			if (this._boxStart) {
 				this._updateSelRect(e);
 				return;
 			}
 			if (this._stretchState) {
-				const { idxs, start, snapCoords, lcs } = this._stretchState;
+				const { idxs, start, snapCoords, lcs, pivot } = this._stretchState;
 				const pt = this._clientToScene(e.clientX, e.clientY);
 				const dx = pt.x - start.x,
 					dy = pt.y - start.y;
@@ -9732,6 +9895,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					h.lc.x = h.x + dx;
 					h.lc.y = h.y + dy;
 				}
+				if (pivot) this._selPivot = { x: pivot.x + dx, y: pivot.y + dy };
 				this._render();
 				return;
 			}
@@ -9946,20 +10110,43 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._tooltip.style.display !== 'none') this._positionTooltip(e.clientX, e.clientY);
 		}
 		_onMouseUp(e) {
+			if (this._pivotDrag) {
+				this._pivotDrag = false;
+				this._canvas.classList.remove('grabbing');
+				return;
+			}
+			if (this._selClick) {
+				const { idx, x, y } = this._selClick;
+				this._selClick = null;
+				if (Math.abs(e.clientX - x) + Math.abs(e.clientY - y) < 4) {
+					this._stretchState = null;
+					this._canvas.classList.remove('grabbing');
+					if (this._sel.has(idx)) this._sel.delete(idx);
+					else this._sel.add(idx);
+					if (!this._pivotUser) this._selPivot = null; // hinge follows the selection
+					this._render();
+					return;
+				}
+			}
 			if (this._boxStart) {
 				const a = this._clientToScene(this._boxStart.x, this._boxStart.y),
 					b = this._clientToScene(e.clientX, e.clientY);
 				const [x0, x1] = [Math.min(a.x, b.x), Math.max(a.x, b.x)],
 					[y0, y1] = [Math.min(a.y, b.y), Math.max(a.y, b.y)];
 				this._rna.coords.forEach((c, i) => {
-					if (c.x >= x0 && c.x <= x1 && c.y >= y0 && c.y <= y1 && !this._rna.baseDisplay?.[i]?.skip) this._sel.add(i);
+					if (c.x >= x0 && c.x <= x1 && c.y >= y0 && c.y <= y1 && !this._rna.baseDisplay?.[i]?.skip) {
+						if (this._boxStart.sub) this._sel.delete(i);
+						else this._sel.add(i);
+					}
 				});
+				if (!this._pivotUser) this._selPivot = null;
 				this._boxStart = null;
 				this._selRect.style.display = 'none';
 				this._render();
 				return;
 			}
-			const wasActive = !!(this._rotState || this._flipState || this._stretchState);
+			const wasActive = !!(this._rotState || this._flipState || this._stretchState || this._selRot);
+			this._selRot = null;
 			this._stretchState = null;
 			this._panStart = null;
 			this._rotState = null;
