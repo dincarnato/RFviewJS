@@ -164,6 +164,36 @@ app.whenReady().then(async () => {
 		v.setDomainColors(false);
 		r.domainOff = [...svg.querySelectorAll('.rv-backbone')].every(l => !l.style.stroke);
 
+		// The sequence strip: hidden until the status-bar button is clicked, letters coloured
+		// by domain, and click / drag / Ctrl / Alt / Shift edit the same selection
+		r.seqHidden = !v._seqView.classList.contains('rv-visible');
+		v._root.querySelector('.rv-sb-seqview').click();
+		r.seqShown = v._seqView.classList.contains('rv-visible');
+		const chars = () => [...v._seqView.querySelectorAll('.rv-seq-ch')];
+		r.seqLen = chars().length;
+		r.seqRuler = v._seqView.querySelector('.rv-seq-ruler').textContent;
+		r.seqColored = chars().filter(c => c.style.color).length;
+		{
+			const md = (el, mod) => el.dispatchEvent(new MouseEvent('mousedown', Object.assign({ bubbles: true, cancelable: true, button: 0 }, mod)));
+			const over = el => el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+			const up = () => window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+			md(chars()[5]); over(chars()[9]); up(); v._render();
+			r.seqDragSel = [...v._sel].sort((a, b) => a - b).join(',');
+			md(chars()[20], { ctrlKey: true }); up(); v._render();
+			r.seqCtrlAdd = v._sel.has(20) && v._sel.has(5);
+			md(chars()[7], { altKey: true }); up(); v._render();
+			r.seqAltSub = !v._sel.has(7) && v._sel.has(8);
+			const was = [...v._sel].sort((a, b) => a - b).join(',');
+			md(chars()[30], { shiftKey: true }); up(); v._render();
+			r.seqShift = v._sel.has(7) && v._sel.has(25) && v._sel.has(30);
+			r.seqMarks = svg.querySelectorAll('.rv-selected').length === v._sel.size;
+			r.seqHighlit = chars().filter(c => c.classList.contains('rv-seq-sel')).length === v._sel.size;
+			key('z'); v._render();
+			r.seqUndo = [...v._sel].sort((a, b) => a - b).join(',') === was;
+		}
+		v._root.querySelector('.rv-sb-seqview').click();
+		r.seqHiddenAgain = !v._seqView.classList.contains('rv-visible');
+
 		// A move must not throw away the pan the user set, but an edit that pushes the
 		// structure out of a fitted view still refits
 		v._sel.clear(); v._render();
@@ -232,6 +262,16 @@ app.whenReady().then(async () => {
 		assert.ok(out.expHinge, 'rotation points are left out of the SVG export');
 		assert.ok(out.pannedOutside && out.panKept, 'a move keeps the pan the user set');
 		assert.ok(out.fittedInside && out.refitted, 'a move out of a fitted view still refits');
+		assert.ok(out.seqHidden && out.seqShown && out.seqHiddenAgain, 'the Sequence button shows and hides the strip');
+		assert.strictEqual(out.seqLen, 49, 'one cell per base');
+		assert.ok(/(^|\s)10(\s|$)/.test(out.seqRuler) && out.seqRuler.includes('40'), `the ruler numbers every ten bases: "${out.seqRuler}"`);
+		assert.ok(out.seqColored >= 9, `the letters of a domain take its colour (${out.seqColored})`);
+		assert.strictEqual(out.seqDragSel, '5,6,7,8,9', 'dragging over the letters selects that range');
+		assert.ok(out.seqCtrlAdd, 'Ctrl+click adds a base');
+		assert.ok(out.seqAltSub, 'Alt+click removes one');
+		assert.ok(out.seqShift, 'Shift+click extends from the last one clicked');
+		assert.ok(out.seqMarks && out.seqHighlit, 'the strip and the drawing show the same selection');
+		assert.ok(out.seqUndo, 'Ctrl+Z undoes a selection made in the strip');
 		assert.ok(out.cleared, 'Escape clears the selection and the overlay');
 		console.log('selection / pivot / rotation: all checks passed');
 		app.exit(0);

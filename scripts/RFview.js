@@ -124,6 +124,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-legend-nan-swatch{width:18px;height:9px;border-radius:2px;flex-shrink:0}
 .rv-statusbar{padding:4px 18px;border-top:1px solid var(--rv-border,#d0d7de);background:var(--rv-surface,#f6f8fa);font-family:monospace;font-size:12px;color:var(--rv-muted,#656d76);display:flex;gap:18px}
 .rv-statusbar span{display:inline-flex;align-items:center;gap:4px}
+.rv-sb-seqview{cursor:pointer;color:var(--rv-accent,#0969da);text-decoration:underline;text-underline-offset:2px}
+.rv-seqview{position:absolute;left:0;right:0;bottom:0;max-height:34%;overflow:auto;background:var(--rv-surface,#f6f8fa);border-top:1px solid var(--rv-border,#d0d7de);font-family:monospace;font-size:13px;line-height:1.4;padding:6px 10px;white-space:pre;display:none;user-select:none;z-index:300}
+.rv-seqview.rv-visible{display:block}
+.rv-seq-ruler{color:var(--rv-muted,#656d76)}
+.rv-seq-ch{color:var(--rv-text,#1f2328);cursor:pointer}
+.rv-seq-ch.rv-seq-skip{opacity:.35}
+.rv-seq-ch.rv-seq-sel{background:var(--rv-accent,#0969da);color:#fff!important}
 .rv-dot{width:6px;height:6px;border-radius:50%;background:var(--rv-accent2,#1a7f37);flex-shrink:0}
 .rv-btn-toggle.rv--active{background:color-mix(in srgb,var(--rv-accent,#0969da) 10%,transparent);border-color:var(--rv-accent,#0969da);color:var(--rv-accent,#0969da)}
 .rv-btn-layout{font-family:monospace;font-weight:700;letter-spacing:0}
@@ -3099,6 +3106,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._selRot = null;
 			this._selClick = null;
 			this._pivotDrag = false;
+			this._seqViewOn = !!config.sequenceView; // the sequence strip at the bottom, off by default
 			this._domainColors = !!config.domainColors; // colour the backbone by domain, off by default
 			this._showPairTypes = !!config.showPairTypes; // Leontis-Westhof symbols, off by default
 			this._showPairAnnotations = config.showPairAnnotations !== false;
@@ -3213,6 +3221,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         </div>
         <div class="rv-canvas">
           <div class="rv-aln-view"></div>
+          <div class="rv-seqview"></div>
           <svg class="rv-svg" xmlns="http://www.w3.org/2000/svg">
             <g class="rv-rot-ring">
               <circle class="rv-rot-circ" cx="0" cy="0" r="50"/>
@@ -3449,6 +3458,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         </div>
         <div class="rv-statusbar"${this._showStatusBar ? '' : ' style="display:none"'}>
           <span><span class="rv-dot"></span><span class="rv-sb-seq">-</span></span>
+          <span><span class="rv-sb-seqview" title="Show the sequence, and select nucleotides in it">Sequence</span></span>
           <span class="rv-sb-pairs">- pairs</span>
           <span>&nbsp;</span>
         </div>`;
@@ -3489,6 +3499,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._rotCirc = q('.rv-rot-circ');
 			this._rotLine = q('.rv-rot-line');
 			this._sbSeq = q('.rv-sb-seq');
+			this._seqView = q('.rv-seqview');
+			this._bindSeqView(q('.rv-sb-seqview'));
 			this._sbPairs = q('.rv-sb-pairs');
 			this._chkOutline = q('.rv-chk-outline');
 			this._outlineLegend = q('.rv-outline-legend');
@@ -6484,6 +6496,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._structLayouts = [];
 			this._currentStructIdx = 0;
 			this._scene.innerHTML = '';
+			this._sel.clear();
+			this._refreshSelUI();
+			this._renderSeqView();
 			this._structBar.innerHTML = '';
 			if (this._pkPanelsEl) {
 				this._pkPanelsEl.innerHTML = '';
@@ -8379,6 +8394,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const xmlSection = this._root?.querySelector('.rv-upload-drop-xml')?.closest('.rv-upload-section');
 			if (xmlSection) xmlSection.style.display = isStockholm ? 'none' : '';
 			this._refreshSelUI();
+			this._renderSeqView();
 		}
 		_saveSVG(returnString = false) {
 			if (!this._rna) return returnString ? null : undefined;
@@ -9992,10 +10008,94 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._commitUndo();
 			this._render();
 		}
+		// Sequence strip at the bottom: the letters coloured by domain, click / drag to select
+		// (Ctrl adds, Alt removes, Shift extends), like the sequence viewer of PyMOL.
+		toggleSeqView(on = !this._seqViewOn) {
+			this._seqViewOn = !!on;
+			this._renderSeqView();
+			return this._seqViewOn;
+		}
+		_bindSeqView(btn) {
+			btn?.addEventListener('click', () => this.toggleSeqView());
+			const el = this._seqView;
+			if (!el) return;
+			const at = e => {
+				const t = e.target.closest?.('[data-sidx]');
+				return t ? parseInt(t.getAttribute('data-sidx')) : -1;
+			};
+			el.addEventListener('mousedown', e => {
+				const i = at(e);
+				if (i < 0 || !this._rna) return;
+				e.preventDefault();
+				const mode = (e.ctrlKey || e.metaKey) ? 'add' : e.altKey ? 'sub' : 'set';
+				this._beginUndo();
+				if (e.shiftKey && this._seqAnchor != null) {
+					this._seqSelRange(this._seqAnchor, i, mode === 'sub' ? 'sub' : 'add');
+					this._commitUndo();
+					this._renderSoon();
+					return;
+				}
+				if (mode === 'set') {
+					this._sel.clear();
+					this._selHinge = null;
+					if (!this._pivotUser) this._selPivot = null;
+				}
+				this._seqDrag = { from: i, mode };
+				this._seqAnchor = i;
+				this._seqSelRange(i, i, mode === 'sub' ? 'sub' : 'add');
+				this._renderSoon();
+			});
+			// ponytail: the whole strip is rebuilt on each covered base, rAF-throttled like
+			// every other drag here. Switch to toggling the classes if it ever drags heavily.
+			el.addEventListener('mouseover', e => {
+				if (!this._seqDrag) return;
+				const i = at(e);
+				if (i < 0) return;
+				if (this._seqDrag.mode === 'set') this._sel.clear();
+				this._seqSelRange(this._seqDrag.from, i, this._seqDrag.mode === 'sub' ? 'sub' : 'add');
+				this._renderSoon();
+			});
+		}
+		_seqSelRange(a, b, mode) {
+			const [lo, hi] = a <= b ? [a, b] : [b, a];
+			for (let i = lo; i <= hi; i++) {
+				if (this._rna.baseDisplay?.[i]?.skip) continue;
+				if (mode === 'sub') this._sel.delete(i);
+				else this._sel.add(i);
+			}
+		}
+		_renderSeqView() {
+			const el = this._seqView;
+			if (!el) return;
+			el.classList.toggle('rv-visible', !!this._seqViewOn && !!this._rna);
+			if (!this._seqViewOn || !this._rna) {
+				el.innerHTML = '';
+				return;
+			}
+			const { n, sequence } = this._rna;
+			const labels = this._outlineLabels();
+			const dom = this._domainColorByIndex(true);
+			// Ruler: every label that is a multiple of ten, ending on its own base
+			const cells = new Array(n).fill(' ');
+			for (let i = 0; i < n; i++) {
+				if (labels[i] % 10) continue;
+				const t = String(labels[i]);
+				const st = Math.max(0, i - t.length + 1);
+				for (let k = 0; k < t.length && st + k < n; k++) cells[st + k] = t[k];
+			}
+			const skip = this._rna.baseDisplay;
+			const chars = [];
+			for (let i = 0; i < n; i++) {
+				const cls = 'rv-seq-ch' + (this._sel.has(i) ? ' rv-seq-sel' : '') + (skip?.[i]?.skip ? ' rv-seq-skip' : '');
+				const col = dom?.[i] ? ` style="color:${escHtml(dom[i])}"` : '';
+				chars.push(`<span class="${cls}" data-sidx="${i}"${col}>${escHtml(sequence[i] || '-')}</span>`);
+			}
+			el.innerHTML = `<div class="rv-seq-ruler">${escHtml(cells.join(''))}</div><div>${chars.join('')}</div>`;
+		}
 		// Colour of each base taken from the domains of the Outline tab (later domains win),
 		// null when domain colouring is off, has no domains, or the outline view draws them itself
-		_domainColorByIndex() {
-			if (!this._domainColors || this._outlineMode || !this._rna) return null;
+		_domainColorByIndex(always = false) {
+			if ((!always && !this._domainColors) || this._outlineMode || !this._rna) return null;
 			const doms = this._outlineDomains(false);
 			if (!doms.length) return null;
 			const out = new Array(this._rna.n).fill(null);
@@ -10532,6 +10632,11 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._tooltip.style.display !== 'none') this._positionTooltip(e.clientX, e.clientY);
 		}
 		_onMouseUp(e) {
+			if (this._seqDrag) {
+				this._seqDrag = null;
+				this._commitUndo();
+				return;
+			}
 			if (this._pivotDrag) {
 				this._pivotDrag = null;
 				this._pendingUndo = null;
