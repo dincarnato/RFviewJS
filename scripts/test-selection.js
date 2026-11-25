@@ -251,6 +251,40 @@ app.whenReady().then(async () => {
 		// Escape drops the selection and its overlay
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		r.cleared = v._sel.size === 0 && v._selPivot === null && svg.querySelector('.rv-sel-ui').childElementCount === 0;
+		// Overlapping bases: counted, marked, pushed apart. On a freshly loaded copy, so that
+		// what is measured is the solver and not the pile of edits the tests above made.
+		v.load({ fileText: '>t\\n${SEQ}\\n${DB}\\n' });
+		{
+			const c = v._rna.coords;
+			const lens = ps => ps.map(([a, b]) => Math.hypot(c[a].x - c[b].x, c[a].y - c[b].y));
+			const bonds = [], prs = [], stiff = [];
+			for (let i = 0; i < 48; i++) {
+				bonds.push([i, i + 1]);
+				if (v._rna.pairs[i] >= 0 && v._rna.pairs[i + 1] >= 0) stiff.push([i, i + 1]);
+			}
+			for (let i = 0; i < 49; i++) if (v._rna.pairs[i] > i) prs.push([i, v._rna.pairs[i]]);
+			r.clashClean = v._clashPairs().length; // a layout straight off the engine has none
+			const dx = c[0].x - c[37].x, dy = c[0].y - c[37].y;
+			for (let i = 37; i <= 45; i++) { c[i].x += dx; c[i].y += dy; } // drop the last hairpin on the first
+			v._render();
+			r.clashBefore = v._lastClashes;
+			r.clashMarks = svg.querySelectorAll('.rv-clash').length;
+			r.clashShown = v._root.querySelector('.rv-sb-overlap').style.display !== 'none' &&
+				v._root.querySelector('.rv-sb-clash').textContent;
+			const b0 = lens(bonds), p0 = lens(prs), s0 = lens(stiff);
+			v._root.querySelector('.rv-sb-relax').click();
+			r.clashAfter = v._lastClashes;
+			r.clashHidden = v._root.querySelector('.rv-sb-overlap').style.display === 'none';
+			const b1 = lens(bonds), p1 = lens(prs), s1 = lens(stiff);
+			r.stiffDrift = +Math.max(...s1.map((x, k) => Math.abs(x - s0[k]) / s0[k])).toFixed(4);
+			r.loopGrowth = +Math.max(...b1.map((x, k) => x / b0[k])).toFixed(3);
+			const drift = b1.map((x, k) => Math.abs(x - b0[k]) / b0[k]);
+			r.bondDrift = +Math.max(...drift).toFixed(4);
+			r.bondMedian = +drift.slice().sort((a, b) => a - b)[drift.length >> 1].toFixed(4);
+			r.pairDrift = +Math.max(...p1.map((x, k) => Math.abs(x - p0[k]) / p0[k])).toFixed(4);
+			window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', bubbles: true, ctrlKey: true }));
+			r.relaxUndone = v._clashPairs().length === r.clashBefore;
+		}
 		return r;
 	})()`);
 
@@ -304,6 +338,17 @@ app.whenReady().then(async () => {
 		assert.ok(out.seqShift, 'Shift+click extends from the last one clicked');
 		assert.ok(out.seqMarks && out.seqHighlit, 'the strip and the drawing show the same selection');
 		assert.ok(out.seqUndo, 'Ctrl+Z undoes a selection made in the strip');
+		assert.strictEqual(out.clashClean, 0, 'a fresh layout has no overlapping bases');
+		assert.ok(out.clashBefore >= 8, `overlapping bases are counted (${out.clashBefore})`);
+		assert.ok(out.clashMarks > 0 && out.clashShown, `they are marked and shown in the status bar (${out.clashShown})`);
+		assert.strictEqual(out.clashAfter, 0, 'the relax step clears them');
+		assert.ok(out.clashHidden, 'the status bar drops the warning');
+		assert.ok(out.bondMedian < 0.01, `the drawing keeps its proportions (median drift ${out.bondMedian})`);
+		assert.ok(out.stiffDrift < 0.02, `the bonds inside the helices keep their length (${out.stiffDrift})`);
+		assert.ok(out.loopGrowth > 1.05 && out.loopGrowth <= 1.75,
+			`a crowded loop is allowed to stretch, up to a point (x${out.loopGrowth})`);
+		assert.ok(out.pairDrift < 0.02, `the pairs keep theirs (${out.pairDrift})`);
+		assert.ok(out.relaxUndone, 'Ctrl+Z undoes the relax step');
 		assert.ok(out.outlineOn, 'outline mode is on');
 		assert.ok(out.outlineSeqColored >= 9, `the strip keeps the domain colours in outline mode (${out.outlineSeqColored})`);
 		assert.strictEqual(out.handles, 2, 'each domain has a handle at both ends');
