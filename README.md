@@ -19,8 +19,10 @@ __RFviewJS__ is a self-contained JavaScript library for rendering RNA secondary 
 - automatic layout selection (Radiate vs. NAView)
 - manual helix rotation, reactivity color mapping (SHAPE/DMS)
 - base-pair and helix-level covariation annotations from R-scape
+- Leontis-Westhof base-pair types from RNApolis' annotator or DSSR output
+- hand-made layouts, saved to a `.rfv.json` file and put back on the same structure or carried over to another one
 - CSS styling
-- SVG export
+- SVG and PNG export
 
 Furthermore, thanks to the power of __[Electron](https://www.electronjs.org/)__, __RFview__ is also provided as a stand-alone app for Windows, Linux and Mac.
 
@@ -92,4 +94,18 @@ The module exports a single global class, `RFviewJS`.
 ## Documentation
 
 For any information, please refer to the documentation: <http://rfviewjs-docs.readthedocs.io/>
+
+## Custom Louis Update
+
+This version is customised to satisfy multiple need I have:
+The Pair Annotations can be loaded from files created by RNAPolis/DSSR and displayed, And they keep the original conventions
+The Layout can be saved and reloaded by drag and drop the .json file in the windows
+The layout has been slightly changed, now there's the possibility to "Unclutter" parts that were supporposed: first the algorithm try to move the helices, then the individial nucleotides. It's not working very well for the moment but at least the user can now reach them and move them.
+Now we can add and remove nucleotides from selection, and when things are selected we can also rotate them by specifying a rotation point. It's possible to "cut" a bond and make it a rotation point using "Alt+Click", this allow to create layouts closer to RiboDraw.
+I've added a Sequence button that display the sequence for the currently displayed structure, togglable using a button at the bottom of the page, it also allow to select/add/remove nucleotides from there
+The domains added can now be edited in the settings, (Names, start, stop, color and layout changements), and an option in the settings allow the user to also view the colors on the "default visualisation mode", in this case the links between the nucleotides are colored
+Undo is added using Ctrl + Z 
+And thoses changes has been (largely) made using LLMs, I tried to keep the code to be clear enough but a lot of modifications has been done. 
+ 
+
 

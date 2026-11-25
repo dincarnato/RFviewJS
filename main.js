@@ -74,6 +74,7 @@ if (cliArgs.help || cliArgs.h) {
                                 Note: --rfam and --structureFile are mutually exclusive
  --xml              <string>    Reactivity file (in RNA Framework's XML format)
  --basePairAnno     <string>    Pair-annotation file (.tsv, .txt) or R-scape's .cov file
+ --layoutFile       <string>    Saved RFview layout (.rfv.json) to put back on the structure
  --percCanonical                For Stockholm alignments, colors every base-pair by % canonical pairs 
                                 computed from the alignment
  --helixCovAnno     <string>    R-scape's .helixcov helix-level covariation file
@@ -227,6 +228,23 @@ ipcMain.handle('save-svg-dialog', async (_, name) => {
 
 });
 
+ipcMain.handle('save-file-dialog', async (_, name, filters) => {
+
+    if (!win) return null;
+
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+
+        title: 'Save',
+        defaultPath: name || 'RF_structure',
+        filters: filters || [{ name: 'All files', extensions: ['*'] }],
+
+    });
+
+    return canceled ? null : filePath;
+
+});
+ipcMain.handle('write-file-b64', async (_, p, b64) => { fs.writeFileSync(p, Buffer.from(b64, 'base64')); return true; });
+
 // IPC for headless SVG result
 ipcMain.handle('headless-done', async (_, svgText, outPath, pdfPath) => {
     fs.writeFileSync(outPath, svgText, 'utf8');
@@ -359,6 +377,10 @@ async function runHeadless(args) {
         console.error(`[!] Error: Base-pair annotation/covariation file ${args.basePairAnno} not found`); app.exit(1); return;
     }
 
+    if (args.layoutFile && !fs.existsSync(args.layoutFile)) {
+        console.error(`[!] Error: Layout file ${args.layoutFile} not found`); app.exit(1); return;
+    }
+
     if (args.helixCovAnno && !fs.existsSync(args.helixCovAnno)) {
         console.error(`[!] Error: Helix covariation file ${args.helixCovAnno} not found`); app.exit(1); return;
     }
@@ -410,6 +432,7 @@ async function runHeadless(args) {
     const xmlText = args.xml ? fs.readFileSync(args.xml, 'utf8') : null;
     const annotText = args.basePairAnno ? fs.readFileSync(args.basePairAnno, 'utf8') : null;
     const annotName = args.basePairAnno ? path.basename(args.basePairAnno) : null;
+    const layoutText = args.layoutFile ? fs.readFileSync(args.layoutFile, 'utf8') : null;
     const helixCovText = args.helixCovAnno ? fs.readFileSync(args.helixCovAnno, 'utf8') : null;
     const helixCovName = args.helixCovAnno ? path.basename(args.helixCovAnno) : null;
 
@@ -430,6 +453,7 @@ async function runHeadless(args) {
     if (xmlText) console.log(`Reactivity file: ${args.xml}`);
     if (annotText) console.log(`Base-pair annotation file: ${args.basePairAnno}`);
     if (helixCovText) console.log(`Helix covariation file: ${args.helixCovAnno}`);
+    if (layoutText) console.log(`Layout file: ${args.layoutFile}`);
 
     console.log(`Layout: ${layout}`);
 
@@ -469,7 +493,7 @@ async function runHeadless(args) {
 
         // Embeds all data as JSON so no IPC hand-off is needed.
         // executeJavaScript runs in the renderer's main world where RFviewJS is defined.
-        const payload = JSON.stringify({ structureText, streamStructure, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layout, outPath, pdfPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds, percCanonical: !!args.percCanonical });
+        const payload = JSON.stringify({ structureText, streamStructure, structureName, xmlText, annotText, annotName, helixCovText, helixCovName, layoutText, layout, outPath, pdfPath, noLegend: !!args.noLegend, noPk: !!args.noPk, noLabels: !!args.noLabels, noInsets: !!args.noInsets, incSsEnds: !!args.incSsEnds, percCanonical: !!args.percCanonical });
 
         const code = `
 (async function () {
@@ -540,7 +564,9 @@ async function runHeadless(args) {
        any pairs that are not present in the consensus structure.            */
     if (d.annotText) {
       try {
-        viewer.loadCov(d.annotText);
+        /* RNApolis annotator / DSSR pair types are recognized by content, as in the GUI */
+        if (RFviewJS.looksLikeLw && RFviewJS.looksLikeLw(d.annotText)) viewer.loadPairTypes(d.annotText);
+        else viewer.loadCov(d.annotText);
       } catch (e) {
         console.warn('[!] Warning: Cannot load annotations: ' + e.message);
       }
@@ -556,6 +582,16 @@ async function runHeadless(args) {
         viewer.loadCov(d.helixCovText); // Auto-detects helixcov format
       } catch (e) {
         console.warn('[!] Warning: Cannot load helix annotations: ' + e.message);
+      }
+    }
+
+    /* A saved layout goes on last, so it overrides whatever the engine laid out */
+    if (d.layoutText) {
+      try {
+        const msg = viewer.loadLayout(d.layoutText);
+        if (msg) console.log(msg);
+      } catch (e) {
+        console.warn('[!] Warning: Cannot apply the layout: ' + e.message);
       }
     }
 

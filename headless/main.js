@@ -76,6 +76,7 @@ if (cliArgs.help || cliArgs.h) {
                                 Note: --rfam and --structureFile are mutually exclusive
  --xml              <string>    Reactivity file (in RNA Framework's XML format)
  --basePairAnno     <string>    Pair-annotation file (.tsv, .txt) or R-scape's .cov file
+ --layoutFile       <string>    Saved RFview layout (.rfv.json) to put back on the structure
  --percCanonical                For Stockholm alignments, colors every base-pair by % canonical pairs 
                                 computed from the alignment
  --helixCovAnno     <string>    R-scape's .helixcov helix-level covariation file
@@ -381,6 +382,10 @@ async function runHeadless(args) {
         console.error(`[!] Error: Base-pair annotation/covariation file ${args.basePairAnno} not found`); process.exit(1);
     }
 
+    if (args.layoutFile && !fs.existsSync(args.layoutFile)) {
+        console.error(`[!] Error: Layout file ${args.layoutFile} not found`); process.exit(1);
+    }
+
     if (args.helixCovAnno && !fs.existsSync(args.helixCovAnno)) {
         console.error(`[!] Error: Helix covariation file ${args.helixCovAnno} not found`); process.exit(1);
     }
@@ -423,6 +428,7 @@ async function runHeadless(args) {
     const annotText = args.basePairAnno ? fs.readFileSync(args.basePairAnno, 'utf8') : null;
     const annotName = args.basePairAnno ? path.basename(args.basePairAnno) : null;
     const helixCovText = args.helixCovAnno ? fs.readFileSync(args.helixCovAnno, 'utf8') : null;
+    const layoutText = args.layoutFile ? fs.readFileSync(args.layoutFile, 'utf8') : null;
     const helixCovName = args.helixCovAnno ? path.basename(args.helixCovAnno) : null;
 
     const outPath = args.svg
@@ -442,6 +448,7 @@ async function runHeadless(args) {
     if (xmlText) console.log(`Reactivity file: ${args.xml}`);
     if (annotText) console.log(`Base-pair annotation file: ${args.basePairAnno}`);
     if (helixCovText) console.log(`Helix covariation file: ${args.helixCovAnno}`);
+    if (layoutText) console.log(`Layout file: ${args.layoutFile}`);
 
     console.log(`Layout: ${layout}`);
 
@@ -531,7 +538,9 @@ async function runHeadless(args) {
     if (!viewer._rna) { console.error('[!] Error: Structure failed to render.'); process.exit(1); }
 
     if (annotText) {
-        try { viewer.loadCov(annotText); }
+        // RNApolis annotator / DSSR pair types are recognized by content, like in the GUI
+        const isLw = RFviewJS.looksLikeLw?.(annotText);
+        try { isLw ? viewer.loadPairTypes(annotText) : viewer.loadCov(annotText); }
         catch (e) { console.warn('[!] Warning: Cannot load annotations: ' + e.message); }
     }
     if (args.percCanonical && viewer._rna?.pairCanonPct) {
@@ -541,6 +550,15 @@ async function runHeadless(args) {
     if (helixCovText) {
         try { viewer.loadCov(helixCovText); }
         catch (e) { console.warn('[!] Warning: Cannot load helix annotations: ' + e.message); }
+    }
+
+    // A saved layout goes on last, so it overrides whatever the engine laid out
+    if (layoutText) {
+        try {
+            const msg = viewer.loadLayout(layoutText);
+            if (msg) console.log(msg);
+        }
+        catch (e) { console.warn('[!] Warning: Cannot apply the layout: ' + e.message); }
     }
 
     viewer._render();
