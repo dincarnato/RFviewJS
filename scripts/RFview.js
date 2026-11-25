@@ -59,6 +59,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-basepair{stroke:var(--rv-basepair,#000);stroke-width:var(--rv-basepair-width,2.2);fill:none;stroke-linecap:round}
 .rv-bp-dot{fill:var(--rv-basepair,#000);stroke:none}
 .rv-bp-noncanon{fill:var(--rv-noncanon-dot,var(--rv-basepair,#000));stroke:none}
+.rv-lw{stroke:var(--rv-basepair,#000);stroke-width:var(--rv-basepair-width,2.2);stroke-linejoin:round}
+.rv-lw-cis{fill:var(--rv-basepair,#000)}
+.rv-lw-trans{fill:var(--rv-bg,#fff)}
+.rv-lw-extra{stroke:var(--rv-basepair,#000);stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}
 .rv-pseudopair{stroke:var(--rv-pseudopair,#1f2328);stroke-width:var(--rv-pseudopair-width,2);fill:none;stroke-linecap:round;stroke-dasharray:5 3}
 .rv-aln-legend{display:none;position:absolute;bottom:16px;right:16px;background:var(--rv-surface,#f6f8fa);border:1px solid var(--rv-border,#d0d7de);border-radius:8px;padding:8px 12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:var(--rv-text,#1f2328);pointer-events:none;z-index:5;white-space:nowrap}
 .rv-aln-legend *{pointer-events:none}
@@ -1024,6 +1028,98 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		if (!pairs.length) throw new Error('no valid pairs found');
 		return pairs;
+	}
+	// Leontis-Westhof base-pair type: "c"/"t" (cis/trans) + the edge each nucleotide
+	// uses (W = Watson-Crick, H = Hoogsteen, S = Sugar). Accepts DSSR's "cW-W" spelling.
+	function normalizeLw(tok) {
+		const t = String(tok ?? '').replace(/[-+]/g, '');
+		return /^[ct][WHS]{2}$/.test(t) ? t : null;
+	}
+	// Residue identifier -> residue number: the last run of digits, ignoring an
+	// insertion-code suffix. "A.G1" -> 1, "A.1MA58" -> 58, "A.A/23^A" -> 23, "72" -> 72.
+	function lwResNum(tok) {
+		const m = String(tok ?? '').split('^')[0].match(/(\d+)(?!.*\d)/);
+		return m ? parseInt(m[1], 10) : NaN;
+	}
+	// Cheap content sniff, so pair-type files are recognized by what they hold rather
+	// than by their extension (RNApolis writes .csv/.json, DSSR .txt/.out/.json).
+	function looksLikeLw(text) {
+		const head = String(text).slice(0, 8192);
+		return /(^|[\s,"'])[ct][WHS]{2}([\s,"']|$)/.test(head) || /"(lw|LW)"\s*:/.test(head);
+	}
+	// Parses Leontis-Westhof pair-type annotations. Recognized inputs:
+	//   RNApolis annotator CSV    nt1,nt2,type,classification-1,classification-2
+	//   RNApolis extended DBN     ">strand_A" / "seq ..." / one "cWW ((..))" row per class
+	//   DSSR base-pair list       the "nt1 nt2 bp name Saenger LW DSSR" table, dssr-pairs.txt
+	//   DSSR / RNApolis JSON      any nested object carrying nt1, nt2 and lw / LW
+	//   minimal                   i<TAB>j<TAB>cWW
+	// Residue numbers are read as 1-based and returned 0-based: [{i, j, lw}].
+	function parseLwFile(text) {
+		const out = [];
+		const push = (a, b, lw) => {
+			if (Number.isInteger(a) && Number.isInteger(b) && a > 0 && b > 0 && a !== b)
+				out.push({ i: a - 1, j: b - 1, lw });
+		};
+		const body = String(text).replace(/\r/g, '').trim();
+		if (body.startsWith('{') || body.startsWith('[')) {
+			let data;
+			try {
+				data = JSON.parse(body);
+			} catch (e) {
+				throw new Error('Cannot parse pair-type file: invalid JSON');
+			}
+			// A residue is either a printable id ("A.G1") or an RNApolis Residue object
+			const resNum = v => (v && typeof v === 'object') ?
+				lwResNum(v.auth?.number ?? v.label?.number ?? v.number ?? v.full_name ?? v.name ?? '') :
+				lwResNum(v);
+			(function walk(node) {
+				if (Array.isArray(node)) return node.forEach(walk);
+				if (!node || typeof node !== 'object') return;
+				const lw = normalizeLw(node.lw ?? node.LW);
+				if (lw && node.nt1 !== undefined && node.nt2 !== undefined) push(resNum(node.nt1), resNum(node.nt2), lw);
+				for (const v of Object.values(node)) walk(v);
+			})(data);
+		} else if (/^\s*>strand_/m.test(body) && /^\s*[ct][WHS]{2}\s+\S/m.test(body)) {
+			// Extended dot-bracket: one dot-bracket line per LW class, per strand.
+			// Strands are concatenated in order of appearance.
+			let offset = 0,
+				strandLen = 0;
+			for (const raw of body.split('\n')) {
+				const line = raw.trim();
+				if (line.startsWith('>strand_')) {
+					offset += strandLen;
+					strandLen = 0;
+					continue;
+				}
+				const m = line.match(/^(\S+)\s+(\S+)$/);
+				if (!m) continue;
+				if (m[1].toLowerCase() === 'seq') {
+					strandLen = m[2].length;
+					continue;
+				}
+				const lw = normalizeLw(m[1]);
+				if (lw)
+					for (const { i, j } of matchBracketPairs(m[2])) push(offset + i + 1, offset + j + 1, lw);
+			}
+		} else {
+			for (const raw of body.split('\n')) {
+				const line = raw.trim();
+				if (!line || line.startsWith('#')) continue;
+				const toks = line.split(/[\s,;]+/);
+				const lwIdx = toks.findIndex(t => normalizeLw(t));
+				if (lwIdx < 0) continue; // Header, stacking row, prose: no pair type on this line
+				// Residue ids carry both letters and digits ("A.G1"); a bare "5 72 cWW"
+				// file has none, so fall back to the first two plain integers.
+				const ids = toks.filter((t, k) => k !== lwIdx && /[A-Za-z]/.test(t) && /\d/.test(t));
+				const pick = ids.length >= 2 ? ids : toks.filter(t => /^\d+$/.test(t));
+				if (pick.length < 2) continue;
+				push(lwResNum(pick[0]), lwResNum(pick[1]), normalizeLw(toks[lwIdx]));
+			}
+		}
+		if (!out.length) throw new Error('No Leontis-Westhof pair types found (expected RNApolis annotator or DSSR output)');
+		const byPair = new Map(); // Last annotation wins for a repeated pair
+		for (const q of out) byPair.set(pairKey(q.i, q.j), q);
+		return [...byPair.values()];
 	}
 	// Parses an R-scape covariation .cov file.
 	// Data lines start with '*' followed by whitespace-separated columns:
@@ -2985,6 +3081,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._stretchState = null;
 			this._sel = new Set(); // box-selected base indices (Ctrl+drag)
 			this._boxStart = null;
+			this._showPairTypes = !!config.showPairTypes; // Leontis-Westhof symbols, off by default
 			this._showPairAnnotations = config.showPairAnnotations !== false;
 			this._autoTolerance = config.autoLayoutTolerance ?? 0;
 			this._id = config.id || null; // Used as SVG export filename
@@ -3260,6 +3357,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
                 <div class="rv-setting-row" style="align-items:center;gap:8px">
                   <input type="checkbox" class="rv-set-relaxed-seq" id="rv-set-relaxed-seq-${this._uid}" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)">
                   <label for="rv-set-relaxed-seq-${this._uid}" style="cursor:pointer;font-size:13px;user-select:none">Allow non-standard characters in sequence</label>
+                </div>
+                <div class="rv-setting-row" style="align-items:center;gap:8px">
+                  <input type="checkbox" class="rv-set-pairtypes" id="rv-set-pairtypes-${this._uid}" style="width:15px;height:15px;cursor:pointer;accent-color:var(--rv-accent,#0969da)">
+                  <label for="rv-set-pairtypes-${this._uid}" style="cursor:pointer;font-size:13px;user-select:none">Show base-pair types (Leontis-Westhof)</label>
                 </div>
               </div>
             </div>
@@ -3693,18 +3794,45 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				this._canvas.classList.remove('rv--drop-hover');
 				if (!this._canvasDrop) return;
 				const allFiles = Array.from(e.dataTransfer.files);
-				const dbFiles = allFiles.filter(f => DB_EXTS.test(f.name));
-				const xmlFiles = allFiles.filter(f => /\.xml$/i.test(f.name));
+				// Pair-type annotations (RNApolis annotator / DSSR) are recognized by content,
+				// since both tools write plain .csv / .json / .txt. They apply to the structure
+				// already on screen, so they are handled here and not in the upload panel.
+				const lwFiles = [];
+				if (this._rna)
+					for (const f of allFiles.filter(f => /\.(csv|json|lw|bp|out|dssr|txt)$/i.test(f.name))) {
+						const text = await f.text();
+						if (looksLikeLw(text)) lwFiles.push({ name: f.name, text });
+					}
+				const rest = allFiles.filter(f => !lwFiles.some(l => l.name === f.name));
+				if (lwFiles.length && !rest.length) {
+					let warn = '';
+					for (const f of lwFiles) {
+						try {
+							warn = this.loadPairTypes(f.text) || warn;
+						} catch (err) {
+							this._showErrorDialog(`"${f.name}": ${err.message}`);
+							return;
+						}
+					}
+					if (warn) this._showErrorDialog(warn);
+					return;
+				}
+				if (lwFiles.length) {
+					this._showErrorDialog(`"${lwFiles[0].name}" holds base-pair types: drop it on its own, once the structure is loaded.`);
+					return;
+				}
+				const dbFiles = rest.filter(f => DB_EXTS.test(f.name));
+				const xmlFiles = rest.filter(f => /\.xml$/i.test(f.name));
 				// Silently ignore XML files for Stockholm structures
 				const effectiveXmlFiles = this._rna?.baseDisplay ? [] : xmlFiles;
-				const covFiles = allFiles.filter(f => /\.(cov|helixcov)$/i.test(f.name));
+				const covFiles = rest.filter(f => /\.(cov|helixcov)$/i.test(f.name));
 				if (!dbFiles.length && !effectiveXmlFiles.length && !covFiles.length) {
-					const unrecognized = allFiles.filter(f =>
+					const unrecognized = rest.filter(f =>
 						!DB_EXTS.test(f.name) && !/\.(xml|cov|helixcov)$/i.test(f.name)
 					);
 					if (unrecognized.length) {
 						const names = unrecognized.map(f => f.name).join(', ');
-						if (this._rna) this._showErrorDialog(`Unrecognized file format: ${names}\n\nSupported formats: ${_DB_EXTS.map(e => '.' + e).join(', ')}, .xml, .cov, .helixcov`);
+						if (this._rna) this._showErrorDialog(`Unrecognized file format: ${names}\n\nSupported formats: ${_DB_EXTS.map(e => '.' + e).join(', ')}, .xml, .cov, .helixcov, plus RNApolis / DSSR pair-type files (.csv, .json)`);
 						else this._showError(`Unrecognized file format: ${names}`);
 					}
 					return;
@@ -3868,6 +3996,26 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			// always has the canonical unshifted source regardless of ssEnds state.
 			this._syncBaseAnnotations();
 			this._render();
+		}
+		// Load Leontis-Westhof base-pair types onto the current structure, from the output
+		// of RNApolis' annotator or DSSR (CSV, JSON, extended dot-bracket or pair list).
+		// Switches the pair-type display on. Returns a warning string ('' when none).
+		loadPairTypes(text) {
+			if (!this._rna) throw new Error('No structure loaded - call load() first.');
+			const parsed = parseLwFile(text);
+			const n = this._rna.n;
+			const remapped = remapAnnotPairs(parsed, this._rna.positionLabels);
+			const valid = remapped.filter(q => q.i >= 0 && q.j >= 0 && q.i < n && q.j < n);
+			if (!valid.length)
+				throw new Error(`None of the ${parsed.length} annotated pairs fall inside the loaded sequence (1-${n}). Residue numbers must match the sequence positions.`);
+			this._rna.lwPairs = valid;
+			this._showPairTypes = true;
+			const chk = this._settingsPanel?.querySelector('.rv-set-pairtypes');
+			if (chk) chk.checked = true;
+			this._syncBaseAnnotations();
+			this._render();
+			const skipped = remapped.length - valid.length;
+			return skipped ? `Warning: ${skipped} of ${remapped.length} annotated pairs are outside the structure and were skipped` : '';
 		}
 		// Apply pair annotations (alignment or drawn coordinates) to a layout, replacing previous
 		// ones: pairs of nested helices become boxes (pairAnnotations + colour map), pseudoknot pairs become
@@ -4294,6 +4442,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			_base.pseudoCovAnnotations = shiftIdx(this._rna.pseudoCovAnnotations, d) || _base.pseudoCovAnnotations;
 			_base.isCovAnnot = this._rna.isCovAnnot;
 			_base.covRawPairs = this._rna.covRawPairs || _base.covRawPairs;
+			_base.lwPairs = shiftIdx(this._rna.lwPairs, d) || _base.lwPairs;
 			// pairCanonPct is not synced: it lives on the structure record (s / s.ssEnds)
 		}
 		// Returns true if b1/b2 form a canonical Watson-Crick or wobble pair
@@ -4314,7 +4463,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const props = [
 				'helixAnnotations', 'isCovAnnot', 'pseudoCovAnnotations',
 				'pseudoHelixCovAnnotations', 'ssConsFeatures', 'ssConsPkPairs', 'ssEnds',
-				'covRawPairs', 'pairCanonPct', '_canonAnnotations', '_canonPkAnnotations',
+				'covRawPairs', 'pairCanonPct', '_canonAnnotations', '_canonPkAnnotations', 'lwPairs',
 				'_savedPairAnnotColorMap',
 			];
 			for (const p of props)
@@ -4396,6 +4545,50 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			return [mkL(sx1, sy1, sx2, sy2)];
 		}
 
+		// Leontis-Westhof pair symbol(s) for the bond between two base centres.
+		// Edge -> shape: W = circle, H = square, S = triangle. cis = filled, trans = hollow.
+		// Symmetric pairs (cWW, tHH, ...) get one symbol at the midpoint; asymmetric ones
+		// (cWS, tHW, ...) get one symbol per edge, each on its own nucleotide's side.
+		_mkLwSymbol(x1, y1, x2, y2, lw, baseR) {
+			const sz = Math.max(5, baseR * 0.95);
+			const cls = 'rv-lw ' + (lw[0] === 'c' ? 'rv-lw-cis' : 'rv-lw-trans');
+			const ang = Math.atan2(y2 - y1, x2 - x1);
+			const deg = ang * 180 / Math.PI;
+			const mk = (cx, cy, edge, rot) => {
+				let el;
+				if (edge === 'W') {
+					el = document.createElementNS(NS, 'circle');
+					el.setAttribute('cx', cx);
+					el.setAttribute('cy', cy);
+					el.setAttribute('r', sz / 2);
+				} else if (edge === 'H') {
+					el = document.createElementNS(NS, 'rect');
+					el.setAttribute('x', cx - sz / 2);
+					el.setAttribute('y', cy - sz / 2);
+					el.setAttribute('width', sz);
+					el.setAttribute('height', sz);
+					el.setAttribute('transform', `rotate(${deg},${cx},${cy})`);
+				} else {
+					// Equilateral triangle, apex along the bond axis
+					const r = sz * 0.62;
+					el = document.createElementNS(NS, 'polygon');
+					el.setAttribute('points', [0, 120, 240]
+						.map(a => {
+							const t = ang + rot + a * Math.PI / 180;
+							return `${cx + r * Math.cos(t)},${cy + r * Math.sin(t)}`;
+						}).join(' '));
+				}
+				el.setAttribute('class', cls);
+				return el;
+			};
+			const mx = (x1 + x2) / 2,
+				my = (y1 + y2) / 2;
+			if (lw[1] === lw[2]) return [mk(mx, my, lw[1], 0)];
+			const off = sz * 0.58,
+				ux = Math.cos(ang),
+				uy = Math.sin(ang);
+			return [mk(mx - ux * off, my - uy * off, lw[1], Math.PI), mk(mx + ux * off, my + uy * off, lw[2], 0)];
+		}
 		// Pair-annotation rectangle centred between two base positions.
 		// Works for any angle, used in both main structure and insets.
 		_mkPairAnnotRect(x1, y1, x2, y2, color, opa, sw, pad, baseR) {
@@ -4607,6 +4800,10 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					`.rv-basepair{stroke:${bpCol};stroke-width:${bpW};fill:none;stroke-linecap:round}`,
 					`.rv-bp-dot{fill:${bpCol};stroke:none}`,
 					`.rv-bp-noncanon{fill:${bpCol};stroke:none}`,
+					`.rv-lw{stroke:${bpCol};stroke-width:${bpW};stroke-linejoin:round}`,
+					`.rv-lw-cis{fill:${bpCol}}`,
+					`.rv-lw-trans{fill:${bgCol}}`,
+					`.rv-lw-extra{stroke:${bpCol};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`,
 				].join('');
 				svg.appendChild(style);
 
@@ -5888,6 +6085,16 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				});
 			}
 
+			// General tab: Leontis-Westhof pair-type symbols
+			const ptChk = q('.rv-set-pairtypes');
+			if (ptChk) {
+				ptChk.checked = this._showPairTypes;
+				ptChk.addEventListener('change', () => {
+					this._showPairTypes = ptChk.checked;
+					this._render();
+				});
+			}
+
 			// Reset all settings to defaults
 			const SETTINGS_DEFAULTS = {
 				'--rv-base-radius': ['11', '.rv-set-radius', '.rv-val-radius', ''],
@@ -5930,6 +6137,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					this._relaxedSequence = true;
 					const relaxedChk = q('.rv-set-relaxed-seq');
 					if (relaxedChk) relaxedChk.checked = true;
+					this._showPairTypes = false;
+					const ptChk2 = q('.rv-set-pairtypes');
+					if (ptChk2) ptChk2.checked = false;
 					rerender();
 				});
 			}
@@ -7758,6 +7968,9 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				// GU: single line + filled dot at midpoint
 				// other: filled dot at midpoint
 				const BP_OFFSET = 2.8; // Scene units between GC double-line centres
+				// Leontis-Westhof pair types (RNApolis / DSSR), off unless toggled on
+				const lwMap = (this._showPairTypes && !isStockholm && this._rna.lwPairs?.length) ?
+					new Map(this._rna.lwPairs.map(q => [pairKey(q.i, q.j), q.lw])) : null;
 				for (let i = 0; i < n; i++) {
 					if (pairs[i] <= i) continue;
 					const j = pairs[i];
@@ -7775,7 +7988,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const isGC = (b1 === 'G' && b2 === 'C') || (b1 === 'C' && b2 === 'G');
 					const isGU = (b1 === 'G' && b2 === 'U') || (b1 === 'U' && b2 === 'G') || (b1 === 'G' && b2 === 'T') || (b1 === 'T' && b2 === 'G');
 					const isCanon = this._isCanonPair(b1, b2);
-					if (isStockholm) {
+					const lw = lwMap?.get(pairKey(i, j)) || null;
+					// A non-WC or non-canonical pair gets its edge symbol(s); canonical cWW
+					// pairs keep the classic line / double-line / wobble-dot glyph.
+					if (lw && !(lw === 'cWW' && isCanon)) {
+						g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+						this._mkLwSymbol(x1, y1, x2, y2, lw, baseR).forEach(el => g_bp.appendChild(el));
+					} else if (isStockholm) {
 						// Stockholm: canonical majority (by alignment) draws a line, non-canonical a dot
 						const canonPct = this._rna.pairCanonPct?.[i] ?? null;
 						this._mkStockholmBond(x1, y1, x2, y2, b1, b2, baseR, dotR, canonPct)
@@ -7807,6 +8026,19 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					} else {
 						// AU: single line
 						g_bp.appendChild(mkLine(x1, y1, x2, y2, 'rv-basepair'));
+					}
+				}
+				// Annotated pairs that are not in the secondary structure (tertiary contacts):
+				// dashed bond plus its symbol, so a 3D annotation file shows its full picture.
+				if (lwMap) {
+					const pkDrawn = this._buildPkSet(this._rna); // Already bonded as dashed pseudoknot lines
+					for (const { i, j, lw } of this._rna.lwPairs) {
+						if (i >= n || j >= n || pairs[i] === j) continue;
+						if (this._rna.baseDisplay?.[i]?.skip || this._rna.baseDisplay?.[j]?.skip) continue;
+						if (!pkDrawn.has(pairKey(i, j)))
+							g_bp.appendChild(mkLine(coords[i].x, coords[i].y, coords[j].x, coords[j].y, 'rv-lw-extra'));
+						this._mkLwSymbol(coords[i].x, coords[i].y, coords[j].x, coords[j].y, lw, baseR)
+							.forEach(el => g_bp.appendChild(el));
 					}
 				}
 				// Per-base highlight boxes for covarying pseudoknot pairs
@@ -8211,7 +8443,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			exp.setAttribute('height', Math.round(vbH * scale));
 			// Stylesheet (user units, scales with circles)
 			const st = document.createElementNS(NS, 'style');
-			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
+			st.textContent = [`.rv-backbone  {stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`, `.rv-basepair  {stroke:${C.basepair};stroke-width:${C.basepairWidth};fill:none;stroke-linecap:round}`, `.rv-bp-dot    {fill:${C.basepair};stroke:none}`, `.rv-bp-noncanon{fill:${C.basepair};stroke:none}`, `.rv-lw{stroke:${C.basepair};stroke-width:${C.basepairWidth};stroke-linejoin:round}`, `.rv-lw-cis{fill:${C.basepair}}`, `.rv-lw-trans{fill:${C.bg}}`, `.rv-lw-extra{stroke:${C.basepair};stroke-width:1.4;fill:none;stroke-dasharray:4 3;opacity:.8}`, `.rv-pseudopair{stroke:${C.pseudopair};stroke-width:${C.pseudopairWidth};fill:none;stroke-linecap:round;stroke-dasharray:5 3}`, `.rv-base-circle{stroke:${C.baseStroke};stroke-width:${C.baseStrokeWidth};fill:${C.baseFill}}`, `.rv-base-label{font-family:${C.labelFont};font-size:${labelFSz};font-weight:bold;fill:${labelColor};text-anchor:middle}`, `.rv-base-index{font-family:${C.indexFont};font-size:${indexFSz};font-weight:bold;fill:${indexColor};text-anchor:middle}`,
 				`.rv-ss-cons-label{font-family:${C.indexFont};font-size:${_gvn('--rv-annot-label-font-size', 12) * 1.6};font-weight:bold;fill:${indexColor};paint-order:stroke fill}`,
 				`.rv-ss-cons-line{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round;stroke-linejoin:round}`,
 				`.rv-ss-cons-leader{stroke:${C.backbone};stroke-width:${C.backboneWidth};fill:none;stroke-linecap:round}`,
@@ -10738,6 +10970,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 	RFviewJS.parseStockholmFileChunked = parseStockholmFileChunked;
 	RFviewJS.parseXmlReactivity = parseXmlReactivity;
 	RFviewJS.parsePairAnnotFile = parsePairAnnotFile;
+	RFviewJS.parseLwFile = parseLwFile;
+	RFviewJS.looksLikeLw = looksLikeLw;
 	RFviewJS.parseCovFile = parseCovFile;
 	RFviewJS.parseHelixCovFile = parseHelixCovFile;
 	RFviewJS.buildAnnotColorMap = buildAnnotColorMap;

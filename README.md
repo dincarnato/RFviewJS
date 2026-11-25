@@ -19,6 +19,7 @@ __RFviewJS__ is a self-contained JavaScript library for rendering RNA secondary 
 - automatic layout selection (Radiate vs. NAView)
 - manual helix rotation, reactivity color mapping (SHAPE/DMS)
 - base-pair and helix-level covariation annotations from R-scape
+- Leontis-Westhof base-pair types from RNApolis' annotator or DSSR output
 - CSS styling
 - SVG export
 
