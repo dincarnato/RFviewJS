@@ -130,7 +130,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-statusbar{padding:4px 18px;border-top:1px solid var(--rv-border,#d0d7de);background:var(--rv-surface,#f6f8fa);font-family:monospace;font-size:12px;color:var(--rv-muted,#656d76);display:flex;gap:18px}
 .rv-statusbar span{display:inline-flex;align-items:center;gap:4px}
 .rv-sb-seqview{cursor:pointer;color:var(--rv-accent,#0969da);text-decoration:underline;text-underline-offset:2px}
-.rv-sb-relax{cursor:pointer;color:var(--rv-accent,#0969da);text-decoration:underline;text-underline-offset:2px}
+.rv-sb-mark,.rv-sb-relax{cursor:pointer;color:var(--rv-accent,#0969da);text-decoration:underline;text-underline-offset:2px}
 .rv-sb-clash{color:var(--rv-error,#cf222e)}
 .rv-clash>circle.rv-base-circle{stroke:var(--rv-error,#cf222e)!important;stroke-width:2.5!important}
 .rv-seqview{position:absolute;left:0;right:0;bottom:0;max-height:34%;overflow:auto;background:var(--rv-surface,#f6f8fa);border-top:1px solid var(--rv-border,#d0d7de);font-family:monospace;font-size:13px;line-height:1.4;padding:6px 10px;white-space:pre;display:none;user-select:none;z-index:300}
@@ -3118,6 +3118,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._selRot = null;
 			this._selClick = null;
 			this._pivotDrag = false;
+			this._showClashes = !!config.showOverlaps; // mark the overlapping bases in red, off by default
 			this._pngScale = +config.pngScale || 2; // PNG export size, 1 = the SVG's own size
 			this._seqViewOn = !!config.sequenceView; // the sequence strip at the bottom, off by default
 			this._domainColors = !!config.domainColors; // colour the backbone by domain, off by default
@@ -3481,7 +3482,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
         <div class="rv-statusbar"${this._showStatusBar ? '' : ' style="display:none"'}>
           <span><span class="rv-dot"></span><span class="rv-sb-seq">-</span></span>
           <span><span class="rv-sb-seqview" title="Show the sequence, and select nucleotides in it">Sequence</span></span>
-          <span class="rv-sb-overlap" style="display:none"><span class="rv-sb-clash"></span><span class="rv-sb-relax" title="Push the overlapping parts apart, keeping the helices rigid">Unclutter</span></span>
+          <span class="rv-sb-overlap" style="display:none"><span class="rv-sb-clash"></span><span class="rv-sb-mark" title="Mark the overlapping nucleotides in the drawing">show</span><span class="rv-sb-relax" title="Push the overlapping parts apart, keeping the helices rigid">Unclutter</span></span>
           <span class="rv-sb-pairs">- pairs</span>
           <span>&nbsp;</span>
         </div>`;
@@ -3525,6 +3526,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._seqView = q('.rv-seqview');
 			this._sbOverlap = q('.rv-sb-overlap');
 			this._sbClash = q('.rv-sb-clash');
+			this._sbMark = q('.rv-sb-mark');
+			this._sbMark?.addEventListener('click', () => this.setShowOverlaps(!this._showClashes));
 			q('.rv-sb-relax')?.addEventListener('click', () => this.relaxLayout());
 			this._bindSeqView(q('.rv-sb-seqview'));
 			this._sbPairs = q('.rv-sb-pairs');
@@ -8343,7 +8346,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 					const grp = document.createElementNS(NS, 'g');
 					grp.setAttribute('data-idx', i);
 					if (this._sel.has(i)) grp.classList.add('rv-selected');
-					if (clashSet?.has(i)) grp.classList.add('rv-clash');
+					if (this._showClashes && clashSet?.has(i)) grp.classList.add('rv-clash');
 					// Dragging a paired base turns (or flips) its helix: say so with the pointer
 					if (pairs[i] >= 0 && !this._sel.has(i)) grp.classList.add('rv-rotatable');
 					const bd = this._rna.baseDisplay?.[i];
@@ -10216,6 +10219,17 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const c = this._lastClashes || 0;
 			this._sbOverlap.style.display = c ? '' : 'none';
 			if (this._sbClash) this._sbClash.textContent = `${c} overlap${c !== 1 ? 's' : ''}`;
+			if (this._sbMark) {
+				this._sbMark.textContent = this._showClashes ? 'hide' : 'show';
+				this._sbMark.title = this._showClashes ?
+					'Stop marking the overlapping nucleotides' : 'Mark the overlapping nucleotides in the drawing';
+			}
+		}
+		// Mark the nucleotides that overlap, in red. Off by default.
+		setShowOverlaps(on = !this._showClashes) {
+			this._showClashes = !!on;
+			this._render();
+			return this._showClashes;
 		}
 		// A hand-made layout, as a plain object: positions, rotation points, domains and the
 		// options that go with them. RFviewJS.looksLikeLayout(text) recognises the saved file.

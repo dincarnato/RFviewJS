@@ -269,7 +269,13 @@ app.whenReady().then(async () => {
 			for (let i = 37; i <= 45; i++) { c[i].x += dx; c[i].y += dy; } // drop the last hairpin on the first
 			v._render();
 			r.clashBefore = v._lastClashes;
+			r.clashMarksOff = svg.querySelectorAll('.rv-clash').length;   // off by default
+			v._root.querySelector('.rv-sb-mark').click();
 			r.clashMarks = svg.querySelectorAll('.rv-clash').length;
+			r.clashMarkLabel = v._root.querySelector('.rv-sb-mark').textContent;
+			v._root.querySelector('.rv-sb-mark').click();
+			r.clashMarksHidden = svg.querySelectorAll('.rv-clash').length;
+			v._root.querySelector('.rv-sb-mark').click();
 			r.clashShown = v._root.querySelector('.rv-sb-overlap').style.display !== 'none' &&
 				v._root.querySelector('.rv-sb-clash').textContent;
 			const extent = () => {
@@ -447,7 +453,10 @@ app.whenReady().then(async () => {
 		assert.ok(out.seqUndo, 'Ctrl+Z undoes a selection made in the strip');
 		assert.strictEqual(out.clashClean, 0, 'a fresh layout has no overlapping bases');
 		assert.ok(out.clashBefore >= 8, `overlapping bases are counted (${out.clashBefore})`);
-		assert.ok(out.clashMarks > 0 && out.clashShown, `they are marked and shown in the status bar (${out.clashShown})`);
+		assert.strictEqual(out.clashMarksOff, 0, 'the overlapping nucleotides are not marked by default');
+		assert.ok(out.clashMarks > 0 && out.clashMarkLabel === 'hide', 'the show/hide link marks them');
+		assert.strictEqual(out.clashMarksHidden, 0, 'and unmarks them');
+		assert.ok(out.clashShown, `the count is in the status bar (${out.clashShown})`);
 		assert.strictEqual(out.clashAfter, 0, 'the relax step clears them');
 		assert.ok(out.clashHidden, 'the status bar drops the warning');
 		assert.ok(out.stiffDrift < 0.02, `the bonds inside the helices keep their length (${out.stiffDrift})`);
