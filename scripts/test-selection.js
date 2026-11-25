@@ -194,6 +194,38 @@ app.whenReady().then(async () => {
 		v._root.querySelector('.rv-sb-seqview').click();
 		r.seqHiddenAgain = !v._seqView.classList.contains('rv-visible');
 
+		// Outline mode: the strip keeps its colours there, and the domains are editable
+		v.setOutlineMode(true); v._render();
+		r.outlineOn = v._outlineMode;
+		v._root.querySelector('.rv-sb-seqview').click();
+		r.outlineSeqColored = [...v._seqView.querySelectorAll('.rv-seq-ch')].filter(c => c.style.color).length;
+		const handles = () => [...svg.querySelectorAll('.rv-outline-handle')];
+		r.handles = handles().length;
+		{
+			const h = handles()[1]; // the far end of the first domain
+			h.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: 0, clientY: 0 }));
+			const to = s2c(coords[30]);
+			ev(window, 'mousemove', to);
+			ev(window, 'mouseup', to);
+			const d0 = v.getOutlineDomains()[0];
+			r.dragged = [d0.start, d0.end];
+		}
+		{
+			const before = v.getOutlineDomains().length;
+			v._sel = new Set(); for (let i = 40; i <= 45; i++) v._sel.add(i);
+			v._root.querySelector('.rv-outline-from-sel').click();
+			const doms = v.getOutlineDomains();
+			r.outlineAdded = doms.length === before + 1 && doms[doms.length - 1].start === 41 && doms[doms.length - 1].end === 46;
+			r.outlineNoSideEffect = !v._domainColors;
+		}
+		v._root.querySelector('.rv-outline-edit').click();
+		r.editOpens = v._settingsPanel.classList.contains('rv-visible') &&
+			!!v._settingsPanel.querySelector('.rv-settings-pane[data-pane="outline"].rv--active') &&
+			v._settingsPanel.querySelectorAll('.rv-outline-row').length === v.getOutlineDomains().length;
+		v._settingsPanel.classList.remove('rv-visible');
+		v.setOutlineMode(false); v._sel.clear(); v._render();
+		v._root.querySelector('.rv-sb-seqview').click();
+
 		// A move must not throw away the pan the user set, but an edit that pushes the
 		// structure out of a fitted view still refits
 		v._sel.clear(); v._render();
@@ -272,6 +304,13 @@ app.whenReady().then(async () => {
 		assert.ok(out.seqShift, 'Shift+click extends from the last one clicked');
 		assert.ok(out.seqMarks && out.seqHighlit, 'the strip and the drawing show the same selection');
 		assert.ok(out.seqUndo, 'Ctrl+Z undoes a selection made in the strip');
+		assert.ok(out.outlineOn, 'outline mode is on');
+		assert.ok(out.outlineSeqColored >= 9, `the strip keeps the domain colours in outline mode (${out.outlineSeqColored})`);
+		assert.strictEqual(out.handles, 2, 'each domain has a handle at both ends');
+		assert.deepStrictEqual(out.dragged, [13, 31], `dragging an end moves that bound: ${JSON.stringify(out.dragged)}`);
+		assert.ok(out.outlineAdded, 'From selection adds a domain in outline mode');
+		assert.ok(out.outlineNoSideEffect, 'and does not switch the backbone colouring on there');
+		assert.ok(out.editOpens, 'Edit domains opens the domain list');
 		assert.ok(out.cleared, 'Escape clears the selection and the overlay');
 		console.log('selection / pivot / rotation: all checks passed');
 		app.exit(0);

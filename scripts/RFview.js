@@ -106,6 +106,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 .rv-outline-bar button:disabled{color:var(--rv-muted,#656d76);cursor:default;opacity:.6}
 .rv--outline .rv-legend,.rv--outline .rv-pal-legend,.rv--outline .rv-aln-legend,.rv--outline .rv-pk-panels{display:none!important}
 .rv-outline-hit{cursor:crosshair}
+.rv-outline-handle{pointer-events:all;cursor:grab}
 .rv-outline-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
 .rv-outline-name{flex:1;min-width:0;padding:3px 5px;border:1px solid var(--rv-border,#d0d7de);border-radius:4px;font-size:13px;font-family:inherit;background:var(--rv-bg,#fff);color:var(--rv-text,#1f2328)}
 .rv-outline-row .rv-stop-val{width:62px;box-sizing:border-box;-moz-appearance:textfield}
@@ -3298,6 +3299,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
           <div class="rv-outline-bar">
             <input type="color" class="rv-outline-color" value="#e6194b" title="Colour of the next domain">
             <span class="rv-outline-hint"></span>
+            <button class="rv-outline-from-sel" title="Make a domain out of the current selection (pick it in the sequence strip)">From selection</button>
+            <button class="rv-outline-edit" title="Names, colours and bounds of every domain">Edit domains</button>
             <button class="rv-outline-undo" title="Remove the last domain">Undo</button>
           </div>
           <div class="rv-pk-panels"></div>
@@ -3604,6 +3607,13 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._chkOutline) this._chkOutline.addEventListener('click', () => this.setOutlineMode(!this._outlineMode));
 			if (this._outlineBar) {
 				this._outlineColorIn.addEventListener('input', () => this._refreshOutlinePreview());
+				this._outlineBar.querySelector('.rv-outline-from-sel').addEventListener('click', () => {
+					if (!this.addDomainFromSelection()) this._showErrorDialog?.('Select the bases of the domain first: open the sequence strip from the status bar and drag over them.');
+				});
+				this._outlineBar.querySelector('.rv-outline-edit').addEventListener('click', () => {
+					this._openSettings();
+					this._settingsPanel?.querySelector('.rv-settings-tab[data-tab="outline"]')?.click();
+				});
 				this._outlineBar.querySelector('.rv-outline-undo').addEventListener('click', () => {
 					const doms = this._outlineDomains(false);
 					if (doms.length) this.removeOutlineDomain(doms.length - 1);
@@ -7804,6 +7814,25 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				hit.addEventListener('mousemove', e => { const q = this._clientToScene(e.clientX, e.clientY); this._outlineHover(this._nearestBase(q.x, q.y), e); });
 				hit.addEventListener('mouseleave', () => this._outlineHover(-1));
 				g.appendChild(hit);
+				// Ends of every domain: drag one along the backbone to move that bound
+				this._outlineDomains(false).forEach((dom, k) => {
+					const r = this._outlineRange(dom);
+					if (!r) return;
+					[0, 1].forEach(end => {
+						const c = coords[r[end]];
+						const h = document.createElementNS(NS, 'circle');
+						h.setAttribute('class', 'rv-outline-handle');
+						h.setAttribute('data-dom', k);
+						h.setAttribute('data-end', end);
+						h.setAttribute('cx', c.x);
+						h.setAttribute('cy', c.y);
+						h.setAttribute('r', width * 0.42);
+						h.setAttribute('fill', bg);
+						h.setAttribute('stroke', dom.color);
+						h.setAttribute('stroke-width', Math.max(2, width * 0.18));
+						g.appendChild(h);
+					});
+				});
 				// Marker of the hovered base (what a click would pick), with its index in the tooltip
 				this._outlineHoverEl = document.createElementNS(NS, 'circle');
 				this._outlineHoverEl.setAttribute('class', 'rv-outline-hover');
@@ -9541,6 +9570,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		}
 		_onMouseDown(e) {
 			if (this._isAnimating) return;
+			// Outline mode: the round ends of a domain drag its bounds along the backbone
+			const domEnd = e.button === 0 && this._outlineMode && this._rna ? e.target.closest('.rv-outline-handle') : null;
+			if (domEnd) {
+				e.preventDefault();
+				this._mouseDownPt = null; // this is not a click that picks a base
+				this._outlineDrag = {
+					dom: this._outlineDomains(false)[parseInt(domEnd.getAttribute('data-dom'))],
+					key: +domEnd.getAttribute('data-end') ? 'end' : 'start',
+				};
+				this._canvas.classList.add('grabbing');
+				return;
+			}
 			const grp = e.target.closest('[data-idx]');
 			const idx0 = grp ? parseInt(grp.getAttribute('data-idx')) : -1;
 			const ctrl = e.ctrlKey || e.metaKey;
@@ -10095,7 +10136,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 		// Colour of each base taken from the domains of the Outline tab (later domains win),
 		// null when domain colouring is off, has no domains, or the outline view draws them itself
 		_domainColorByIndex(always = false) {
-			if ((!always && !this._domainColors) || this._outlineMode || !this._rna) return null;
+			if (!this._rna || (!always && (!this._domainColors || this._outlineMode))) return null;
 			const doms = this._outlineDomains(false);
 			if (!doms.length) return null;
 			const out = new Array(this._rna.n).fill(null);
@@ -10118,7 +10159,8 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 				end: labels[idx[idx.length - 1]],
 				color: pal[doms.length % pal.length],
 			});
-			if (dom && !this._domainColors) this.setDomainColors(true);
+			if (dom && !this._domainColors && !this._outlineMode) this.setDomainColors(true);
+			else if (dom && this._outlineMode) this._renderSoon();
 			return dom;
 		}
 		// Show / hide the domain colours on the backbone
@@ -10251,6 +10293,7 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			const g = this._selUI;
 			if (!g) return;
 			g.innerHTML = '';
+			if (this._outlineMode) return; // the outline view has its own domain handles
 			const idxs = this._rna ? [...this._sel].filter(i => i < this._rna.n).sort((a, b) => a - b) : [];
 			if (!idxs.length) {
 				this._selPivot = null;
@@ -10348,6 +10391,18 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			this._selRect.setAttribute('height', Math.abs(e.clientY - b.y));
 		}
 		_onMouseMove(e) {
+			if (this._outlineDrag) {
+				const { dom, key } = this._outlineDrag;
+				const p = this._clientToScene(e.clientX, e.clientY);
+				const idx = this._nearestBase(p.x, p.y);
+				if (idx < 0 || !dom) return;
+				const v = this._outlineLabels()[idx];
+				if (v === dom[key]) return;
+				dom[key] = v;
+				this._clampOutlineDomain(dom);
+				this._renderSoon();
+				return;
+			}
 			if (this._pivotDrag) {
 				const pt = this._clientToScene(e.clientX, e.clientY);
 				const { hinge, selPivot } = this._pivotDrag;
@@ -10632,6 +10687,12 @@ body {-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select
 			if (this._tooltip.style.display !== 'none') this._positionTooltip(e.clientX, e.clientY);
 		}
 		_onMouseUp(e) {
+			if (this._outlineDrag) {
+				this._outlineDrag = null;
+				this._canvas.classList.remove('grabbing');
+				this._outlineChanged();
+				return;
+			}
 			if (this._seqDrag) {
 				this._seqDrag = null;
 				this._commitUndo();
